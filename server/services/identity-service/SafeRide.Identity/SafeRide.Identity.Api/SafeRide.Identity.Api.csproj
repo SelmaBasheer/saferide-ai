@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+    <PropertyGroup>
+        <TargetFramework>net10.0</TargetFramework>
+        <Nullable>enable</Nullable>
+        <ImplicitUsings>enable</ImplicitUsings>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="10.0.9" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\SafeRide.Identity.Application\SafeRide.Identity.Application.csproj" />
+        <ProjectReference Include="..\SafeRide.Identity.Infrastructure\SafeRide.Identity.Infrastructure.csproj" />
+    </ItemGroup>
+</Project>

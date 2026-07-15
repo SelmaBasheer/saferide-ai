@@ -1,0 +1,6 @@
+@SafeRide.Identity.Api_HostAddress = http://localhost:5110
+
+GET {{SafeRide.Identity.Api_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
