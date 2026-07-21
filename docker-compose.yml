@@ -1,0 +1,87 @@
+name: saferide
+
+x-common: &common
+  restart: unless-stopped
+  networks: [saferide-net]
+  logging:
+    driver: json-file
+    options: { max-size: "10m", max-file: "3" }
+
+services:
+  postgres:
+    <<: *common
+    image: postgres:17-alpine
+    container_name: saferide-postgres
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 15s
+
+  rabbitmq:
+    <<: *common
+    image: rabbitmq:4-management-alpine
+    container_name: saferide-rabbitmq
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD}
+    ports:
+      - "${RABBITMQ_PORT:-5672}:5672"
+      - "${RABBITMQ_UI_PORT:-15672}:15672"
+    volumes:
+      - rabbitmq-data:/var/lib/rabbitmq
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 15s
+      timeout: 10s
+      retries: 10
+      start_period: 30s
+
+  identity-service:
+    <<: *common
+    build:
+      context: .
+      dockerfile: server/services/identity-service/SafeRide.Identity/Dockerfile
+    image: saferide/identity-service:local
+    container_name: saferide-identity
+    ports:
+      - "${IDENTITY_PORT:-5001}:8080"
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      ConnectionStrings__Default: "Host=postgres;Port=5432;Database=${POSTGRES_DB};Username=${POSTGRES_USER};Password=${POSTGRES_PASSWORD}"
+      RabbitMQ__Host: rabbitmq
+      RabbitMQ__Username: ${RABBITMQ_USER}
+      RabbitMQ__Password: ${RABBITMQ_PASSWORD}
+      JwtSettings__Secret: ${JWT_SECRET}
+      JwtSettings__Issuer: ${JWT_ISSUER}
+      JwtSettings__Audience: ${JWT_AUDIENCE}
+      JwtSettings__AccessTokenMinutes: "15"
+      JwtSettings__RefreshTokenDays: "7"
+      Seed__SuperAdminEmail: ${SUPERADMIN_EMAIL}
+      Seed__SuperAdminPhone: ${SUPERADMIN_PHONE}
+      Seed__SuperAdminPassword: ${SUPERADMIN_PASSWORD}
+    volumes:
+      - identity-logs:/app/logs
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+
+networks:
+  saferide-net:
+    driver: bridge
+
+volumes:
+  postgres-data:
+  rabbitmq-data:
+  identity-logs:

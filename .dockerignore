@@ -1,0 +1,39 @@
+# Visual Studio / Rider / VS Code
+.vs/
+.idea/
+.vscode/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+
+# Build output
+**/bin/
+**/obj/
+
+# Logs & local artifacts
+**/logs/
+*.log
+
+# Node (for the React PWA )
+**/node_modules/
+**/dist/
+**/build/
+
+# Git & CI
+.git/
+.gitignore
+.github/
+.husky/
+
+# Docker files themselves
+**/Dockerfile*
+**/docker-compose*.yml
+.dockerignore
+
+# Secrets — never bake these into an image
+.env
+.env.*
+!.env.example
+*.pfx
+*.p12
