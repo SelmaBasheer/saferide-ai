@@ -6,3 +6,5 @@
 # Build outputs
 bin/
 obj/
+
+**/logs/

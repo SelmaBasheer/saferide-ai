@@ -12,18 +12,45 @@ indent_size = 2
 
 [*.cs]
 
-# C# style
+#######################################
+# C# Style
+#######################################
+
 csharp_style_namespace_declarations = file_scoped:warning
 csharp_style_prefer_primary_constructors = true:suggestion
+
 csharp_style_var_when_type_is_apparent = true:suggestion
+csharp_style_var_for_built_in_types = true:suggestion
 csharp_style_var_elsewhere = false:suggestion
 
-# Don't require 'this.'
+#######################################
+# Qualification
+#######################################
+
 dotnet_style_qualification_for_field = false:suggestion
 dotnet_style_qualification_for_property = false:suggestion
 dotnet_style_qualification_for_method = false:suggestion
 
-# Analyzer categories
+#######################################
+# Nullable
+#######################################
+
+dotnet_style_null_propagation = true:suggestion
+dotnet_style_coalesce_expression = true:suggestion
+
+#######################################
+# Analyzer Categories
+#######################################
+
 dotnet_analyzer_diagnostic.category-Design.severity = warning
-dotnet_analyzer_diagnostic.category-Performance.severity = warning
 dotnet_analyzer_diagnostic.category-Security.severity = warning
+dotnet_analyzer_diagnostic.category-Reliability.severity = warning
+
+dotnet_analyzer_diagnostic.category-Performance.severity = suggestion
+
+#######################################
+# Specific Rules
+#######################################
+
+dotnet_diagnostic.CA1848.severity = suggestion
+dotnet_diagnostic.CA1873.severity = suggestion
