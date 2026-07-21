@@ -1,7 +1,9 @@
+using Microsoft.EntityFrameworkCore;
 using SafeRide.Identity.Api.Extensions;
 using SafeRide.Identity.Api.Middleware;
 using SafeRide.Identity.Application;
 using SafeRide.Identity.Infrastructure;
+using SafeRide.Identity.Infrastructure.Persistence;
 using SafeRide.Identity.Infrastructure.Persistence.Seed;
 using Serilog;
 
@@ -22,9 +24,13 @@ var app = builder.Build();
 
 using (var scope = app.Services.CreateScope())
 {
+    var db = scope.ServiceProvider.GetRequiredService<IdentityDbContext>();
+    await db.Database.MigrateAsync();
+
     var seeder = scope.ServiceProvider.GetRequiredService<IdentitySeeder>();
     await seeder.SeedAsync();
 }
+
 
 if (app.Environment.IsDevelopment())
 {
@@ -33,7 +39,6 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseMiddleware<ExceptionHandlingMiddleware>();
-app.UseHttpsRedirection();
 app.UseSerilogRequestLogging();
 app.UseAuthentication();
 app.UseAuthorization();

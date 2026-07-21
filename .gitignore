@@ -7,4 +7,10 @@
 bin/
 obj/
 
+# Secrets & local config
+.env
+.env.*
+!.env.example
+
+# Docker
 **/logs/
