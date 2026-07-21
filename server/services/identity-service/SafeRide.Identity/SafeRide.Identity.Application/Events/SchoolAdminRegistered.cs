@@ -3,7 +3,8 @@ namespace SafeRide.Identity.Application.Events;
 public sealed record SchoolAdminRegistered(
     Guid UserId,
     string Email,
-    string FullName,
+    string FirstName,
+    string LastName,
     string Phone,
     string SchoolName,
     string SchoolAddress,
