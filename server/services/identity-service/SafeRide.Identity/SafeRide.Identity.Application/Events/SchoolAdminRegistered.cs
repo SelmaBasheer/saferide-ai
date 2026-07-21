@@ -9,7 +9,8 @@ public sealed record SchoolAdminRegistered(
     string SchoolName,
     string SchoolAddress,
     string City,
+    string District,
     string State,
     string Pincode,
-    DateTime OccurredAtUtc
+    DateTime RegisteredAtUtc
 );

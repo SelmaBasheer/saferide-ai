@@ -16,7 +16,7 @@ public sealed record Email
         var normalized = input.Trim().ToLowerInvariant();
 
         if (!Regex.IsMatch(normalized, @"^[^@\s]+@[^@\s]+\.[^@\s]+$"))
-            throw new ArgumentException($"'{input}' is not a valid email address.");
+            throw new ArgumentException($"The provided email address is not valid.");
 
         return new Email(normalized);
     }

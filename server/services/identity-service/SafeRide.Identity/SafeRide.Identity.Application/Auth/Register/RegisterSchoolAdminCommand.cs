@@ -11,6 +11,7 @@ public sealed record RegisterSchoolAdminCommand(
     string SchoolName,
     string SchoolAddress,
     string City,
+    string District,
     string State,
     string Pincode
 );

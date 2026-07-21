@@ -1,4 +1,5 @@
 using SafeRide.Identity.Api.Extensions;
+using SafeRide.Identity.Api.Middleware;
 using SafeRide.Identity.Application;
 using SafeRide.Identity.Infrastructure;
 using SafeRide.Identity.Infrastructure.Persistence.Seed;
@@ -31,6 +32,7 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
+app.UseMiddleware<ExceptionHandlingMiddleware>();
 app.UseHttpsRedirection();
 app.UseSerilogRequestLogging();
 app.UseAuthentication();

@@ -15,6 +15,7 @@ public sealed class RegisterSchoolAdminCommandValidator
         RuleFor(x => x.SchoolName).NotEmpty().MaximumLength(200);
         RuleFor(x => x.SchoolAddress).NotEmpty();
         RuleFor(x => x.City).NotEmpty();
+        RuleFor(x => x.District).NotEmpty().MaximumLength(100);
         RuleFor(x => x.State).NotEmpty();
         RuleFor(x => x.Pincode).NotEmpty();
     }

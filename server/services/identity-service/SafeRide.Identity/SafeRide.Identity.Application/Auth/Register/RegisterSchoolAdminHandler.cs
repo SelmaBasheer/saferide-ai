@@ -31,13 +31,6 @@ public sealed class RegisterSchoolAdminHandler(
                 )
             );
 
-        var address = Address.Create(
-            command.SchoolAddress,
-            command.City,
-            command.State,
-            command.Pincode
-        );
-
         if (await userRepository.ExistsByEmailAsync(command.Email, ct))
         {
             logger.LogWarning("Registration failed — email already exists {Email}", command.Email);
@@ -72,10 +65,11 @@ public sealed class RegisterSchoolAdminHandler(
                     user.LastName,
                     user.Phone.Value,
                     command.SchoolName,
-                    command.SchoolAddress,
-                    command.City,
-                    command.State,
-                    command.Pincode,
+                    command.SchoolAddress.Trim(),
+                    command.City.Trim(),
+                    command.District.Trim(),
+                    command.State.Trim(),
+                    command.Pincode.Trim(),
                     DateTime.UtcNow
                 ),
                 ct
