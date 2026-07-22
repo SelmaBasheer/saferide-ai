@@ -1,5 +1,5 @@
 import { useState } from "react"
-import { useNavigate } from "react-router-dom"
+import { Link, useNavigate } from "react-router-dom"
 import { Bus, Mail, Lock, Eye, EyeOff, ArrowRight } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -118,10 +118,9 @@ export default function LoginPage() {
                                 <button
                                     type="button"
                                     onClick={() => setShowPassword(!showPassword)}
+                                    aria-label={showPassword ? "Hide password" : "Show password"}
                                     className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400"
-                                >
-                                    {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                                </button>
+                                />
                             </div>
                         </div>
 
@@ -140,12 +139,9 @@ export default function LoginPage() {
 
                         <p className="text-center text-sm text-slate-500">
                             New school?{" "}
-                            <span
-                                onClick={() => navigate("/register")}
-                                className="cursor-pointer font-medium text-sky-700"
-                            >
+                            <Link to="/register" className="font-medium text-sky-700">
                                 Register here
-                            </span>
+                            </Link>
                         </p>
                     </form>
                 </div>
