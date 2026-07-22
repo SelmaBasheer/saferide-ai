@@ -11,12 +11,18 @@ interface AuthState {
     user: AuthUser | null
 }
 
-// Restore session from localStorage so a page refresh doesn't log you out.
+// Restore session only if the saved token is still valid; otherwise clear it.
 const savedToken = localStorage.getItem(TOKEN_KEY)
+const savedUser = savedToken ? decodeToken(savedToken) : null
+if (savedToken && !savedUser) {
+    localStorage.removeItem(TOKEN_KEY)
+    localStorage.removeItem(REFRESH_KEY)
+}
+
 const initialState: AuthState = {
-    accessToken: savedToken,
-    refreshToken: localStorage.getItem(REFRESH_KEY),
-    user: savedToken ? decodeToken(savedToken) : null,
+    accessToken: savedUser ? savedToken : null,
+    refreshToken: savedUser ? localStorage.getItem(REFRESH_KEY) : null,
+    user: savedUser,
 }
 
 const authSlice = createSlice({
@@ -27,9 +33,11 @@ const authSlice = createSlice({
             state,
             action: PayloadAction<{ accessToken: string; refreshToken: string }>
         ) => {
+            const user = decodeToken(action.payload.accessToken)
+            if (!user) return // reject invalid tokens
             state.accessToken = action.payload.accessToken
             state.refreshToken = action.payload.refreshToken
-            state.user = decodeToken(action.payload.accessToken)
+            state.user = user
             localStorage.setItem(TOKEN_KEY, action.payload.accessToken)
             localStorage.setItem(REFRESH_KEY, action.payload.refreshToken)
         },

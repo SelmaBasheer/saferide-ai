@@ -1,11 +1,13 @@
 import { Navigate } from "react-router-dom"
 import { useAppSelector } from "@/app/hooks"
 
-/** Wraps pages that require login. Redirects to /login if there's no token. */
-export default function ProtectedRoute({ children }: { children: React.ReactNode }) {
-    const token = useAppSelector((state) => state.auth.accessToken)
+const ADMIN_ROLES = ["SuperAdmin", "SchoolAdmin"]
 
-    if (!token) {
+/** Requires a valid session AND an admin role to view the page. */
+export default function ProtectedRoute({ children }: { children: React.ReactNode }) {
+    const user = useAppSelector((state) => state.auth.user)
+
+    if (!user || !ADMIN_ROLES.includes(user.role)) {
         return <Navigate to="/login" replace />
     }
 
