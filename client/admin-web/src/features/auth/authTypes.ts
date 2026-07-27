@@ -28,7 +28,6 @@ export interface AuthResponse {
 
 export interface RegisterResponse {
     userId: string
-    message: string
 }
 
 export type UserRole = "SuperAdmin" | "SchoolAdmin" | "Driver" | "Parent"
@@ -39,4 +38,12 @@ export interface AuthUser {
     email: string
     role: UserRole
     schoolId?: string
+}
+
+/** The standard envelope every endpoint now returns. */
+export interface ApiResponse<T> {
+    success: boolean
+    data: T
+    message: string | null
+    error: { code: string; message: string } | null
 }

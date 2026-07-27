@@ -4,6 +4,7 @@ import type {
     RegisterRequest,
     AuthResponse,
     RegisterResponse,
+    ApiResponse,
 } from "./authTypes"
 
 /** Auth endpoints, injected into the base API. */
@@ -11,9 +12,12 @@ export const authApi = baseApi.injectEndpoints({
     endpoints: (builder) => ({
         login: builder.mutation<AuthResponse, LoginRequest>({
             query: (body) => ({ url: "/auth/login", method: "POST", body }),
+            // unwrap the envelope → components still receive a plain AuthResponse
+            transformResponse: (r: ApiResponse<AuthResponse>) => r.data,
         }),
         registerSchoolAdmin: builder.mutation<RegisterResponse, RegisterRequest>({
             query: (body) => ({ url: "/auth/register/school-admin", method: "POST", body }),
+            transformResponse: (r: ApiResponse<RegisterResponse>) => r.data,
         }),
     }),
 })

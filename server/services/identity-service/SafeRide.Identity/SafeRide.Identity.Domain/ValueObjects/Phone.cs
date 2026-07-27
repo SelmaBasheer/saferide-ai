@@ -13,7 +13,7 @@ public sealed record Phone
 
         var digits = new string(input.Where(char.IsDigit).ToArray());
 
-        if (digits.Length == 12 && digits.StartsWith("91"))
+        if (digits.Length == 12 && digits.StartsWith("91", StringComparison.Ordinal))
             digits = digits[2..];
 
         if (digits.Length != 10)

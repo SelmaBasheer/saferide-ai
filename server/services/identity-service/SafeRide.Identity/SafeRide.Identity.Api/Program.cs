@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using SafeRide.Identity.Api.Extensions;
+using SafeRide.Identity.Api.Mapping;
 using SafeRide.Identity.Api.Middleware;
 using SafeRide.Identity.Application;
 using SafeRide.Identity.Infrastructure;
@@ -19,6 +20,9 @@ builder.Services.AddAuthorizationPolicies();
 builder.Services.AddInfrastructure(builder.Configuration);
 builder.Services.AddApplication();
 builder.Services.AddOpenTelemetryTracing();
+builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
+builder.Services.AddProblemDetails(); // safe fallback;
+builder.Services.AddAutoMapper();
 
 var app = builder.Build();
 
@@ -31,14 +35,13 @@ using (var scope = app.Services.CreateScope())
     await seeder.SeedAsync();
 }
 
-
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
     app.UseSwaggerUI();
 }
 
-app.UseMiddleware<ExceptionHandlingMiddleware>();
+app.UseExceptionHandler();
 app.UseSerilogRequestLogging();
 app.UseAuthentication();
 app.UseAuthorization();

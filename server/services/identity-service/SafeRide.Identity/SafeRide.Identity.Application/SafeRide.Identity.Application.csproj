@@ -20,4 +20,8 @@
     <ItemGroup>
         <ProjectReference Include="..\SafeRide.Identity.Domain\SafeRide.Identity.Domain.csproj" />
     </ItemGroup>
+
+    <ItemGroup>
+        <Folder Include="NewFolder\" />
+    </ItemGroup>
 </Project>
