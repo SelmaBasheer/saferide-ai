@@ -1,0 +1,36 @@
+name: CI
+
+on:
+  push:
+    branches: [main, master]   
+  pull_request:
+
+jobs:
+  dotnet:
+    name: .NET build & check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Restore tools
+        run: dotnet tool restore
+
+      - name: Build
+        run: |
+          for sln in $(find . -name "*.slnx"); do
+            echo "== building $sln =="
+            dotnet build "$sln" --configuration Release
+          done
+
+      - name: Test
+        run: |
+          for sln in $(find . -name "*.slnx"); do
+            dotnet test "$sln" --configuration Release --no-build --verbosity minimal
+          done
+
+      - name: Check formatting (CSharpier)
+        run: dotnet csharpier check .
