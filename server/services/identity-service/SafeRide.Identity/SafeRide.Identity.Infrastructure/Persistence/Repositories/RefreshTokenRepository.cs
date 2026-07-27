@@ -1,6 +1,6 @@
 using Microsoft.EntityFrameworkCore;
-using SafeRide.Identity.Application.Abstractions;
 using SafeRide.Identity.Domain.Entities;
+using SafeRide.Identity.Domain.Repositories;
 
 namespace SafeRide.Identity.Infrastructure.Persistence.Repositories;
 

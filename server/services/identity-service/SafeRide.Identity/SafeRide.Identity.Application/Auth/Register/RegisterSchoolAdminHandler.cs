@@ -4,6 +4,7 @@ using SafeRide.Identity.Application.Abstractions;
 using SafeRide.Identity.Application.Common;
 using SafeRide.Identity.Application.Events;
 using SafeRide.Identity.Domain.Entities;
+using SafeRide.Identity.Domain.Repositories;
 using SafeRide.Identity.Domain.ValueObjects;
 
 namespace SafeRide.Identity.Application.Auth.Register;

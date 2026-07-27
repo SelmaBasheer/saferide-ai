@@ -1,4 +1,4 @@
-namespace SafeRide.Identity.Application.Abstractions;
+namespace SafeRide.Identity.Domain.Repositories;
 
 public interface IUnitOfWork
 {

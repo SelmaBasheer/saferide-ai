@@ -1,0 +1,4 @@
+# forces LF everywhere
+# This tells git to store and check out LF on every platform, so Windows and Linux CI agree.
+
+* text=auto eol=lf

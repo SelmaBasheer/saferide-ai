@@ -1,6 +1,6 @@
 using SafeRide.Identity.Domain.Entities;
 
-namespace SafeRide.Identity.Application.Abstractions;
+namespace SafeRide.Identity.Domain.Repositories;
 
 public interface IRefreshTokenRepository
 {

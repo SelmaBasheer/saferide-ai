@@ -54,3 +54,12 @@ dotnet_analyzer_diagnostic.category-Performance.severity = suggestion
 
 dotnet_diagnostic.CA1848.severity = suggestion
 dotnet_diagnostic.CA1873.severity = suggestion
+
+[*.cs]
+# Repo-wide suppressions for intentional patterns:
+dotnet_diagnostic.CA1000.severity = none   # static factory members on ApiResponse<T>
+dotnet_diagnostic.CA1716.severity = none   # 'Error' type name (Result pattern)
+dotnet_diagnostic.CA1848.severity = none   # LoggerMessage delegates (perf micro-opt)
+
+[**/Migrations/*.cs]
+generated_code = true
