@@ -22,6 +22,8 @@ builder.Services.AddAutoMapper(cfg => cfg.AddProfile<SchoolMappingProfile>());
 builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
 builder.Services.AddProblemDetails();
 
+builder.Services.AddJwtAuthentication(builder.Configuration);
+
 var app = builder.Build();
 
 using (var scope = app.Services.CreateScope())
@@ -38,5 +40,7 @@ if (app.Environment.IsDevelopment())
 
 app.UseExceptionHandler();
 app.UseSerilogRequestLogging();
+app.UseAuthentication();
+app.UseAuthorization();
 app.MapControllers();
 app.Run();

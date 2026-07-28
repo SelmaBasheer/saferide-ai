@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using SafeRide.Schools.Api.Common;
 using SafeRide.Schools.Api.Contracts;
@@ -9,6 +10,7 @@ namespace SafeRide.Schools.Api.Controllers;
 [ApiController]
 public class SchoolsController(ApproveSchoolHandler handler) : ControllerBase
 {
+    [Authorize(Roles = "SuperAdmin")]
     [HttpPost("{id:guid}/approve")]
     public async Task<IActionResult> Approve(Guid id, CancellationToken ct)
     {
@@ -18,6 +20,7 @@ public class SchoolsController(ApproveSchoolHandler handler) : ControllerBase
             : NotFound(ApiResponse<object?>.Fail(result.Error.Code, result.Error.Message));
     }
 
+    [Authorize(Roles = "SuperAdmin")]
     [HttpPost("{id:guid}/suspend")]
     public async Task<IActionResult> Suspend(Guid id, CancellationToken ct)
     {
