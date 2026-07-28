@@ -27,6 +27,24 @@ services:
       retries: 10
       start_period: 15s
 
+  sqlserver:
+    <<: *common
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    container_name: saferide-sqlserver
+    environment:
+      ACCEPT_EULA: "Y"
+      MSSQL_SA_PASSWORD: "SafeRide@123"
+    ports:
+      - "1433:1433"
+    volumes:
+      - sqlserver-data:/var/opt/mssql
+    healthcheck:
+      test: ["CMD-SHELL", "/opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P \"SafeRide@123\" -C -Q \"SELECT 1\" || exit 1"]
+      interval: 15s
+      timeout: 10s
+      retries: 10
+      start_period: 40s
+
   rabbitmq:
     <<: *common
     image: rabbitmq:4-management-alpine
@@ -77,6 +95,30 @@ services:
       rabbitmq:
         condition: service_healthy
 
+  school-service:
+    <<: *common
+    build:
+      context: .
+      dockerfile: server/services/school-service/SafeRide.School/Dockerfile
+    image: saferide/school-service:local
+    container_name: saferide-school
+    ports:
+      - "5003:8080"
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      ConnectionStrings__Default: "Server=sqlserver,1433;Database=SafeRide_School_Db;User Id=sa;Password=SafeRide@123;TrustServerCertificate=True"
+      RabbitMQ__Host: rabbitmq
+      RabbitMQ__Username: ${RABBITMQ_USER}
+      RabbitMQ__Password: ${RABBITMQ_PASSWORD}
+      JwtSettings__Secret: ${JWT_SECRET}
+      JwtSettings__Issuer: ${JWT_ISSUER}
+      JwtSettings__Audience: ${JWT_AUDIENCE}
+    depends_on:
+      sqlserver:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+
 networks:
   saferide-net:
     driver: bridge
@@ -85,3 +127,4 @@ volumes:
   postgres-data:
   rabbitmq-data:
   identity-logs:
+  sqlserver-data:
