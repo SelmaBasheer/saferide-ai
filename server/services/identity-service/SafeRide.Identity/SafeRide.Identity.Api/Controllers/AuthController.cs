@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using SafeRide.Identity.Api.Common;
 using SafeRide.Identity.Api.Contracts;
 using SafeRide.Identity.Application.Auth.Login;
@@ -59,6 +60,7 @@ public class AuthController(
         ));
     }
 
+    [EnableRateLimiting("otp")]
     [AllowAnonymous]
     [HttpPost("forgot-password")]
     public async Task<IActionResult> ForgotPassword(
@@ -68,10 +70,15 @@ public class AuthController(
     )
     {
         await handler.HandleAsync(command, ct);
-        // always the same response — no account enumeration
-        return Ok(ApiResponse<object?>.Ok(null, "An OTP has been sent to the registered email."));
+        return Ok(
+            ApiResponse<object?>.Ok(
+                null,
+                "If an account exists for this email, an OTP has been sent."
+            )
+        );
     }
 
+    [EnableRateLimiting("otp")]
     [AllowAnonymous]
     [HttpPost("resend-otp")]
     public async Task<IActionResult> ResendOtp(
@@ -82,10 +89,16 @@ public class AuthController(
     {
         var result = await handler.HandleAsync(command, ct);
         return result.IsSuccess
-            ? Ok(ApiResponse<object?>.Ok(null, "A new OTP has been sent to the registered email."))
+            ? Ok(
+                ApiResponse<object?>.Ok(
+                    null,
+                    "\"If an account exists for this email, a new OTP has been sent."
+                )
+            )
             : BadRequest(ApiResponse<object?>.Fail(result.Error.Code, result.Error.Message)); // cooldown
     }
 
+    [EnableRateLimiting("otp-verify")]
     [AllowAnonymous]
     [HttpPost("reset-password")]
     public async Task<IActionResult> ResetPassword(

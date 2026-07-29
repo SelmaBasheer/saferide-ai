@@ -7,7 +7,7 @@ public sealed class ResetPasswordCommandValidator : AbstractValidator<ResetPassw
     public ResetPasswordCommandValidator()
     {
         RuleFor(x => x.Email).NotEmpty().EmailAddress();
-        RuleFor(x => x.Otp).NotEmpty().Length(6);
+        RuleFor(x => x.Otp).NotEmpty().Matches("^[0-9]{6}$").WithMessage("OTP must be 6 digits.");
         RuleFor(x => x.NewPassword).NotEmpty().MinimumLength(8);
     }
 }

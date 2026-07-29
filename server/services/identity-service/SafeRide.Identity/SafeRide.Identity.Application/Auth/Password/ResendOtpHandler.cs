@@ -25,9 +25,7 @@ public sealed class ResendOtpHandler(
 
         var last = await otps.GetLatestAsync(user.Id, OtpPurpose.PasswordReset, ct);
         if (last is not null && last.CreatedAtUtc > DateTime.UtcNow.AddSeconds(-60))
-            return Result.Failure(
-                new Error("Otp.Cooldown", "Please wait a minute before requesting another code.")
-            );
+            return Result.Success(); // silent — same as unknown email
 
         var code = otpService.Generate();
         await otps.AddAsync(
@@ -36,21 +34,29 @@ public sealed class ResendOtpHandler(
         );
         await uow.SaveChangesAsync(ct);
 
-        await publisher.PublishAsync(
-            "identity.events",
-            "otp-email-requested",
-            new OtpEmailRequested(
-                user.Id,
-                user.Email.Value,
-                user.FirstName,
-                code,
-                "PasswordReset",
-                DateTime.UtcNow
-            ),
-            ct
-        );
+        try
+        {
+            await publisher.PublishAsync(
+                "identity.events",
+                "otp-email-requested",
+                new OtpEmailRequested(
+                    user.Id,
+                    user.Email.Value,
+                    user.FirstName,
+                    code,
+                    "PasswordReset",
+                    DateTime.UtcNow
+                ),
+                ct
+            );
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Failed to publish OTP event for {UserId}", user.Id);
+        }
 
-        logger.LogInformation("DEV OTP for {Email}: {Code}", user.Email.Value, code);
+        logger.LogInformation("DEV OTP for {UserId}: {Code}", user.Id, code);
+
         return Result.Success();
     }
 }

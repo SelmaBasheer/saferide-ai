@@ -21,7 +21,11 @@ public sealed class ForgotPasswordHandler(
     {
         var user = await users.GetByEmailAsync(cmd.Email.Trim().ToLowerInvariant(), ct);
         if (user is null)
-            return Result.Success(); // don't reveal unknown emails
+            return Result.Success(); // unknown — silent
+
+        var last = await otps.GetLatestAsync(user.Id, OtpPurpose.PasswordReset, ct);
+        if (last is not null && last.CreatedAtUtc > DateTime.UtcNow.AddSeconds(-60))
+            return Result.Success(); // just issued — silent
 
         var code = otpService.Generate();
         await otps.AddAsync(
@@ -30,21 +34,28 @@ public sealed class ForgotPasswordHandler(
         );
         await uow.SaveChangesAsync(ct);
 
-        await publisher.PublishAsync(
-            "identity.events",
-            "otp-email-requested",
-            new OtpEmailRequested(
-                user.Id,
-                user.Email.Value,
-                user.FirstName,
-                code,
-                "PasswordReset",
-                DateTime.UtcNow
-            ),
-            ct
-        );
+        try
+        {
+            await publisher.PublishAsync(
+                "identity.events",
+                "otp-email-requested",
+                new OtpEmailRequested(
+                    user.Id,
+                    user.Email.Value,
+                    user.FirstName,
+                    code,
+                    "PasswordReset",
+                    DateTime.UtcNow
+                ),
+                ct
+            );
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Failed to publish OTP event for {UserId}", user.Id);
+        }
 
-        logger.LogInformation("DEV OTP for {Email}: {Code}", user.Email.Value, code);
+        logger.LogInformation("DEV OTP for {UserId}: {Code}", user.Id, code);
         return Result.Success();
     }
 }
