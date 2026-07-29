@@ -99,4 +99,10 @@ public class User
         LastLoginAt = DateTime.UtcNow;
         UpdatedAtUtc = DateTime.UtcNow;
     }
+
+    public void ResetPassword(string newPasswordHash)
+    {
+        PasswordHash = newPasswordHash;
+        UpdatedAtUtc = DateTime.UtcNow;
+    }
 }

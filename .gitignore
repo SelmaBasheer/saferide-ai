@@ -3,8 +3,19 @@
 *.user
 *.suo
 
-# Build outputs
+# .NET Build outputs
 bin/
 obj/
 
 **/logs/
+
+# Node / frontend
+node_modules/
+client/**/node_modules/
+dist/
+build/
+
+# Secrets / env
+.env
+*.env
+.env.local

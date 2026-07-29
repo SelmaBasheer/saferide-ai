@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using SafeRide.Identity.Application.Auth.Login;
+using SafeRide.Identity.Application.Auth.Password;
 using SafeRide.Identity.Application.Auth.Refresh;
 using SafeRide.Identity.Application.Auth.Register;
 
@@ -69,5 +70,46 @@ public class AuthController(
                 }
             )
             : Unauthorized(new { error = result.Error.Code, message = result.Error.Message });
+    }
+
+    [AllowAnonymous]
+    [HttpPost("forgot-password")]
+    public async Task<IActionResult> ForgotPassword(
+        [FromBody] ForgotPasswordCommand command,
+        [FromServices] ForgotPasswordHandler handler,
+        CancellationToken ct
+    )
+    {
+        await handler.HandleAsync(command, ct);
+        // always the same response — no account enumeration
+        return Ok(ApiResponse<object?>.Ok(null, "An OTP has been sent to the registered email."));
+    }
+
+    [AllowAnonymous]
+    [HttpPost("resend-otp")]
+    public async Task<IActionResult> ResendOtp(
+        [FromBody] ResendOtpCommand command,
+        [FromServices] ResendOtpHandler handler,
+        CancellationToken ct
+    )
+    {
+        var result = await handler.HandleAsync(command, ct);
+        return result.IsSuccess
+            ? Ok(ApiResponse<object?>.Ok(null, "A new OTP has been sent to the registered email."))
+            : BadRequest(ApiResponse<object?>.Fail(result.Error.Code, result.Error.Message)); // cooldown
+    }
+
+    [AllowAnonymous]
+    [HttpPost("reset-password")]
+    public async Task<IActionResult> ResetPassword(
+        [FromBody] ResetPasswordCommand command,
+        [FromServices] ResetPasswordHandler handler,
+        CancellationToken ct
+    )
+    {
+        var result = await handler.HandleAsync(command, ct);
+        return result.IsSuccess
+            ? Ok(ApiResponse<object?>.Ok(null, "Password reset successfully."))
+            : BadRequest(ApiResponse<object?>.Fail(result.Error.Code, result.Error.Message));
     }
 }
