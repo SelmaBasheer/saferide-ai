@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using SafeRide.Identity.Application.Abstractions;
+using SafeRide.Identity.Domain.Repositories;
 using SafeRide.Identity.Infrastructure.Messaging;
 using SafeRide.Identity.Infrastructure.Persistence;
 using SafeRide.Identity.Infrastructure.Persistence.Repositories;
@@ -26,6 +27,7 @@ public static class DependencyInjection
             configuration.GetSection(RabbitMqSettings.SectionName)
         );
 
+        services.AddScoped(typeof(IGenericRepository<>), typeof(GenericRepository<>));
         services.AddScoped<IUserRepository, UserRepository>();
         services.AddScoped<IRefreshTokenRepository, RefreshTokenRepository>();
         services.AddScoped<IUnitOfWork, UnitOfWork>();

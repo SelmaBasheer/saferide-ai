@@ -3,10 +3,9 @@
 *.user
 *.suo
 
-# .NET Build outputs
+# Build outputs
 bin/
 obj/
-
 **/logs/
 
 # Node / frontend
@@ -15,7 +14,7 @@ client/**/node_modules/
 dist/
 build/
 
-# Secrets / env
+# Secrets & local config
 .env
-*.env
-.env.local
+.env.*
+!.env.example

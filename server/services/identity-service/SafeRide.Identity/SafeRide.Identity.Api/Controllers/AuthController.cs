@@ -1,5 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using SafeRide.Identity.Api.Common;
+using SafeRide.Identity.Api.Contracts;
 using SafeRide.Identity.Application.Auth.Login;
 using SafeRide.Identity.Application.Auth.Password;
 using SafeRide.Identity.Application.Auth.Refresh;
@@ -23,16 +25,11 @@ public class AuthController(
     )
     {
         var result = await registerHandler.HandleAsync(command, ct);
-        return result.IsSuccess
-            ? StatusCode(
-                201,
-                new
-                {
-                    userId = result.Value,
-                    message = "School administrator registered successfully.",
-                }
-            )
-            : BadRequest(new { error = result.Error.Code, message = result.Error.Message });
+        return result.ToApiResponse(
+            id => new RegisterResponse(id),
+            StatusCodes.Status201Created,
+            "School administrator registered successfully."
+        );
     }
 
     [AllowAnonymous]
@@ -40,16 +37,11 @@ public class AuthController(
     public async Task<IActionResult> Login([FromBody] LoginCommand command, CancellationToken ct)
     {
         var result = await loginHandler.HandleAsync(command, ct);
-        return result.IsSuccess
-            ? Ok(
-                new
-                {
-                    accessToken = result.Value.AccessToken,
-                    refreshToken = result.Value.RefreshToken,
-                    expiresIn = result.Value.AccessTokenExpiresAtUtc,
-                }
-            )
-            : Unauthorized(new { error = result.Error.Code, message = result.Error.Message });
+        return result.ToApiResponse(v => new AuthResponse(
+            v.AccessToken,
+            v.RefreshToken,
+            v.AccessTokenExpiresAtUtc
+        ));
     }
 
     [AllowAnonymous]
@@ -60,16 +52,11 @@ public class AuthController(
     )
     {
         var result = await refreshHandler.HandleAsync(command, ct);
-        return result.IsSuccess
-            ? Ok(
-                new
-                {
-                    accessToken = result.Value.AccessToken,
-                    refreshToken = result.Value.RefreshToken,
-                    expiresIn = result.Value.AccessTokenExpiresAtUtc,
-                }
-            )
-            : Unauthorized(new { error = result.Error.Code, message = result.Error.Message });
+        return result.ToApiResponse(v => new AuthResponse(
+            v.AccessToken,
+            v.RefreshToken,
+            v.AccessTokenExpiresAtUtc
+        ));
     }
 
     [AllowAnonymous]
