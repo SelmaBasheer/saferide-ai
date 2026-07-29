@@ -1,5 +1,6 @@
 using SafeRide.Schools.Domain.Common;
 using SafeRide.Schools.Domain.Enums;
+using SafeRide.Schools.Domain.Exceptions;
 
 namespace SafeRide.Schools.Domain.Entities;
 
@@ -58,6 +59,11 @@ public class School : BaseEntity
 
     public void Approve()
     {
+        if (Status != SchoolStatus.PendingApproval)
+            throw new DomainException(
+                "School.InvalidTransition",
+                "Only a pending school can be approved."
+            );
         Status = SchoolStatus.Approved;
         ApprovedAtUtc = DateTime.UtcNow;
         UpdatedAtUtc = DateTime.UtcNow;
@@ -65,6 +71,11 @@ public class School : BaseEntity
 
     public void Suspend()
     {
+        if (Status != SchoolStatus.Approved)
+            throw new DomainException(
+                "School.InvalidTransition",
+                "Only an approved school can be suspended."
+            );
         Status = SchoolStatus.Suspended;
         UpdatedAtUtc = DateTime.UtcNow;
     }
