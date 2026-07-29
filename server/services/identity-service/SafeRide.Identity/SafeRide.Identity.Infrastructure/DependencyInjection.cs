@@ -37,6 +37,9 @@ public static class DependencyInjection
         services.AddSingleton<IJwtTokenService, JwtTokenService>();
         services.AddSingleton<IEventPublisher, RabbitMqEventPublisher>();
 
+        services.AddSingleton<IOtpService, OtpService>();
+        services.AddScoped<IOtpCodeRepository, OtpCodeRepository>();
+
         return services;
     }
 }

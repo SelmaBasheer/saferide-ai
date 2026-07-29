@@ -1,0 +1,61 @@
+using Microsoft.Extensions.Logging;
+using SafeRide.Identity.Application.Abstractions;
+using SafeRide.Identity.Application.Common;
+using SafeRide.Identity.Application.Events;
+using SafeRide.Identity.Domain.Entities;
+using SafeRide.Identity.Domain.Enums;
+using SafeRide.Identity.Domain.Repositories;
+
+namespace SafeRide.Identity.Application.Auth.Password;
+
+public sealed class ForgotPasswordHandler(
+    IUserRepository users,
+    IOtpCodeRepository otps,
+    IOtpService otpService,
+    IUnitOfWork uow,
+    IEventPublisher publisher,
+    ILogger<ForgotPasswordHandler> logger
+)
+{
+    public async Task<Result> HandleAsync(ForgotPasswordCommand cmd, CancellationToken ct)
+    {
+        var user = await users.GetByEmailAsync(cmd.Email.Trim().ToLowerInvariant(), ct);
+        if (user is null)
+            return Result.Success(); // unknown — silent
+
+        var last = await otps.GetLatestAsync(user.Id, OtpPurpose.PasswordReset, ct);
+        if (last is not null && last.CreatedAtUtc > DateTime.UtcNow.AddSeconds(-60))
+            return Result.Success(); // just issued — silent
+
+        var code = otpService.Generate();
+        await otps.AddAsync(
+            OtpCode.Issue(user.Id, otpService.Hash(code), OtpPurpose.PasswordReset),
+            ct
+        );
+        await uow.SaveChangesAsync(ct);
+
+        try
+        {
+            await publisher.PublishAsync(
+                "identity.events",
+                "otp-email-requested",
+                new OtpEmailRequested(
+                    user.Id,
+                    user.Email.Value,
+                    user.FirstName,
+                    code,
+                    "PasswordReset",
+                    DateTime.UtcNow
+                ),
+                ct
+            );
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Failed to publish OTP event for {UserId}", user.Id);
+        }
+
+        logger.LogInformation("DEV OTP for {UserId}: {Code}", user.Id, code);
+        return Result.Success();
+    }
+}

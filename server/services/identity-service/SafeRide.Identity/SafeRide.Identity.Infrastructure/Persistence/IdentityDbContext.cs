@@ -9,6 +9,7 @@ public sealed class IdentityDbContext(DbContextOptions<IdentityDbContext> option
 {
     public DbSet<User> Users => Set<User>();
     public DbSet<RefreshToken> RefreshTokens => Set<RefreshToken>();
+    public DbSet<OtpCode> OtpCodes => Set<OtpCode>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -33,6 +34,13 @@ public sealed class IdentityDbContext(DbContextOptions<IdentityDbContext> option
         modelBuilder.Entity<RefreshToken>(entity =>
         {
             entity.HasIndex(rt => rt.TokenHash).IsUnique();
+        });
+
+        modelBuilder.Entity<OtpCode>(e =>
+        {
+            e.HasKey(o => o.Id);
+            e.Property(o => o.CodeHash).IsRequired();
+            e.HasIndex(o => new { o.UserId, o.Purpose });
         });
     }
 }

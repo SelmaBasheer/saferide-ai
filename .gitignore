@@ -6,11 +6,15 @@
 # Build outputs
 bin/
 obj/
+**/logs/
+
+# Node / frontend
+node_modules/
+client/**/node_modules/
+dist/
+build/
 
 # Secrets & local config
 .env
 .env.*
 !.env.example
-
-# Docker
-**/logs/
