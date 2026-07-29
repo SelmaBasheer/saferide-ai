@@ -8,11 +8,10 @@ public sealed class SchoolDbContextFactory : IDesignTimeDbContextFactory<SchoolD
 {
     public SchoolDbContext CreateDbContext(string[] args)
     {
-        var options = new DbContextOptionsBuilder<SchoolDbContext>()
-            .UseSqlServer(
-                "Server=localhost,1433;Database=SafeRide_School_Db;User Id=sa;Password=SafeRide@123;TrustServerCertificate=True"
-            )
-            .Options;
+        var conn =
+            Environment.GetEnvironmentVariable("ConnectionStrings__Default")
+            ?? "Server=localhost,1433;Database=SafeRide_School_Db;User Id=sa;Password=SafeRide@123;TrustServerCertificate=True";
+        var options = new DbContextOptionsBuilder<SchoolDbContext>().UseSqlServer(conn).Options;
         return new SchoolDbContext(options);
     }
 }
