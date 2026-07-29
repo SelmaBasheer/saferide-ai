@@ -1,0 +1,19 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Microsoft.EntityFrameworkCore" Version="10.0.10" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" Version="10.0.10" />
+    <PackageReference Include="Microsoft.Extensions.Hosting" Version="10.0.10" />
+    <PackageReference
+      Include="Microsoft.Extensions.Options.ConfigurationExtensions"
+      Version="10.0.10"
+    />
+    <PackageReference Include="RabbitMQ.Client" Version="7.2.1" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\SafeRide.Schools.Application\SafeRide.Schools.Application.csproj" />
+    <ProjectReference Include="..\SafeRide.Schools.Domain\SafeRide.Schools.Domain.csproj" />
+  </ItemGroup>
+</Project>

@@ -63,3 +63,6 @@ dotnet_diagnostic.CA1848.severity = none   # LoggerMessage delegates (perf micro
 
 [**/Migrations/*.cs]
 generated_code = true
+
+[*]
+end_of_line = lf

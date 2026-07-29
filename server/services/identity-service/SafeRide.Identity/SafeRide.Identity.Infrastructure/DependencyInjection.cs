@@ -36,6 +36,7 @@ public static class DependencyInjection
         services.AddSingleton<IPasswordHasher, BCryptPasswordHasher>();
         services.AddSingleton<IJwtTokenService, JwtTokenService>();
         services.AddSingleton<IEventPublisher, RabbitMqEventPublisher>();
+        services.AddHostedService<SchoolEventsConsumer>();
 
         services.AddSingleton<IOtpService, OtpService>();
         services.AddScoped<IOtpCodeRepository, OtpCodeRepository>();
