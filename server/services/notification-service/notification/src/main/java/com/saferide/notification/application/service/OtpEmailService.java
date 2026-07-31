@@ -18,6 +18,9 @@ public class OtpEmailService {
     }
 
     public void sendOtp(OtpEmailRequested event) {
+        if (event.email() == null || event.email().isBlank()) {
+            throw new IllegalArgumentException("OTP event has no email address");
+        }
         String name = (event.firstName() == null || event.firstName().isBlank()) ? "there" : event.firstName();
         Context ctx = new Context();
         ctx.setVariable("name", name);

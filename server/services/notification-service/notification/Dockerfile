@@ -15,6 +15,6 @@ RUN mvn -q -B clean package -DskipTests
 # ---- Runtime stage: just the JRE + the jar ----
 FROM eclipse-temurin:21-jre-alpine
 WORKDIR /app
-COPY --from=build /app/target/notification-0.0.1-SNAPSHOT.jar app.jar
+COPY --from=build /app/target/notification.jar app.jar
 EXPOSE 8080
 ENTRYPOINT ["java", "-jar", "app.jar"]

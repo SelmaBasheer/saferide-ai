@@ -1,9 +1,9 @@
 spring:
   rabbitmq:
-    host: localhost
-    port: 5672
-    username: saferide
-    password: password
+    host: ${SPRING_RABBITMQ_HOST:localhost}
+    port: ${SPRING_RABBITMQ_PORT:5672}
+    username: ${SPRING_RABBITMQ_USER:guest}
+    password: ${SPRING_RABBITMQ_PASSWORD:guest}
 
 sendgrid:
   api-key: ${SENDGRID_API_KEY}       # "read from the env variable"

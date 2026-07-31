@@ -19,6 +19,6 @@ public class OtpEventConsumer {
     @RabbitListener(queues = "${saferide.rabbitmq.otp-queue}")
     public void handle(OtpEmailRequested event) {
         otpEmailService.sendOtp(event);
-        log.info("Received OTP event for {} -> code {}", event.email(), event.code());
+        log.info("Processed OTP email event for user {}", event.userId());
     }
 }
