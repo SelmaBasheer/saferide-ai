@@ -15,15 +15,24 @@ import org.springframework.context.annotation.Configuration;
 @Configuration
 public class RabbitConfig {
 
-    @Value("${saferide.rabbitmq.identity-exchange}") String exchange;
-    @Value("${saferide.rabbitmq.otp-queue}") String queue;
-    @Value("${saferide.rabbitmq.otp-routing-key}") String routingKey;
+    @Value("${saferide.rabbitmq.identity-exchange}")
+    String exchange;
+
+    @Value("${saferide.rabbitmq.otp-queue}")
+    String queue;
+
+    @Value("${saferide.rabbitmq.otp-routing-key}")
+    String routingKey;
 
     @Bean
-    TopicExchange identityExchange() { return new TopicExchange(exchange, true, false); }
+    TopicExchange identityExchange() {
+        return new TopicExchange(exchange, true, false);
+    }
 
     @Bean
-    Queue otpQueue() { return new Queue(queue, true); }
+    Queue otpQueue() {
+        return new Queue(queue, true);
+    }
 
     @Bean
     Binding otpBinding() {

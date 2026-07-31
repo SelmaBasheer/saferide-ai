@@ -5,22 +5,27 @@ import com.sendgrid.*;
 import com.sendgrid.helpers.mail.Mail;
 import com.sendgrid.helpers.mail.objects.Content;
 import com.sendgrid.helpers.mail.objects.Email;
+import java.io.IOException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
-import java.io.IOException;
 
 @Component
 public class SendGridEmailSender implements EmailSender {
     private static final Logger log = LoggerFactory.getLogger(SendGridEmailSender.class);
     private final SendGridProperties props;
 
-    public SendGridEmailSender(SendGridProperties props) { this.props = props; }
+    public SendGridEmailSender(SendGridProperties props) {
+        this.props = props;
+    }
 
     @Override
     public void send(String to, String subject, String htmlBody) {
-        Mail mail = new Mail(new Email(props.fromEmail(), props.fromName()), subject,
-            new Email(to), new Content("text/html", htmlBody));
+        Mail mail = new Mail(
+                new Email(props.fromEmail(), props.fromName()),
+                subject,
+                new Email(to),
+                new Content("text/html", htmlBody));
         Request request = new Request();
         try {
             request.setMethod(Method.POST);

@@ -11,7 +11,10 @@ import org.springframework.stereotype.Component;
 public class OtpEventConsumer {
     private final OtpEmailService otpEmailService;
     private static final Logger log = LoggerFactory.getLogger(OtpEventConsumer.class);
-    public OtpEventConsumer(OtpEmailService otpEmailService) { this.otpEmailService = otpEmailService; }
+
+    public OtpEventConsumer(OtpEmailService otpEmailService) {
+        this.otpEmailService = otpEmailService;
+    }
 
     @RabbitListener(queues = "${saferide.rabbitmq.otp-queue}")
     public void handle(OtpEmailRequested event) {

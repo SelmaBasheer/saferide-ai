@@ -1,7 +1,7 @@
 package com.saferide.notification.application.service;
 
-import com.saferide.notification.application.port.EmailSender;
 import com.saferide.notification.application.event.OtpEmailRequested;
+import com.saferide.notification.application.port.EmailSender;
 import org.springframework.stereotype.Service;
 import org.thymeleaf.context.Context;
 import org.thymeleaf.spring6.SpringTemplateEngine;
@@ -18,12 +18,11 @@ public class OtpEmailService {
     }
 
     public void sendOtp(OtpEmailRequested event) {
-        String name = (event.firstName() == null || event.firstName().isBlank())
-            ? "there" : event.firstName();
+        String name = (event.firstName() == null || event.firstName().isBlank()) ? "there" : event.firstName();
         Context ctx = new Context();
         ctx.setVariable("name", name);
         ctx.setVariable("code", event.code());
-        String html = templateEngine.process("otp-email", ctx);  // Thymeleaf → HTML
-        emailSender.send(event.email(), SUBJECT, html);           // SendGrid → inbox
+        String html = templateEngine.process("otp-email", ctx); // Thymeleaf → HTML
+        emailSender.send(event.email(), SUBJECT, html); // SendGrid → inbox
     }
 }
