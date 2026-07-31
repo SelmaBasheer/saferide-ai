@@ -119,6 +119,26 @@ services:
       rabbitmq:
         condition: service_healthy
 
+  notification-service:
+    <<: *common
+    build:
+      context: server/services/notification-service/notification
+      dockerfile: Dockerfile
+    image: saferide/notification-service:local
+    container_name: saferide-notification
+    ports:
+      - "${NOTIFICATION_PORT:-5005}:8080"
+    environment:
+      SPRING_RABBITMQ_HOST: rabbitmq
+      SPRING_RABBITMQ_PORT: "5672"
+      SPRING_RABBITMQ_USERNAME: ${RABBITMQ_USER}
+      SPRING_RABBITMQ_PASSWORD: ${RABBITMQ_PASSWORD}
+      SENDGRID_API_KEY: ${SENDGRID_API_KEY}
+      SENDGRID_FROM_EMAIL: ${SENDGRID_FROM_EMAIL}
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+
 networks:
   saferide-net:
     driver: bridge

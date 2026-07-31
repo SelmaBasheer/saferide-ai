@@ -47,3 +47,17 @@ export interface ApiResponse<T> {
     message: string | null
     error: { code: string; message: string } | null
 }
+
+export interface ForgotPasswordRequest {
+    email: string
+}
+
+export interface ResendOtpRequest {
+    email: string
+}
+
+export interface ResetPasswordRequest {
+    email: string;
+    otp: string;
+    newPassword: string
+}

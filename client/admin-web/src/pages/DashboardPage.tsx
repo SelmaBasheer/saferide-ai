@@ -1,73 +1,101 @@
-import { useNavigate } from "react-router-dom"
-import { Bus, LogOut } from "lucide-react"
-import { useAppSelector, useAppDispatch } from "@/app/hooks"
-import { logout } from "@/features/auth/authSlice"
+import { useState } from "react"
+import DashboardLayout from "@/components/layout/DashboardLayout"
+import {
+    useGetSchoolsQuery, useApproveSchoolMutation, useSuspendSchoolMutation,
+    type SchoolStatus,
+} from "@/features/schools/schoolApi"
 import { Button } from "@/components/ui/button"
+import { School, Users, BarChart3 } from "lucide-react"
 
-export default function DashboardPage() {
-    const navigate = useNavigate()
-    const dispatch = useAppDispatch()
-    const user = useAppSelector((state) => state.auth.user)
 
-    function handleLogout() {
-        dispatch(logout())
-        navigate("/login", { replace: true })
-    }
+const FILTERS: { label: string; value: SchoolStatus | "All" }[] = [
+    { label: "All", value: "All" },
+    { label: "Pending", value: "PendingApproval" },
+    { label: "Approved", value: "Approved" },
+    { label: "Suspended", value: "Suspended" },
+]
 
-    const initials =
-        user?.email?.slice(0, 2).toUpperCase() ?? "SR"
-
-    return (
-        <div className="min-h-screen bg-slate-100">
-            {/* Top bar */}
-            <header className="flex items-center justify-between border-b border-slate-200 bg-white px-6 py-3">
-                <div className="flex items-center gap-2">
-                    <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-sky-700">
-                        <Bus className="h-4 w-4 text-white" />
-                    </div>
-                    <span className="font-semibold text-slate-800">SafeRide AI</span>
-                </div>
-                <Button variant="outline" onClick={handleLogout}>
-                    <LogOut className="mr-1 h-4 w-4" />
-                    Sign out
-                </Button>
-            </header>
-
-            {/* Content */}
-            <main className="mx-auto max-w-4xl px-6 py-10">
-                <div className="rounded-2xl bg-white p-6 shadow-sm">
-                    <div className="flex items-center gap-4">
-                        <div className="flex h-14 w-14 items-center justify-center rounded-full bg-sky-100 text-lg font-semibold text-sky-700">
-                            {initials}
-                        </div>
-                        <div>
-                            <h1 className="text-xl font-semibold text-slate-800">
-                                Welcome back
-                            </h1>
-                            <p className="text-sm text-slate-500">{user?.email}</p>
-                        </div>
-                        <span className="ml-auto rounded-full bg-amber-100 px-3 py-1 text-xs font-medium text-amber-800">
-                            {user?.role}
-                        </span>
-                    </div>
-                </div>
-
-                <div className="mt-6 grid gap-4 sm:grid-cols-3">
-                    <StatCard label="Schools" value="—" note="Total schools" />
-                    <StatCard label="Active" value="—" note="Active schools" />
-                    <StatCard label="Suspended" value="—" note="Suspended schools" />
-                </div>
-            </main>
-        </div>
-    )
+const badge: Record<SchoolStatus, string> = {
+    PendingApproval: "bg-amber-100 text-amber-700",
+    Approved: "bg-green-100 text-green-700",
+    Suspended: "bg-red-100 text-red-700",
 }
 
-function StatCard({ label, value, note }: { label: string; value: string; note: string }) {
+export default function DashboardPage() {
+    const { data: schools = [], isLoading, isError } = useGetSchoolsQuery()
+    const [approve, { isLoading: approving }] = useApproveSchoolMutation()
+    const [suspend, { isLoading: suspending }] = useSuspendSchoolMutation()
+    const [filter, setFilter] = useState<SchoolStatus | "All">("All")
+
+    const rows = filter === "All" ? schools : schools.filter((s) => s.status === filter)
+
     return (
-        <div className="rounded-xl border border-slate-200 bg-white p-5">
-            <p className="text-sm text-slate-500">{label}</p>
-            <p className="mt-1 text-2xl font-semibold text-slate-800">{value}</p>
-            <p className="mt-1 text-xs text-slate-400">{note}</p>
-        </div>
+        <DashboardLayout roleLabel="Super Admin" nav={[
+            { label: "Schools", icon: School, active: true },
+            { label: "Users", icon: Users },
+            { label: "Reports", icon: BarChart3 },
+        ]}>
+            <h1 className="text-2xl font-semibold text-slate-800">Schools</h1>
+            <p className="mt-1 text-sm text-slate-500">Approve or suspend registered schools.</p>
+
+            <div className="mt-6 flex gap-2">
+                {FILTERS.map((f) => (
+                    <button key={f.value} onClick={() => setFilter(f.value)}
+                        className={`rounded-full px-4 py-1.5 text-sm ${filter === f.value ? "bg-sky-700 text-white" : "bg-white text-slate-600 border"}`}>
+                        {f.label}
+                    </button>
+                ))}
+            </div>
+
+            <div className="mt-4 overflow-hidden rounded-lg border bg-white">
+                {isLoading ? (
+                    <p className="p-6 text-sm text-slate-500">Loading schools…</p>
+                ) : isError ? (
+                    <p className="p-6 text-sm text-red-600">Failed to load schools.</p>
+                ) : rows.length === 0 ? (
+                    <p className="p-6 text-sm text-slate-500">No schools found.</p>
+                ) : (
+                    <table className="w-full text-sm">
+                        <thead className="bg-slate-50 text-left text-slate-500">
+                            <tr>
+                                <th className="px-4 py-3 font-medium">School</th>
+                                <th className="px-4 py-3 font-medium">Admin</th>
+                                <th className="px-4 py-3 font-medium">Location</th>
+                                <th className="px-4 py-3 font-medium">Status</th>
+                                <th className="px-4 py-3 font-medium text-right">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody className="divide-y">
+                            {rows.map((s) => (
+                                <tr key={s.id} className="hover:bg-slate-50">
+                                    <td className="px-4 py-3 font-medium text-slate-800">{s.name}</td>
+                                    <td className="px-4 py-3 text-slate-600">
+                                        <div>{s.adminName}</div>
+                                        <div className="text-xs text-slate-400">{s.adminEmail}</div>
+                                    </td>
+                                    <td className="px-4 py-3 text-slate-600">{s.city}, {s.district}, {s.state}</td>
+                                    <td className="px-4 py-3">
+                                        <span className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${badge[s.status]}`}>
+                                            {s.status === "PendingApproval" ? "Pending" : s.status}
+                                        </span>
+                                    </td>
+                                    <td className="px-4 py-3 text-right">
+                                        {s.status === "PendingApproval" && (
+                                            <Button size="sm" disabled={approving}
+                                                onClick={() => approve(s.id)}>Approve</Button>
+                                        )}
+                                        {s.status === "Approved" && (
+                                            <Button size="sm" variant="destructive" disabled={suspending}
+                                                onClick={() => suspend(s.id)}>Suspend</Button>
+                                        )}
+                                        {s.status === "Suspended" && <span className="text-xs text-slate-400">—</span>}
+                                    </td>
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
+                )}
+            </div>
+        </DashboardLayout>
     )
 }

@@ -1,0 +1,17 @@
+spring:
+  rabbitmq:
+    host: localhost
+    port: 5672
+    username: saferide
+    password: password
+
+sendgrid:
+  api-key: ${SENDGRID_API_KEY}       # "read from the env variable"
+  from-email: ${SENDGRID_FROM_EMAIL}
+  from-name: SafeRide AI
+
+saferide:
+  rabbitmq:
+    identity-exchange: identity.events
+    otp-queue: notification.otp-email
+    otp-routing-key: otp-email-requested
