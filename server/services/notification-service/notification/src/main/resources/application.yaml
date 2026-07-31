@@ -1,0 +1,17 @@
+spring:
+  rabbitmq:
+    host: ${SPRING_RABBITMQ_HOST:localhost}
+    port: ${SPRING_RABBITMQ_PORT:5672}
+    username: ${SPRING_RABBITMQ_USERNAME:guest}
+    password: ${SPRING_RABBITMQ_PASSWORD:guest}
+
+sendgrid:
+  api-key: ${SENDGRID_API_KEY}       # "read from the env variable"
+  from-email: ${SENDGRID_FROM_EMAIL}
+  from-name: SafeRide AI
+
+saferide:
+  rabbitmq:
+    identity-exchange: identity.events
+    otp-queue: notification.otp-email
+    otp-routing-key: otp-email-requested

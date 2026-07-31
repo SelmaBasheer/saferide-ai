@@ -5,6 +5,9 @@ import type {
     AuthResponse,
     RegisterResponse,
     ApiResponse,
+    ForgotPasswordRequest,
+    ResendOtpRequest,
+    ResetPasswordRequest
 } from "./authTypes"
 
 /** Auth endpoints, injected into the base API. */
@@ -19,8 +22,24 @@ export const authApi = baseApi.injectEndpoints({
             query: (body) => ({ url: "/auth/register/school-admin", method: "POST", body }),
             transformResponse: (r: ApiResponse<RegisterResponse>) => r.data,
         }),
+        forgotPassword: builder.mutation<null, ForgotPasswordRequest>({
+            query: (body) => ({ url: "/auth/forgot-password", method: "POST", body }),
+            transformResponse: (r: ApiResponse<null>) => r.data,
+        }),
+        resendOtp: builder.mutation<null, ResendOtpRequest>({
+            query: (body) => ({ url: "/auth/resend-otp", method: "POST", body }),
+            transformResponse: (r: ApiResponse<null>) => r.data,
+        }),
+        resetPassword: builder.mutation<null, ResetPasswordRequest>({
+            query: (body) => ({ url: "/auth/reset-password", method: "POST", body }),
+            transformResponse: (r: ApiResponse<null>) => r.data,
+        }),
     }),
 })
 
 // RTK Query auto-generates these hooks from the endpoints above.
-export const { useLoginMutation, useRegisterSchoolAdminMutation } = authApi
+export const { useLoginMutation,
+    useRegisterSchoolAdminMutation,
+    useForgotPasswordMutation,
+    useResendOtpMutation,
+    useResetPasswordMutation } = authApi

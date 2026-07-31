@@ -1,0 +1,10 @@
+export const ROUTES = {
+    home: "/",
+    login: "/login",
+    register: "/register",
+    forgotPassword: "/forgot-password",
+    resetPassword: "/reset-password",
+    dashboard: "/dashboard",
+    superAdmin: "/super-admin",       // SuperAdmin → schools
+    schoolAdmin: "/school-admin",     // SchoolAdmin → their school
+} as const

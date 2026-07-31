@@ -13,6 +13,7 @@ export default defineConfig({
   server: {
     port: 5173,
     proxy: {
+      '/api/schools': { target: 'http://localhost:5003', changeOrigin: true },
       '/api': { target: 'http://localhost:5001', changeOrigin: true },
     },
   },
