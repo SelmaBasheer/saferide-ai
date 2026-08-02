@@ -21,18 +21,18 @@ public sealed class ResetPasswordHandler(
         if (!v.IsValid)
             return Result.Failure(
                 new Error(
-                    "Validation.Failed",
+                    ErrorCodes.ValidationFailed,
                     string.Join(" | ", v.Errors.Select(e => e.ErrorMessage))
                 )
             );
 
         var user = await users.GetByEmailAsync(cmd.Email.Trim().ToLowerInvariant(), ct);
         if (user is null)
-            return Result.Failure(new Error("Otp.Invalid", "Invalid email or OTP."));
+            return Result.Failure(AuthErrors.InvalidOtp);
 
         var otp = await otps.GetLatestAsync(user.Id, OtpPurpose.PasswordReset, ct);
         if (otp is null || !otp.IsValid || !otpService.Verify(cmd.Otp, otp.CodeHash))
-            return Result.Failure(new Error("Otp.Invalid", "Invalid or expired OTP."));
+            return Result.Failure(AuthErrors.InvalidOtp);
 
         user.ResetPassword(passwordHasher.HashPassword(cmd.NewPassword));
         otp.Consume();

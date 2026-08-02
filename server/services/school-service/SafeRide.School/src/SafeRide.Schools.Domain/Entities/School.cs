@@ -61,7 +61,7 @@ public class School : BaseEntity
     {
         if (Status != SchoolStatus.PendingApproval)
             throw new DomainException(
-                "School.InvalidTransition",
+                DomainErrorCodes.InvalidTransition,
                 "Only a pending school can be approved."
             );
         Status = SchoolStatus.Approved;
@@ -73,7 +73,7 @@ public class School : BaseEntity
     {
         if (Status != SchoolStatus.Approved)
             throw new DomainException(
-                "School.InvalidTransition",
+                DomainErrorCodes.InvalidTransition,
                 "Only an approved school can be suspended."
             );
         Status = SchoolStatus.Suspended;

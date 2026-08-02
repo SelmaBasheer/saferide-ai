@@ -1,4 +1,4 @@
-namespace SafeRide.Schools.Domain.Common;
+namespace SafeRide.Schools.Application.Common;
 
 // Result pattern for expected business outcomes (no exceptions on the happy/expected path).
 public class Result

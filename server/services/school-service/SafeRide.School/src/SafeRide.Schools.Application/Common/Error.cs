@@ -1,4 +1,4 @@
-namespace SafeRide.Schools.Domain.Common;
+namespace SafeRide.Schools.Application.Common;
 
 public sealed record Error(string Code, string Message)
 {

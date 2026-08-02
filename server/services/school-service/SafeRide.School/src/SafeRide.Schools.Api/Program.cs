@@ -1,3 +1,4 @@
+using AutoMapper;
 using Microsoft.EntityFrameworkCore;
 using SafeRide.Schools.Api.Extensions;
 using SafeRide.Schools.Api.Mapping;
@@ -25,6 +26,8 @@ builder.Services.AddProblemDetails();
 builder.Services.AddJwtAuthentication(builder.Configuration);
 
 var app = builder.Build();
+
+app.Services.GetRequiredService<IMapper>().ConfigurationProvider.AssertConfigurationIsValid();
 
 using (var scope = app.Services.CreateScope())
 {

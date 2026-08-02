@@ -1,4 +1,5 @@
 using SafeRide.Schools.Application.Abstractions;
+using SafeRide.Schools.Application.Common;
 using SafeRide.Schools.Application.Events;
 using SafeRide.Schools.Domain.Common;
 using SafeRide.Schools.Domain.Entities;
@@ -16,7 +17,7 @@ public sealed class ApproveSchoolHandler(
     {
         var school = await schools.GetByIdAsync(id, ct);
         if (school is null)
-            return Result.Failure(new Error("School.NotFound", "School not found."));
+            return Result.Failure(SchoolErrors.SchoolNotFound);
 
         school.Approve();
         await unitOfWork.SaveChangesAsync(ct);
