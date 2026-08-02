@@ -17,10 +17,22 @@ public sealed class UnitOfWork(IdentityDbContext dbContext) : IUnitOfWork
         {
             throw new ConcurrencyConflictException("Concurrency conflict on SaveChanges.", ex);
         }
-        catch (DbUpdateException ex)
-            when (ex.InnerException is PostgresException { SqlState: "23505" })
+        catch (DbUpdateException ex) when (ex.InnerException is PostgresException pg)
         {
-            throw new DuplicateEntityException("Unique constraint violation on SaveChanges.", ex);
+            throw pg.SqlState switch
+            {
+                PostgresErrorCodes.UniqueViolation => new DuplicateEntityException(
+                    "A record with the same value already exists.",
+                    ex
+                ),
+                PostgresErrorCodes.ForeignKeyViolation
+                or PostgresErrorCodes.NotNullViolation
+                or PostgresErrorCodes.CheckViolation => new DataIntegrityException(
+                    "The data provided violates a database constraint.",
+                    ex
+                ),
+                _ => new InfrastructureException("Database error on SaveChanges.", ex),
+            };
         }
         catch (DbUpdateException ex)
         {

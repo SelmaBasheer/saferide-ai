@@ -17,10 +17,16 @@ public sealed class UnitOfWork(DbContext context) : IUnitOfWork
         {
             throw new ConcurrencyConflictException("Concurrency conflict on SaveChanges.", ex);
         }
-        catch (DbUpdateException ex)
-            when (ex.InnerException is SqlException { Number: 2627 or 2601 })
+        catch (DbUpdateException ex) when (ex.InnerException is SqlException sql)
         {
-            throw new DuplicateEntityException("Unique constraint violation on SaveChanges.", ex);
+            throw sql.Number switch
+            {
+                2627 or 2601 => // unique constraint / index
+                new DuplicateEntityException("A record with the same value already exists.", ex),
+                515 or 547 => // 515 = NULL into NOT NULL, 547 = FK/check constraint
+                new DataIntegrityException("The data provided violates a database constraint.", ex),
+                _ => new InfrastructureException("Database error on SaveChanges.", ex),
+            };
         }
         catch (DbUpdateException ex)
         {

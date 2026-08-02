@@ -31,6 +31,11 @@ public sealed class GlobalExceptionHandler(ILogger<GlobalExceptionHandler> logge
                 "Db.Concurrency",
                 "The record was changed by another request. Please try again."
             ),
+            DataIntegrityException => (
+                StatusCodes.Status400BadRequest,
+                "Db.ConstraintViolation",
+                "The request could not be completed due to a data constraint."
+            ),
             InfrastructureException => (
                 StatusCodes.Status503ServiceUnavailable,
                 "Infrastructure.Error",
