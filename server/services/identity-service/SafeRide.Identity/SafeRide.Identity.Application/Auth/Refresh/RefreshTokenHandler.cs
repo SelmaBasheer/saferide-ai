@@ -25,7 +25,7 @@ public sealed class RefreshTokenHandler(
         if (!validation.IsValid)
             return Result.Failure<RefreshTokenResult>(
                 new Error(
-                    "Validation.Failed",
+                    ErrorCodes.ValidationFailed,
                     string.Join(" | ", validation.Errors.Select(e => e.ErrorMessage))
                 )
             );
@@ -40,9 +40,7 @@ public sealed class RefreshTokenHandler(
         if (existingToken is null || !existingToken.IsActive)
         {
             logger.LogWarning("Refresh failed — token invalid, expired, or already revoked");
-            return Result.Failure<RefreshTokenResult>(
-                new Error("Auth.InvalidRefreshToken", "Refresh token is invalid or expired.")
-            );
+            return Result.Failure<RefreshTokenResult>(AuthErrors.InvalidRefreshToken);
         }
 
         var user = await users.GetByIdAsync(existingToken.UserId, ct);
@@ -52,9 +50,7 @@ public sealed class RefreshTokenHandler(
                 "Refresh failed — account not active for UserId {UserId}",
                 existingToken.UserId
             );
-            return Result.Failure<RefreshTokenResult>(
-                new Error("Auth.AccountNotActive", "Account is not active.")
-            );
+            return Result.Failure<RefreshTokenResult>(AuthErrors.AccountNotActive);
         }
 
         existingToken.Revoke();

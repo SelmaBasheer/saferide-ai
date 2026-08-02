@@ -27,7 +27,7 @@ public sealed class RegisterSchoolAdminHandler(
         if (!validation.IsValid)
             return Result.Failure<Guid>(
                 new Error(
-                    "Validation.Failed",
+                    ErrorCodes.ValidationFailed,
                     string.Join(" | ", validation.Errors.Select(e => e.ErrorMessage))
                 )
             );
@@ -35,9 +35,7 @@ public sealed class RegisterSchoolAdminHandler(
         if (await userRepository.ExistsByEmailAsync(command.Email, ct))
         {
             logger.LogWarning("Registration failed — email already exists {Email}", command.Email);
-            return Result.Failure<Guid>(
-                new Error("Auth.EmailTaken", "An account with this email already exists.")
-            );
+            return Result.Failure<Guid>(AuthErrors.EmailTaken);
         }
 
         var email = Email.Create(command.Email);

@@ -19,6 +19,16 @@ public sealed class GlobalExceptionHandler(ILogger<GlobalExceptionHandler> logge
         {
             AppException ex => (ex.StatusCode, ex.Code, ex.Message),
             DomainException ex => (StatusCodes.Status400BadRequest, ex.Code, ex.Message),
+            DuplicateEntityException => (
+                StatusCodes.Status409Conflict,
+                "Db.Duplicate",
+                "A record with the same value already exists."
+            ),
+            ConcurrencyConflictException => (
+                StatusCodes.Status409Conflict,
+                "Db.Concurrency",
+                "The record was changed by another request. Please try again."
+            ),
             InfrastructureException => (
                 StatusCodes.Status503ServiceUnavailable,
                 "Infrastructure.Error",

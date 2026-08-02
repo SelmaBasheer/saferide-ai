@@ -26,7 +26,7 @@ public sealed class LoginHandler(
         if (!validation.IsValid)
             return Result.Failure<LoginResult>(
                 new Error(
-                    "Validation.Failed",
+                    ErrorCodes.ValidationFailed,
                     string.Join(" | ", validation.Errors.Select(e => e.ErrorMessage))
                 )
             );
@@ -35,9 +35,7 @@ public sealed class LoginHandler(
         if (user is null || !passwordHasher.VerifyPassword(command.Password, user.PasswordHash))
         {
             logger.LogWarning("Login failed — invalid credentials for {Email}", command.Email);
-            return Result.Failure<LoginResult>(
-                new Error("Auth.InvalidCredentials", "Invalid email or password.")
-            );
+            return Result.Failure<LoginResult>(AuthErrors.InvalidCredentials);
         }
 
         if (!user.CanLogin())
@@ -47,9 +45,7 @@ public sealed class LoginHandler(
                 user.Status,
                 command.Email
             );
-            return Result.Failure<LoginResult>(
-                new Error("Auth.AccountNotActive", $"Account is {user.Status}.")
-            );
+            return Result.Failure<LoginResult>(AuthErrors.AccountNotActive);
         }
 
         var accessToken = jwt.GenerateAccessToken(user);

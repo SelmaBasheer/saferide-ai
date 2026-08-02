@@ -1,3 +1,4 @@
+using AutoMapper;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
@@ -15,7 +16,8 @@ namespace SafeRide.Identity.Api.Controllers;
 public class AuthController(
     RegisterSchoolAdminHandler registerHandler,
     LoginHandler loginHandler,
-    RefreshTokenHandler refreshHandler
+    RefreshTokenHandler refreshHandler,
+    IMapper mapper
 ) : ControllerBase
 {
     [AllowAnonymous]
@@ -29,7 +31,7 @@ public class AuthController(
         return result.ToApiResponse(
             id => new RegisterResponse(id),
             StatusCodes.Status201Created,
-            "School administrator registered successfully."
+            ResponseMessages.Registered
         );
     }
 
@@ -38,11 +40,7 @@ public class AuthController(
     public async Task<IActionResult> Login([FromBody] LoginCommand command, CancellationToken ct)
     {
         var result = await loginHandler.HandleAsync(command, ct);
-        return result.ToApiResponse(v => new AuthResponse(
-            v.AccessToken,
-            v.RefreshToken,
-            v.AccessTokenExpiresAtUtc
-        ));
+        return result.ToApiResponse(v => mapper.Map<AuthResponse>(v));
     }
 
     [AllowAnonymous]
@@ -53,11 +51,7 @@ public class AuthController(
     )
     {
         var result = await refreshHandler.HandleAsync(command, ct);
-        return result.ToApiResponse(v => new AuthResponse(
-            v.AccessToken,
-            v.RefreshToken,
-            v.AccessTokenExpiresAtUtc
-        ));
+        return result.ToApiResponse(v => mapper.Map<AuthResponse>(v));
     }
 
     [EnableRateLimiting("otp")]
@@ -69,13 +63,8 @@ public class AuthController(
         CancellationToken ct
     )
     {
-        await handler.HandleAsync(command, ct);
-        return Ok(
-            ApiResponse<object?>.Ok(
-                null,
-                "If an account exists for this email, an OTP has been sent."
-            )
-        );
+        var result = await handler.HandleAsync(command, ct);
+        return result.ToApiResponse(ResponseMessages.OtpSent);
     }
 
     [EnableRateLimiting("otp")]
@@ -88,14 +77,7 @@ public class AuthController(
     )
     {
         var result = await handler.HandleAsync(command, ct);
-        return result.IsSuccess
-            ? Ok(
-                ApiResponse<object?>.Ok(
-                    null,
-                    "\"If an account exists for this email, a new OTP has been sent."
-                )
-            )
-            : BadRequest(ApiResponse<object?>.Fail(result.Error.Code, result.Error.Message)); // cooldown
+        return result.ToApiResponse(ResponseMessages.OtpResent);
     }
 
     [EnableRateLimiting("otp-verify")]
@@ -108,8 +90,6 @@ public class AuthController(
     )
     {
         var result = await handler.HandleAsync(command, ct);
-        return result.IsSuccess
-            ? Ok(ApiResponse<object?>.Ok(null, "Password reset successfully."))
-            : BadRequest(ApiResponse<object?>.Fail(result.Error.Code, result.Error.Message));
+        return result.ToApiResponse(ResponseMessages.PasswordReset);
     }
 }
