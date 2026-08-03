@@ -6,6 +6,7 @@ using SafeRide.Schools.Domain.Repositories;
 using SafeRide.Schools.Infrastructure.Messaging;
 using SafeRide.Schools.Infrastructure.Persistence;
 using SafeRide.Schools.Infrastructure.Persistence.Repositories;
+using SafeRide.Schools.Infrastructure.Storage;
 
 namespace SafeRide.Schools.Infrastructure;
 
@@ -30,6 +31,8 @@ public static class DependencyInjection
         );
         services.AddScoped<DbContext>(sp => sp.GetRequiredService<SchoolDbContext>());
         services.AddScoped(typeof(IGenericRepository<>), typeof(GenericRepository<>));
+        services.AddScoped<ISchoolRepository, SchoolRepository>();
+        services.AddSingleton<IFileStorage, AzureBlobFileStorage>();
         services.AddScoped<IUnitOfWork, UnitOfWork>();
 
         return services;

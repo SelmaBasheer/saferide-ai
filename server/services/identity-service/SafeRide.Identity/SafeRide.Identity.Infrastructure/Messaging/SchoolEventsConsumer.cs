@@ -96,6 +96,11 @@ public sealed class SchoolEventsConsumer(
                 return;
             user.Activate(e.SchoolId); // Status → Active, links schoolId
             await uow.SaveChangesAsync(ct);
+            logger.LogInformation(
+                "Activated user {UserId} for school {SchoolId}",
+                user.Id,
+                e.SchoolId
+            );
         }
         else if (routingKey == "school-suspended")
         {

@@ -45,6 +45,9 @@ public static class ResultExtensions
         code switch
         {
             ErrorCodes.SchoolNotFound => StatusCodes.Status404NotFound,
+            ErrorCodes.SchoolNotEditable => StatusCodes.Status409Conflict,
+            ErrorCodes.InvalidTransition => StatusCodes.Status409Conflict,
+            ErrorCodes.DocumentNotFound => StatusCodes.Status404NotFound,
             _ => StatusCodes.Status400BadRequest,
         };
 }

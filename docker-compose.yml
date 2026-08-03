@@ -139,6 +139,16 @@ services:
       rabbitmq:
         condition: service_healthy
 
+  azurite:
+    <<: *common
+    image: mcr.microsoft.com/azure-storage/azurite
+    container_name: saferide-azurite
+    command: azurite-blob --blobHost 0.0.0.0 --location /data --skipApiVersionCheck
+    ports:
+      - "10000:10000"
+    volumes:
+      - azurite-data:/data
+
 networks:
   saferide-net:
     driver: bridge
@@ -148,3 +158,4 @@ volumes:
   rabbitmq-data:
   identity-logs:
   sqlserver-data:
+  azurite-data:

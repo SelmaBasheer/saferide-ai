@@ -3,6 +3,7 @@ using SafeRide.Schools.Application.Common;
 using SafeRide.Schools.Application.Events;
 using SafeRide.Schools.Domain.Common;
 using SafeRide.Schools.Domain.Entities;
+using SafeRide.Schools.Domain.Enums;
 using SafeRide.Schools.Domain.Repositories;
 
 namespace SafeRide.Schools.Application.Schools.Command;
@@ -13,18 +14,61 @@ public sealed class ApproveSchoolHandler(
     IEventPublisher publisher
 )
 {
-    public async Task<Result> ApproveAsync(Guid id, CancellationToken ct)
+    public async Task<Result> ApproveAsync(Guid id, Guid reviewerUserId, CancellationToken ct)
     {
         var school = await schools.GetByIdAsync(id, ct);
         if (school is null)
             return Result.Failure(SchoolErrors.SchoolNotFound);
 
-        school.Approve();
+        if (school.Status != SchoolStatus.Submitted)
+            return Result.Failure(SchoolErrors.NotSubmitted);
+
+        school.Approve(reviewerUserId);
         await unitOfWork.SaveChangesAsync(ct);
         await publisher.PublishAsync(
             "school.events",
             "school-approved",
-            new SchoolApproved(school.Id, school.AdminUserId, DateTime.UtcNow),
+            new SchoolApproved(
+                school.Id,
+                school.AdminUserId,
+                school.Name,
+                school.AdminEmail,
+                DateTime.UtcNow
+            ),
+            ct
+        );
+        return Result.Success();
+    }
+
+    public async Task<Result> RejectAsync(
+        Guid id,
+        Guid reviewerUserId,
+        string reason,
+        CancellationToken ct
+    )
+    {
+        if (string.IsNullOrWhiteSpace(reason))
+            return Result.Failure(SchoolErrors.ReasonRequired);
+
+        var school = await schools.GetByIdAsync(id, ct);
+        if (school is null)
+            return Result.Failure(SchoolErrors.SchoolNotFound);
+        if (school.Status != SchoolStatus.Submitted)
+            return Result.Failure(SchoolErrors.NotSubmitted);
+
+        school.Reject(reviewerUserId, reason);
+        await unitOfWork.SaveChangesAsync(ct);
+        await publisher.PublishAsync(
+            "school.events",
+            "school-rejected",
+            new SchoolRejected(
+                school.Id,
+                school.AdminUserId,
+                school.Name,
+                school.AdminEmail,
+                reason,
+                DateTime.UtcNow
+            ),
             ct
         );
         return Result.Success();

@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using SafeRide.Schools.Infrastructure.Persistence;
 
@@ -11,9 +12,11 @@ using SafeRide.Schools.Infrastructure.Persistence;
 namespace SafeRide.Schools.Infrastructure.Persistence.Migrations
 {
     [DbContext(typeof(SchoolDbContext))]
-    partial class SchoolDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260803084258_OnboardingRedesign")]
+    partial class OnboardingRedesign
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -25,6 +28,7 @@ namespace SafeRide.Schools.Infrastructure.Persistence.Migrations
             modelBuilder.Entity("SafeRide.Schools.Domain.Entities.School", b =>
                 {
                     b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
                         .HasColumnType("uniqueidentifier");
 
                     b.Property<string>("Address")
@@ -148,6 +152,7 @@ namespace SafeRide.Schools.Infrastructure.Persistence.Migrations
             modelBuilder.Entity("SafeRide.Schools.Domain.Entities.SchoolDocument", b =>
                 {
                     b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
                         .HasColumnType("uniqueidentifier");
 
                     b.Property<string>("BlobKey")
@@ -188,7 +193,7 @@ namespace SafeRide.Schools.Infrastructure.Persistence.Migrations
                     b.HasIndex("SchoolId", "Type")
                         .IsUnique();
 
-                    b.ToTable("SchoolDocuments", (string)null);
+                    b.ToTable("SchoolDocument");
                 });
 
             modelBuilder.Entity("SafeRide.Schools.Domain.Entities.SchoolDocument", b =>
