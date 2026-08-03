@@ -113,10 +113,13 @@ services:
       JwtSettings__Secret: ${JWT_SECRET}
       JwtSettings__Issuer: ${JWT_ISSUER}
       JwtSettings__Audience: ${JWT_AUDIENCE}
+      AzureStorage__ConnectionString: ${AZURITE_CONNECTION_STRING}
     depends_on:
       sqlserver:
         condition: service_healthy
       rabbitmq:
+        condition: service_healthy
+      azurite:
         condition: service_healthy
 
   notification-service:
@@ -139,6 +142,21 @@ services:
       rabbitmq:
         condition: service_healthy
 
+  azurite:
+    <<: *common
+    image: mcr.microsoft.com/azure-storage/azurite
+    container_name: saferide-azurite
+    command: azurite-blob --blobHost 0.0.0.0 --location /data --skipApiVersionCheck
+    ports:
+      - "10000:10000"
+    volumes:
+      - azurite-data:/data
+    healthcheck:
+      test: ["CMD-SHELL", "node -e \"require('http').get('http://127.0.0.1:10000/devstoreaccount1?comp=list', r => process.exit(r.statusCode < 500 ? 0 : 1)).on('error', () => process.exit(1))\""]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
 networks:
   saferide-net:
     driver: bridge
@@ -148,3 +166,4 @@ volumes:
   rabbitmq-data:
   identity-logs:
   sqlserver-data:
+  azurite-data:

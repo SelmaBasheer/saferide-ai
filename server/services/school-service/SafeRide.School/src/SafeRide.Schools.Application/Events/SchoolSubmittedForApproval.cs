@@ -1,9 +1,8 @@
 namespace SafeRide.Schools.Application.Events;
 
-public sealed record SchoolApproved(
+public sealed record SchoolSubmittedForApproval(
     Guid SchoolId,
-    Guid AdminUserId,
     string SchoolName,
     string AdminEmail,
-    DateTime OccurredAtUtc
+    DateTime SubmittedAtUtc
 );

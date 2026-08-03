@@ -85,7 +85,7 @@ public sealed class IdentityEventsConsumer(
         var schools = scope.ServiceProvider.GetRequiredService<IGenericRepository<School>>();
         var uow = scope.ServiceProvider.GetRequiredService<IUnitOfWork>();
 
-        var school = School.CreatePending(
+        var school = School.CreateDraft(
             e.UserId,
             e.Email,
             e.FirstName,
