@@ -94,7 +94,7 @@ public sealed class SchoolEventsConsumer(
             var user = await users.GetByIdAsync(e.AdminUserId, ct);
             if (user is null)
                 return;
-            user.Activate(e.SchoolId); // Status → Active, links schoolId
+            user.LinkSchool(e.SchoolId);
             await uow.SaveChangesAsync(ct);
             logger.LogInformation(
                 "Activated user {UserId} for school {SchoolId}",

@@ -8,4 +8,5 @@ public static class ErrorCodes
     public const string AccountNotActive = "Auth.AccountNotActive";
     public const string OtpInvalid = "Otp.Invalid";
     public const string ValidationFailed = "Validation.Failed";
+    public const string AlreadyVerified = "Auth.AlreadyVerified";
 }

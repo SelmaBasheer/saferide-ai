@@ -4,6 +4,7 @@ using SafeRide.Identity.Application.Abstractions;
 using SafeRide.Identity.Application.Common;
 using SafeRide.Identity.Application.Events;
 using SafeRide.Identity.Domain.Entities;
+using SafeRide.Identity.Domain.Enums;
 using SafeRide.Identity.Domain.Repositories;
 using SafeRide.Identity.Domain.ValueObjects;
 
@@ -15,6 +16,8 @@ public sealed class RegisterSchoolAdminHandler(
     IUnitOfWork unitOfWork,
     IEventPublisher publisher,
     IValidator<RegisterSchoolAdminCommand> validator,
+    IOtpCodeRepository otps,
+    IOtpService otpService,
     ILogger<RegisterSchoolAdminHandler> logger
 )
 {
@@ -50,6 +53,12 @@ public sealed class RegisterSchoolAdminHandler(
         );
 
         await userRepository.AddAsync(user, ct);
+
+        var code = otpService.Generate();
+        await otps.AddAsync(
+            OtpCode.Issue(user.Id, otpService.Hash(code), OtpPurpose.EmailVerification),
+            ct
+        );
         await unitOfWork.SaveChangesAsync(ct);
 
         try
@@ -73,15 +82,35 @@ public sealed class RegisterSchoolAdminHandler(
                 ),
                 ct
             );
+
+            await publisher.PublishAsync(
+                "identity.events",
+                "otp-email-requested",
+                new OtpEmailRequested(
+                    user.Id,
+                    user.Email.Value,
+                    user.FirstName,
+                    code,
+                    "EmailVerification",
+                    DateTime.UtcNow
+                ),
+                ct
+            );
         }
         catch (Exception ex)
         {
             logger.LogError(
                 ex,
-                "Failed to publish SchoolAdminRegistered event for UserId {UserId} — registration still succeeded",
+                "Failed to publish registration events for UserId {UserId} — registration still succeeded",
                 user.Id
             );
         }
+
+        logger.LogInformation(
+            "DEV ONLY — verification OTP for {Email}: {Code}",
+            user.Email.Value,
+            code
+        ); // TODO: remove before merge
 
         logger.LogInformation(
             "SchoolAdmin registered — UserId {UserId}, Email {Email}",

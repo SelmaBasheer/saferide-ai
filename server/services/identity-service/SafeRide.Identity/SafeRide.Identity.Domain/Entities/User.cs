@@ -35,7 +35,7 @@ public class User
             lastName,
             phone,
             UserRole.SchoolAdmin,
-            UserStatus.PendingApproval
+            UserStatus.PendingVerification
         );
 
     public static User CreateSuperAdmin(
@@ -79,10 +79,19 @@ public class User
             UpdatedAtUtc = DateTime.UtcNow,
         };
 
-    public void Activate(Guid schoolId)
+    public void VerifyEmail()
+    {
+        if (Status != UserStatus.PendingVerification)
+            throw new InvalidOperationException(
+                "Only a pending-verification account can be verified."
+            );
+        Status = UserStatus.Active;
+        UpdatedAtUtc = DateTime.UtcNow;
+    }
+
+    public void LinkSchool(Guid schoolId)
     {
         SchoolId = schoolId;
-        Status = UserStatus.Active;
         UpdatedAtUtc = DateTime.UtcNow;
     }
 

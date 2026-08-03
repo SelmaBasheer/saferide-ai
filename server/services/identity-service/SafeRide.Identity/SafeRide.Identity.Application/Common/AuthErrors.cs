@@ -22,6 +22,11 @@ public static class AuthErrors
         "Account is not active."
     );
 
+    public static readonly Error AlreadyVerified = new(
+        ErrorCodes.AlreadyVerified,
+        "This account is already verified."
+    );
+
     // Same message for both OTP failure cases (also better for security).
     public static readonly Error InvalidOtp = new(ErrorCodes.OtpInvalid, "Invalid or expired OTP.");
 }

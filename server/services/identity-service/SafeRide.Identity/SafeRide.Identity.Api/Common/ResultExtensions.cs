@@ -46,7 +46,7 @@ public static class ResultExtensions
             ErrorCodes.InvalidCredentials
             or ErrorCodes.InvalidRefreshToken
             or ErrorCodes.AccountNotActive => StatusCodes.Status401Unauthorized,
-            ErrorCodes.EmailTaken => StatusCodes.Status409Conflict,
+            ErrorCodes.EmailTaken or ErrorCodes.AlreadyVerified => StatusCodes.Status409Conflict,
             _ => StatusCodes.Status400BadRequest,
         };
 }
