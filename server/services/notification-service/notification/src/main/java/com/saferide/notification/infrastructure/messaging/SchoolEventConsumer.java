@@ -12,7 +12,7 @@ import org.springframework.stereotype.Component;
 @Component
 public class SchoolEventConsumer {
     private final SchoolEmailService schoolEmailService;
-    private static final Logger log = LoggerFactory.getLogger(OtpEventConsumer.class);
+    private static final Logger log = LoggerFactory.getLogger(SchoolEventConsumer.class);
 
     public SchoolEventConsumer(SchoolEmailService schoolEmailService) {
         this.schoolEmailService = schoolEmailService;
