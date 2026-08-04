@@ -1,9 +1,17 @@
 spring:
   rabbitmq:
     host: ${SPRING_RABBITMQ_HOST:localhost}
-    port: ${SPRING_RABBITMQ_PORT:5672}
-    username: ${SPRING_RABBITMQ_USERNAME:guest}
-    password: ${SPRING_RABBITMQ_PASSWORD:guest}
+    port: ${SPRING_RACLEARBBITMQ_PORT:5672}
+    username: ${SPRING_RABBITMQ_USERNAME:saferide}
+    password: ${SPRING_RABBITMQ_PASSWORD:password}
+    listener:
+      simple:
+        default-requeue-rejected: false
+        retry:
+          enabled: true
+          max-attempts: 3
+          initial-interval: 2s
+          multiplier: 2
 
 sendgrid:
   api-key: ${SENDGRID_API_KEY}       # "read from the env variable"
@@ -15,3 +23,9 @@ saferide:
     identity-exchange: identity.events
     otp-queue: notification.otp-email
     otp-routing-key: otp-email-requested
+    school-exchange: school.events
+    school-submitted-queue: notification.school-submitted
+    school-approved-queue: notification.school-approved
+    school-rejected-queue: notification.school-rejected
+  notification:
+    superadmin-email: ${SUPERADMIN_EMAIL}

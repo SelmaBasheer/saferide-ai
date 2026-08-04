@@ -1,0 +1,15 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body style="margin:0;padding:0;background:#f4f6f8;font-family:Arial,Helvetica,sans-serif;">
+<div style="max-width:560px;margin:24px auto;background:#ffffff;border-radius:8px;padding:32px;">
+    <h2 style="color:#1a56db;margin-top:0;">SafeRide AI</h2>
+    <h3 style="margin-bottom:8px;">New school submitted for review</h3>
+    <p><strong th:text="${schoolName}">School name</strong> has completed its profile and
+        submitted its documents for verification.</p>
+    <p style="color:#555;">Submitted by: <span th:text="${adminEmail}">admin email</span></p>
+    <p>Log in to the SuperAdmin dashboard to review the profile and documents,
+        then approve or reject the submission.</p>
+    <p style="color:#999;font-size:12px;margin-top:32px;">SafeRide AI — school bus tracking platform</p>
+</div>
+</body>
+</html>

@@ -62,7 +62,6 @@ public sealed class ResendOtpHandler(
             logger.LogError(ex, "Failed to publish OTP event for {UserId}", user.Id);
         }
 
-        logger.LogDebug("DEV OTP for {UserId}: {Code}", user.Id, code); // TODO: remove before merge
         return Result.Success();
     }
 }
