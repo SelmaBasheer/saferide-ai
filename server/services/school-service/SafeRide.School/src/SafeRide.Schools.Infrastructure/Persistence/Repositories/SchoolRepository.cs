@@ -24,6 +24,6 @@ public class SchoolRepository(SchoolDbContext context)
         CancellationToken ct = default
     ) =>
         await Set.Where(s => status == null || s.Status == status)
-            .OrderBy(s => s.SubmittedAtUtc)
+            .OrderByDescending(s => s.CreatedAtUtc)
             .ToListAsync(ct);
 }

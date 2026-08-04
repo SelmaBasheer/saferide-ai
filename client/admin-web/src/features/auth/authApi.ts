@@ -7,7 +7,8 @@ import type {
     ApiResponse,
     ForgotPasswordRequest,
     ResendOtpRequest,
-    ResetPasswordRequest
+    ResetPasswordRequest,
+    VerifyEmailRequest
 } from "./authTypes"
 
 /** Auth endpoints, injected into the base API. */
@@ -34,6 +35,14 @@ export const authApi = baseApi.injectEndpoints({
             query: (body) => ({ url: "/auth/reset-password", method: "POST", body }),
             transformResponse: (r: ApiResponse<null>) => r.data,
         }),
+        verifyEmail: builder.mutation<null, VerifyEmailRequest>({
+            query: (body) => ({ url: "/auth/verify-email", method: "POST", body }),
+            transformResponse: (r: ApiResponse<null>) => r.data,
+        }),
+        resendVerification: builder.mutation<null, ResendOtpRequest>({
+            query: (body) => ({ url: "/auth/resend-verification", method: "POST", body }),
+            transformResponse: (r: ApiResponse<null>) => r.data,
+        }),
     }),
 })
 
@@ -42,4 +51,6 @@ export const { useLoginMutation,
     useRegisterSchoolAdminMutation,
     useForgotPasswordMutation,
     useResendOtpMutation,
-    useResetPasswordMutation } = authApi
+    useResetPasswordMutation,
+    useVerifyEmailMutation,
+    useResendVerificationMutation } = authApi

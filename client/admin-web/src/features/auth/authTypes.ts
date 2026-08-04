@@ -61,3 +61,8 @@ export interface ResetPasswordRequest {
     otp: string;
     newPassword: string
 }
+
+export interface VerifyEmailRequest {
+    email: string
+    otp: string
+}

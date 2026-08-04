@@ -3,6 +3,11 @@ import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 import { fileURLToPath, URL } from 'node:url'
 
+// Local `dotnet run` ports by default; override via env vars for container mode:
+//   $env:VITE_IDENTITY_URL="http://localhost:5001"; $env:VITE_SCHOOL_URL="http://localhost:5003"; npm run dev
+const identity = process.env.VITE_IDENTITY_URL ?? 'http://localhost:5000'
+const school = process.env.VITE_SCHOOL_URL ?? 'http://localhost:5002'
+
 export default defineConfig({
   plugins: [react(), tailwindcss()],
   resolve: {
@@ -13,8 +18,9 @@ export default defineConfig({
   server: {
     port: 5173,
     proxy: {
-      '/api/schools': { target: 'http://localhost:5003', changeOrigin: true },
-      '/api': { target: 'http://localhost:5001', changeOrigin: true },
+      // order matters: more specific rule first, /api catches the rest
+      '/api/schools': { target: school, changeOrigin: true },
+      '/api': { target: identity, changeOrigin: true },
     },
   },
 })
