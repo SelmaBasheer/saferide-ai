@@ -9,6 +9,8 @@ import ForgotPasswordPage from "@/pages/ForgotPasswordPage"
 import ResetPasswordPage from "@/pages/ResetPasswordPage"
 import DashboardHome from "@/routes/DashboardHome"
 import SchoolAdminDashboardPage from "@/pages/SchoolAdminDashboardPage"
+import VerifyEmailPage from "@/pages/VerifyEmailPage"
+import SchoolDetailPage from "@/pages/SchoolDetailPage"
 
 export default function AppRoutes() {
     return (
@@ -23,6 +25,8 @@ export default function AppRoutes() {
                 <ProtectedRoute roles={["SchoolAdmin"]}><SchoolAdminDashboardPage /></ProtectedRoute>} />
             <Route path={ROUTES.forgotPassword} element={<ForgotPasswordPage />} />
             <Route path={ROUTES.resetPassword} element={<ResetPasswordPage />} />
+            <Route path={ROUTES.verifyEmail} element={<VerifyEmailPage />} />
+            <Route path={ROUTES.superAdminSchool} element={<SchoolDetailPage />} />
         </Routes>
     )
 }

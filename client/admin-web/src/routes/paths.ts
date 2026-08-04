@@ -7,4 +7,6 @@ export const ROUTES = {
     dashboard: "/dashboard",
     superAdmin: "/super-admin",       // SuperAdmin → schools
     schoolAdmin: "/school-admin",     // SchoolAdmin → their school
+    verifyEmail: "/verify-email",
+    superAdminSchool: "/super-admin/schools/:id",
 } as const

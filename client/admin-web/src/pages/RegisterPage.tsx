@@ -1,4 +1,3 @@
-import { useState } from "react"
 import { Link, useNavigate } from "react-router-dom"
 import { Bus, ArrowLeft } from "lucide-react"
 import { useForm } from "react-hook-form"
@@ -27,7 +26,6 @@ type FormValues = z.infer<typeof schema>
 
 export default function RegisterPage() {
     const navigate = useNavigate()
-    const [success, setSuccess] = useState(false)
     const [registerSchoolAdmin, { isLoading, error }] = useRegisterSchoolAdminMutation()
 
     const { register, handleSubmit, formState: { errors } } =
@@ -36,30 +34,10 @@ export default function RegisterPage() {
     const onSubmit = async (values: FormValues) => {
         try {
             await registerSchoolAdmin(values).unwrap()
-            setSuccess(true)
+            navigate(ROUTES.verifyEmail, { state: { email: values.email } })
         } catch {
             /* API error shown below via `error` */
         }
-    }
-
-    if (success) {
-        return (
-            <div className="flex min-h-screen items-center justify-center bg-slate-100 p-4">
-                <div className="max-w-md rounded-2xl bg-white p-8 text-center shadow-xl">
-                    <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-emerald-100">
-                        <Bus className="h-6 w-6 text-emerald-700" />
-                    </div>
-                    <h1 className="text-xl font-semibold text-slate-800">Registration submitted</h1>
-                    <p className="mt-2 text-sm text-slate-500">
-                        Your school admin account is <strong>pending approval</strong>. You'll be able to sign in
-                        once SafeRide approves your school.
-                    </p>
-                    <Button onClick={() => navigate(ROUTES.login)} className="mt-6 w-full bg-sky-700 hover:bg-sky-800">
-                        Go to sign in
-                    </Button>
-                </div>
-            </div>
-        )
     }
 
     return (
