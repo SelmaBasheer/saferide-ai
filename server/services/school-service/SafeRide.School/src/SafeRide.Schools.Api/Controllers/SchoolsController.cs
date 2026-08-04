@@ -48,11 +48,21 @@ public class SchoolsController(
 
     [Authorize(Roles = "SuperAdmin")]
     [HttpGet]
-    public async Task<IActionResult> List([FromQuery] SchoolStatus? status, CancellationToken ct)
+    public async Task<IActionResult> List(
+        [FromQuery] SchoolStatus? status,
+        [FromQuery] string? search,
+        [FromQuery] int page = 1,
+        [FromQuery] int pageSize = 20,
+        CancellationToken ct = default
+    )
     {
-        var schools = await query.GetAllAsync(status, ct);
-        var dtos = mapper.Map<List<SchoolDto>>(schools);
-        return Ok(ApiResponse<List<SchoolDto>>.Ok(dtos));
+        var (items, total) = await query.GetAllAsync(status, search, page, pageSize, ct);
+        var dtos = mapper.Map<List<SchoolDto>>(items);
+        return Ok(
+            ApiResponse<PagedResult<SchoolDto>>.Ok(
+                new PagedResult<SchoolDto>(dtos, total, page, pageSize)
+            )
+        );
     }
 
     [Authorize(Roles = "SchoolAdmin")]

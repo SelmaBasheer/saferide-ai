@@ -6,8 +6,16 @@ namespace SafeRide.Schools.Application.Schools.Query;
 
 public sealed class GetSchoolsHandler(ISchoolRepository schools)
 {
-    public async Task<IReadOnlyList<School>> GetAllAsync(
+    public async Task<(IReadOnlyList<School> Items, int TotalCount)> GetAllAsync(
         SchoolStatus? status,
+        string? search,
+        int page,
+        int pageSize,
         CancellationToken ct
-    ) => await schools.ListByStatusAsync(status, ct);
+    )
+    {
+        page = Math.Max(1, page);
+        pageSize = Math.Clamp(pageSize, 1, 100);
+        return await schools.SearchAsync(status, search, page, pageSize, ct);
+    }
 }

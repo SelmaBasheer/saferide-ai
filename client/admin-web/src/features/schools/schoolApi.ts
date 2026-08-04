@@ -71,6 +71,20 @@ export interface SchoolListItem {
     createdAtUtc: string
 }
 
+export interface PagedResult<T> {
+    items: T[]
+    totalCount: number
+    page: number
+    pageSize: number
+}
+
+export interface SchoolsQueryArgs {
+    status?: SchoolStatus
+    search?: string
+    page: number
+    pageSize: number
+}
+
 // ---- Endpoints ----
 export const schoolApi = baseApi.injectEndpoints({
     endpoints: (builder) => ({
@@ -102,9 +116,12 @@ export const schoolApi = baseApi.injectEndpoints({
         }),
 
         // ---- SuperAdmin ----
-        getSchools: builder.query<SchoolListItem[], SchoolStatus | undefined>({
-            query: (status) => status ? `/schools?status=${status}` : "/schools",
-            transformResponse: (r: ApiResponse<SchoolListItem[]>) => r.data,
+        getSchools: builder.query<PagedResult<SchoolListItem>, SchoolsQueryArgs>({
+            query: ({ status, search, page, pageSize }) => ({
+                url: "/schools",
+                params: { status, search: search || undefined, page, pageSize },
+            }),
+            transformResponse: (r: ApiResponse<PagedResult<SchoolListItem>>) => r.data,
             providesTags: ["Schools"],
         }),
 

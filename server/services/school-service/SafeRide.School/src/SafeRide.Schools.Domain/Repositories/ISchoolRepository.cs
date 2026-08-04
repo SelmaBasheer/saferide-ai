@@ -12,8 +12,11 @@ public interface ISchoolRepository : IGenericRepository<School>
     Task<School?> GetWithDocumentsAsync(Guid id, CancellationToken ct = default);
 
     //Filter schools by status (for SuperAdmin list view)
-    Task<IReadOnlyList<School>> ListByStatusAsync(
+    Task<(IReadOnlyList<School> Items, int TotalCount)> SearchAsync(
         SchoolStatus? status,
+        string? search,
+        int page,
+        int pageSize,
         CancellationToken ct = default
     );
 }
