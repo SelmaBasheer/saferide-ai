@@ -8,6 +8,8 @@ using SafeRide.Identity.Application.Auth.Login;
 using SafeRide.Identity.Application.Auth.Password;
 using SafeRide.Identity.Application.Auth.Refresh;
 using SafeRide.Identity.Application.Auth.Register;
+using SafeRide.Identity.Application.Auth.Verify;
+using SafeRide.Identity.Domain.Enums;
 
 namespace SafeRide.Identity.Api.Controllers;
 
@@ -17,6 +19,10 @@ public class AuthController(
     RegisterSchoolAdminHandler registerHandler,
     LoginHandler loginHandler,
     RefreshTokenHandler refreshHandler,
+    VerifyEmailHandler verifyHandler,
+    ResendOtpHandler resendHandler,
+    ForgotPasswordHandler forgotHandler,
+    ResetPasswordHandler resetHandler,
     IMapper mapper
 ) : ControllerBase
 {
@@ -43,6 +49,18 @@ public class AuthController(
         return result.ToApiResponse(v => mapper.Map<AuthResponse>(v));
     }
 
+    [EnableRateLimiting("otp-verify")]
+    [AllowAnonymous]
+    [HttpPost("verify-email")]
+    public async Task<IActionResult> VerifyEmail(
+        [FromBody] VerifyEmailCommand command,
+        CancellationToken ct
+    )
+    {
+        var result = await verifyHandler.HandleAsync(command, ct);
+        return result.ToApiResponse(ResponseMessages.EmailVerified);
+    }
+
     [AllowAnonymous]
     [HttpPost("refresh")]
     public async Task<IActionResult> RefreshToken(
@@ -59,11 +77,10 @@ public class AuthController(
     [HttpPost("forgot-password")]
     public async Task<IActionResult> ForgotPassword(
         [FromBody] ForgotPasswordCommand command,
-        [FromServices] ForgotPasswordHandler handler,
         CancellationToken ct
     )
     {
-        var result = await handler.HandleAsync(command, ct);
+        var result = await forgotHandler.HandleAsync(command, ct);
         return result.ToApiResponse(ResponseMessages.OtpSent);
     }
 
@@ -72,11 +89,22 @@ public class AuthController(
     [HttpPost("resend-otp")]
     public async Task<IActionResult> ResendOtp(
         [FromBody] ResendOtpCommand command,
-        [FromServices] ResendOtpHandler handler,
         CancellationToken ct
     )
     {
-        var result = await handler.HandleAsync(command, ct);
+        var result = await resendHandler.HandleAsync(command, OtpPurpose.PasswordReset, ct);
+        return result.ToApiResponse(ResponseMessages.OtpResent);
+    }
+
+    [EnableRateLimiting("otp")]
+    [AllowAnonymous]
+    [HttpPost("resend-verification")]
+    public async Task<IActionResult> ResendVerification(
+        [FromBody] ResendOtpCommand command,
+        CancellationToken ct
+    )
+    {
+        var result = await resendHandler.HandleAsync(command, OtpPurpose.EmailVerification, ct);
         return result.ToApiResponse(ResponseMessages.OtpResent);
     }
 
@@ -85,11 +113,10 @@ public class AuthController(
     [HttpPost("reset-password")]
     public async Task<IActionResult> ResetPassword(
         [FromBody] ResetPasswordCommand command,
-        [FromServices] ResetPasswordHandler handler,
         CancellationToken ct
     )
     {
-        var result = await handler.HandleAsync(command, ct);
+        var result = await resetHandler.HandleAsync(command, ct);
         return result.ToApiResponse(ResponseMessages.PasswordReset);
     }
 }

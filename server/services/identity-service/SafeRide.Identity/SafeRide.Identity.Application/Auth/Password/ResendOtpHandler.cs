@@ -17,21 +17,28 @@ public sealed class ResendOtpHandler(
     ILogger<ResendOtpHandler> logger
 )
 {
-    public async Task<Result> HandleAsync(ResendOtpCommand cmd, CancellationToken ct)
+    public async Task<Result> HandleAsync(
+        ResendOtpCommand cmd,
+        OtpPurpose purpose,
+        CancellationToken ct
+    )
     {
         var user = await users.GetByEmailAsync(cmd.Email.Trim().ToLowerInvariant(), ct);
         if (user is null)
             return Result.Success();
 
-        var last = await otps.GetLatestAsync(user.Id, OtpPurpose.PasswordReset, ct);
+        if (
+            purpose == OtpPurpose.EmailVerification
+            && user.Status != UserStatus.PendingVerification
+        )
+            return Result.Success();
+
+        var last = await otps.GetLatestAsync(user.Id, purpose, ct);
         if (last is not null && last.CreatedAtUtc > DateTime.UtcNow.AddSeconds(-60))
             return Result.Success(); // silent — same as unknown email
 
         var code = otpService.Generate();
-        await otps.AddAsync(
-            OtpCode.Issue(user.Id, otpService.Hash(code), OtpPurpose.PasswordReset),
-            ct
-        );
+        await otps.AddAsync(OtpCode.Issue(user.Id, otpService.Hash(code), purpose), ct);
         await uow.SaveChangesAsync(ct);
 
         try
@@ -44,7 +51,7 @@ public sealed class ResendOtpHandler(
                     user.Email.Value,
                     user.FirstName,
                     code,
-                    "PasswordReset",
+                    purpose.ToString(),
                     DateTime.UtcNow
                 ),
                 ct
@@ -55,8 +62,7 @@ public sealed class ResendOtpHandler(
             logger.LogError(ex, "Failed to publish OTP event for {UserId}", user.Id);
         }
 
-        logger.LogInformation("DEV OTP for {UserId}: {Code}", user.Id, code);
-
+        logger.LogDebug("DEV OTP for {UserId}: {Code}", user.Id, code); // TODO: remove before merge
         return Result.Success();
     }
 }

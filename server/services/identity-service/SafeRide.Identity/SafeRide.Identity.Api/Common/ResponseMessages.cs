@@ -6,4 +6,5 @@ public static class ResponseMessages
     public const string OtpSent = "If an account exists for this email, an OTP has been sent.";
     public const string OtpResent = "If an account exists for this email, a new OTP has been sent.";
     public const string PasswordReset = "Password reset successfully.";
+    public const string EmailVerified = "Email verified successfully. You can now log in.";
 }
