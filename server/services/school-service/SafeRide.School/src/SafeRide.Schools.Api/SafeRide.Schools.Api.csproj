@@ -1,6 +1,7 @@
-<Project Sdk="Microsoft.NET.Sdk.Web">
+﻿<Project Sdk="Microsoft.NET.Sdk.Web">
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
+    <UserSecretsId>aaf7daef-ecf1-4c65-8a02-edc910819926</UserSecretsId>
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="AutoMapper" Version="16.2.0" />

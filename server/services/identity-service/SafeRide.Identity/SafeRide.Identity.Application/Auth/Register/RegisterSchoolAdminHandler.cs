@@ -106,8 +106,6 @@ public sealed class RegisterSchoolAdminHandler(
             );
         }
 
-        logger.LogDebug("DEV ONLY — verification OTP for {Email}: {Code}", user.Email.Value, code); // TODO: remove before merge
-
         logger.LogInformation(
             "SchoolAdmin registered — UserId {UserId}, Email {Email}",
             user.Id,
