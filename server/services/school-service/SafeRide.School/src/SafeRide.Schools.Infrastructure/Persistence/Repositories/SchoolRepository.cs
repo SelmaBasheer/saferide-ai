@@ -19,11 +19,28 @@ public class SchoolRepository(SchoolDbContext context)
     public async Task<School?> GetWithDocumentsAsync(Guid id, CancellationToken ct = default) =>
         await Set.Include(s => s.Documents).FirstOrDefaultAsync(s => s.Id == id, ct);
 
-    public async Task<IReadOnlyList<School>> ListByStatusAsync(
+    public async Task<(IReadOnlyList<School>, int)> SearchAsync(
         SchoolStatus? status,
+        string? search,
+        int page,
+        int pageSize,
         CancellationToken ct = default
-    ) =>
-        await Set.Where(s => status == null || s.Status == status)
+    )
+    {
+        var query = Set.AsQueryable();
+        if (status is not null)
+            query = query.Where(s => s.Status == status);
+        if (!string.IsNullOrWhiteSpace(search))
+            query = query.Where(s =>
+                s.Name.Contains(search) || s.City.Contains(search) || s.AdminEmail.Contains(search)
+            );
+
+        var total = await query.CountAsync(ct);
+        var items = await query
             .OrderByDescending(s => s.CreatedAtUtc)
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
             .ToListAsync(ct);
+        return (items, total);
+    }
 }
