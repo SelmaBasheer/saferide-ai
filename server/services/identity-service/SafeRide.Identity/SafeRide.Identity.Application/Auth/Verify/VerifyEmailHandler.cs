@@ -30,7 +30,7 @@ public sealed class VerifyEmailHandler(
             return Result.Failure(AuthErrors.InvalidOtp); // vague on purpose
 
         if (user.Status != UserStatus.PendingVerification)
-            return Result.Failure(AuthErrors.AlreadyVerified);
+            return Result.Failure(AuthErrors.InvalidOtp);
 
         var otp = await otps.GetLatestAsync(user.Id, OtpPurpose.EmailVerification, ct);
         if (otp is null || !otp.IsValid || !otpService.Verify(cmd.Otp, otp.CodeHash))

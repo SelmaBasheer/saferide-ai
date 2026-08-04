@@ -31,7 +31,7 @@ public sealed class ResendOtpHandler(
             purpose == OtpPurpose.EmailVerification
             && user.Status != UserStatus.PendingVerification
         )
-            return Result.Failure(AuthErrors.AlreadyVerified);
+            return Result.Success();
 
         var last = await otps.GetLatestAsync(user.Id, purpose, ct);
         if (last is not null && last.CreatedAtUtc > DateTime.UtcNow.AddSeconds(-60))
@@ -62,7 +62,7 @@ public sealed class ResendOtpHandler(
             logger.LogError(ex, "Failed to publish OTP event for {UserId}", user.Id);
         }
 
-        logger.LogInformation("DEV OTP for {UserId}: {Code}", user.Id, code); // TODO: remove before merge
+        logger.LogDebug("DEV OTP for {UserId}: {Code}", user.Id, code); // TODO: remove before merge
         return Result.Success();
     }
 }
