@@ -38,6 +38,7 @@ public sealed class SchoolEventsConsumer(
             durable: true,
             cancellationToken: stoppingToken
         );
+
         await _channel.QueueDeclareAsync(
             "identity.school-events",
             durable: true,
@@ -45,12 +46,21 @@ public sealed class SchoolEventsConsumer(
             autoDelete: false,
             cancellationToken: stoppingToken
         );
+
+        await _channel.QueueBindAsync(
+            "identity.school-events",
+            "school.events",
+            "school-created",
+            cancellationToken: stoppingToken
+        );
+
         await _channel.QueueBindAsync(
             "identity.school-events",
             "school.events",
             "school-approved",
             cancellationToken: stoppingToken
         );
+
         await _channel.QueueBindAsync(
             "identity.school-events",
             "school.events",
@@ -88,7 +98,21 @@ public sealed class SchoolEventsConsumer(
         var users = scope.ServiceProvider.GetRequiredService<IUserRepository>();
         var uow = scope.ServiceProvider.GetRequiredService<IUnitOfWork>();
 
-        if (routingKey == "school-approved")
+        if (routingKey == "school-created")
+        {
+            var e = JsonSerializer.Deserialize<SchoolCreated>(json)!;
+            var user = await users.GetByIdAsync(e.AdminUserId, ct);
+            if (user is null)
+                return;
+            user.LinkSchool(e.SchoolId);
+            await uow.SaveChangesAsync(ct);
+            logger.LogInformation(
+                "Linked school {SchoolId} to user {UserId} at creation",
+                e.SchoolId,
+                user.Id
+            );
+        }
+        else if (routingKey == "school-approved")
         {
             var e = JsonSerializer.Deserialize<SchoolApproved>(json)!;
             var user = await users.GetByIdAsync(e.AdminUserId, ct);

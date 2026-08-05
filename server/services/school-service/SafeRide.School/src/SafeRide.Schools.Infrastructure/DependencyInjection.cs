@@ -26,9 +26,15 @@ public static class DependencyInjection
 
         // ----- Persistence (EF Core) -----
 
-        services.AddDbContext<SchoolDbContext>(o =>
-            o.UseSqlServer(configuration.GetConnectionString("Default"))
+        services.AddScoped<TenantStampInterceptor>();
+
+        services.AddDbContext<SchoolDbContext>(
+            (sp, options) =>
+                options
+                    .UseSqlServer(configuration.GetConnectionString("Default"))
+                    .AddInterceptors(sp.GetRequiredService<TenantStampInterceptor>())
         );
+
         services.AddScoped<DbContext>(sp => sp.GetRequiredService<SchoolDbContext>());
         services.AddScoped(typeof(IGenericRepository<>), typeof(GenericRepository<>));
         services.AddScoped<ISchoolRepository, SchoolRepository>();
