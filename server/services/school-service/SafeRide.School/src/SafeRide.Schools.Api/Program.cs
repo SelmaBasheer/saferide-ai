@@ -1,9 +1,11 @@
 using AutoMapper;
 using Microsoft.EntityFrameworkCore;
+using SafeRide.Schools.Api.Common;
 using SafeRide.Schools.Api.Extensions;
 using SafeRide.Schools.Api.Mapping;
 using SafeRide.Schools.Api.Middleware;
 using SafeRide.Schools.Application;
+using SafeRide.Schools.Application.Abstractions;
 using SafeRide.Schools.Infrastructure;
 using SafeRide.Schools.Infrastructure.Persistence;
 using Serilog;
@@ -30,6 +32,8 @@ builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
 builder.Services.AddProblemDetails();
 
 builder.Services.AddJwtAuthentication(builder.Configuration);
+builder.Services.AddHttpContextAccessor();
+builder.Services.AddScoped<ITenantProvider, HttpContextTenantProvider>();
 
 var app = builder.Build();
 

@@ -3,8 +3,9 @@ using SafeRide.Schools.Domain.Enums;
 
 namespace SafeRide.Schools.Domain.Entities;
 
-public class SchoolDocument : BaseEntity
+public class SchoolDocument : BaseEntity, ITenantOwned
 {
+    public Guid TenantId { get; private set; }
     public Guid SchoolId { get; private set; }
     public DocumentType Type { get; private set; }
     public string FileName { get; private set; } = null!; // original name, for display
@@ -25,6 +26,7 @@ public class SchoolDocument : BaseEntity
     ) =>
         new()
         {
+            TenantId = schoolId,
             SchoolId = schoolId,
             Type = type,
             FileName = fileName,

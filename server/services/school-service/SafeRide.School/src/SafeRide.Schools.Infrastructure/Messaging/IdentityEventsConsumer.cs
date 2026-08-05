@@ -100,5 +100,13 @@ public sealed class IdentityEventsConsumer(
         );
         await schools.AddAsync(school, ct);
         await uow.SaveChangesAsync(ct);
+
+        var publisher = scope.ServiceProvider.GetRequiredService<IEventPublisher>();
+        await publisher.PublishAsync(
+            "school.events",
+            "school-created",
+            new SchoolCreated(school.Id, school.AdminUserId, DateTime.UtcNow),
+            ct
+        );
     }
 }

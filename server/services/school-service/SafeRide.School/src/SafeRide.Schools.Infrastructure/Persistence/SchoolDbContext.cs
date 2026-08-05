@@ -1,9 +1,14 @@
 using Microsoft.EntityFrameworkCore;
+using SafeRide.Schools.Application.Abstractions;
+using SafeRide.Schools.Domain.Common;
 using SafeRide.Schools.Domain.Entities;
 
 namespace SafeRide.Schools.Infrastructure.Persistence;
 
-public sealed class SchoolDbContext(DbContextOptions<SchoolDbContext> options) : DbContext(options)
+public sealed class SchoolDbContext(
+    DbContextOptions<SchoolDbContext> options,
+    ITenantProvider tenantProvider
+) : DbContext(options)
 {
     public DbSet<School> Schools => Set<School>();
 
@@ -45,6 +50,7 @@ public sealed class SchoolDbContext(DbContextOptions<SchoolDbContext> options) :
 
         modelBuilder.Entity<SchoolDocument>(e =>
         {
+            e.HasIndex(d => d.TenantId);
             e.HasKey(d => d.Id);
             e.Property(d => d.Id).ValueGeneratedNever();
             e.Property(d => d.FileName).HasMaxLength(260).IsRequired();
@@ -53,5 +59,28 @@ public sealed class SchoolDbContext(DbContextOptions<SchoolDbContext> options) :
             e.HasIndex(d => new { d.SchoolId, d.Type }).IsUnique();
             e.ToTable("SchoolDocuments");
         });
+
+        foreach (var entityType in modelBuilder.Model.GetEntityTypes())
+        {
+            if (typeof(ITenantOwned).IsAssignableFrom(entityType.ClrType))
+            {
+                typeof(SchoolDbContext)
+                    .GetMethod(
+                        nameof(SetTenantFilter),
+                        System.Reflection.BindingFlags.NonPublic
+                            | System.Reflection.BindingFlags.Instance
+                    )!
+                    .MakeGenericMethod(entityType.ClrType)
+                    .Invoke(this, [modelBuilder]);
+            }
+        }
     }
+
+    private void SetTenantFilter<T>(ModelBuilder modelBuilder)
+        where T : class, ITenantOwned =>
+        modelBuilder
+            .Entity<T>()
+            .HasQueryFilter(e =>
+                tenantProvider.TenantId == null || e.TenantId == tenantProvider.TenantId
+            );
 }
