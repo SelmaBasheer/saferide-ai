@@ -11,6 +11,8 @@ import DashboardHome from "@/routes/DashboardHome"
 import SchoolAdminDashboardPage from "@/pages/SchoolAdminDashboardPage"
 import VerifyEmailPage from "@/pages/VerifyEmailPage"
 import SchoolDetailPage from "@/pages/SchoolDetailPage"
+import DriversPage from "@/pages/DriversPage"
+import StudentsPage from "@/pages/StudentsPage"
 
 export default function AppRoutes() {
     return (
@@ -27,6 +29,10 @@ export default function AppRoutes() {
             <Route path={ROUTES.resetPassword} element={<ResetPasswordPage />} />
             <Route path={ROUTES.verifyEmail} element={<VerifyEmailPage />} />
             <Route path={ROUTES.superAdminSchool} element={<SchoolDetailPage />} />
+            <Route path={ROUTES.schoolDrivers} element={
+                <ProtectedRoute roles={["SchoolAdmin"]}><DriversPage /></ProtectedRoute>} />
+            <Route path={ROUTES.schoolStudents} element={
+                <ProtectedRoute roles={["SchoolAdmin"]}><StudentsPage /></ProtectedRoute>} />
         </Routes>
     )
 }

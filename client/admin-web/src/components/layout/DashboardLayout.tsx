@@ -7,7 +7,7 @@ import { logout } from "@/features/auth/authSlice"
 import { ROUTES } from "@/routes/paths"
 import { Button } from "@/components/ui/button"
 
-export interface NavItem { label: string; icon: LucideIcon; active?: boolean }
+export interface NavItem { label: string; icon: LucideIcon; active?: boolean; to?: string }
 
 export default function DashboardLayout({
     roleLabel, nav, children,
@@ -30,10 +30,13 @@ export default function DashboardLayout({
                         </div>
                     </div>
                     <nav className="space-y-1">
-                        {nav.map(({ label, icon: Icon, active }) => (
-                            <button key={label} disabled={!active}
+                        {nav.map(({ label, icon: Icon, active, to }) => (
+                            <button key={label} disabled={!active && !to}
+                                onClick={() => to && navigate(to)}
                                 className={`flex w-full items-center gap-3 rounded-md px-3 py-2 text-sm
-                  ${active ? "bg-sky-700 text-white" : "cursor-not-allowed text-sky-300/70"}`}>
+                                        ${active ? "bg-sky-700 text-white"
+                                        : to ? "text-sky-100 hover:bg-sky-700/60"
+                                            : "cursor-not-allowed text-sky-300/70"}`}>
                                 <Icon className="h-4 w-4" /> {label}
                             </button>
                         ))}
