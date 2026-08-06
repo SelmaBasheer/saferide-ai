@@ -33,7 +33,11 @@ public class StudentController {
     private static UUID schoolId(Jwt jwt) {
         var claim = jwt.getClaimAsString("schoolId");
         if (claim == null) throw new ForbiddenException("No school context on this account.");
-        return UUID.fromString(claim);
+        try {
+            return UUID.fromString(claim);
+        } catch (IllegalArgumentException e) {
+            throw new ForbiddenException("No school context on this account.");
+        }
     }
 
     @PostMapping

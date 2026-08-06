@@ -7,7 +7,7 @@ spring:
   datasource:
     url: jdbc:mysql://localhost:3307/saferide_student
     username: root
-    password: ${MYSQL_PASSWORD:Admin@123}
+    password: ${MYSQL_ROOT_PASSWORD:Admin@123}
   jpa:
     hibernate:
       ddl-auto: update   # dev shortcut — Flyway is the planned follow-up

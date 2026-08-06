@@ -1,2 +1,3 @@
 # Java service is formatted by Spotless, not CSharpier
 server/services/notification-service/
+server/services/student-service/
