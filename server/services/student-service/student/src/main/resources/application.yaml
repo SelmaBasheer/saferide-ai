@@ -1,0 +1,27 @@
+server:
+  port: 5009
+
+spring:
+  application:
+    name: student
+  datasource:
+    url: jdbc:mysql://localhost:3307/saferide_student
+    username: root
+    password: ${MYSQL_ROOT_PASSWORD:Admin@123}
+  jpa:
+    hibernate:
+      ddl-auto: update   # dev shortcut — Flyway is the planned follow-up
+    open-in-view: false
+  rabbitmq:
+    host: ${SPRING_RABBITMQ_HOST:localhost}
+    port: 5672
+    username: ${SPRING_RABBITMQ_USERNAME:saferide}
+    password: ${SPRING_RABBITMQ_PASSWORD:password}
+
+saferide:
+  jwt:
+    secret: ${JWT_SECRET:SaferideIdentitySecretKey2026!VeryStrongRandomKey12345}
+    issuer: ${JWT_ISSUER:saferide-ai}
+    audience: ${JWT_AUDIENCE:saferide-ai-clients}
+  rabbitmq:
+    student-exchange: student.events

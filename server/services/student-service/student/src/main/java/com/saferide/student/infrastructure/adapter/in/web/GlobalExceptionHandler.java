@@ -1,0 +1,46 @@
+package com.saferide.student.infrastructure.adapter.in.web;
+
+import com.saferide.student.application.exception.AppException;
+import com.saferide.student.infrastructure.adapter.in.web.dto.ApiResponse;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.bind.annotation.ExceptionHandler;
+import org.springframework.web.bind.annotation.RestControllerAdvice;
+
+@RestControllerAdvice
+public class GlobalExceptionHandler {
+
+    private static final Logger log = LoggerFactory.getLogger(GlobalExceptionHandler.class);
+
+    @ExceptionHandler(AppException.class)
+    ResponseEntity<ApiResponse<Object>> handleApp(AppException ex) {
+        log.warn("Handled: {}", ex.getCode());
+        return ResponseEntity.status(ex.getStatusCode()).body(ApiResponse.fail(ex.getCode(), ex.getMessage()));
+    }
+
+    // DB-level safety net: unique-constraint race (same lesson as Driver's 23505 handling)
+    @ExceptionHandler(DataIntegrityViolationException.class)
+    ResponseEntity<ApiResponse<Object>> handleIntegrity(DataIntegrityViolationException ex) {
+        log.warn("Handled: Db.ConstraintViolation");
+        return ResponseEntity.status(409)
+                .body(ApiResponse.fail("Db.Duplicate", "A record with the same value already exists."));
+    }
+
+    @ExceptionHandler(MethodArgumentNotValidException.class)
+    ResponseEntity<ApiResponse<Object>> handleValidation(MethodArgumentNotValidException ex) {
+        var first = ex.getBindingResult().getFieldErrors().stream()
+                .findFirst()
+                .map(f -> f.getField() + ": " + f.getDefaultMessage())
+                .orElse("Validation failed.");
+        return ResponseEntity.badRequest().body(ApiResponse.fail("Validation.Error", first));
+    }
+
+    @ExceptionHandler(Exception.class)
+    ResponseEntity<ApiResponse<Object>> handleUnknown(Exception ex) {
+        log.error("Unhandled", ex);
+        return ResponseEntity.status(500).body(ApiResponse.fail("Server.Error", "An unexpected error occurred."));
+    }
+}
