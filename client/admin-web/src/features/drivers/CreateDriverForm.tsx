@@ -6,11 +6,11 @@ import { FormField } from "@/components/ui/form-field"
 import { useCreateDriverMutation } from "@/features/drivers/driverApi"
 
 const schema = z.object({
-    firstName: z.string().min(1, "First name is required").max(75),
-    lastName: z.string().min(1, "Last name is required").max(75),
+    firstName: z.string().trim().min(1, "First name is required").max(75),
+    lastName: z.string().trim().min(1, "Last name is required").max(75),
     email: z.string().email("Enter a valid email"),
     phone: z.string().regex(/^\+?[0-9]{10,15}$/, "Enter a valid phone number"),
-    licenseNumber: z.string().min(1, "Licence number is required").max(50),
+    licenseNumber: z.string().trim().min(1, "Licence number is required").max(50),
     licenseExpiryDate: z.string().refine(
         (d) => new Date(d) > new Date(), "Licence must not be expired"),
 })

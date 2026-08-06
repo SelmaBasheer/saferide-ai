@@ -11,12 +11,17 @@ import CreateDriverForm from "@/features/drivers/CreateDriverForm"
 
 const PAGE_SIZE = 10
 
+function formatDate(iso: string): string {
+    const [y, m, d] = iso.split("-").map(Number)
+    return new Date(y, m - 1, d).toLocaleDateString()
+}
+
 const columns: Column<DriverListItem>[] = [
     { header: "Name", cell: (d) => <span className="font-medium text-slate-800">{d.firstName} {d.lastName}</span> },
     { header: "Email", cell: (d) => d.email },
     { header: "Phone", cell: (d) => d.phone },
     { header: "Licence", cell: (d) => d.licenseNumber },
-    { header: "Expiry", cell: (d) => new Date(d.licenseExpiryDate).toLocaleDateString() },
+    { header: "Expiry", cell: (d) => formatDate(d.licenseExpiryDate) },
     {
         header: "Status",
         cell: (d) => (

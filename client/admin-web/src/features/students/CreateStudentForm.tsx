@@ -6,12 +6,12 @@ import { FormField } from "@/components/ui/form-field"
 import { useCreateStudentMutation } from "@/features/students/studentApi"
 
 const schema = z.object({
-    firstName: z.string().min(1, "First name is required").max(75),
-    lastName: z.string().min(1, "Last name is required").max(75),
-    admissionNumber: z.string().min(1, "Admission number is required").max(30),
-    grade: z.string().min(1, "Grade is required").max(20),
-    parentFirstName: z.string().min(1, "Parent first name is required").max(75),
-    parentLastName: z.string().min(1, "Parent last name is required").max(75),
+    firstName: z.string().trim().min(1, "First name is required").max(75),
+    lastName: z.string().trim().min(1, "Last name is required").max(75),
+    admissionNumber: z.string().trim().min(1, "Admission number is required").max(30),
+    grade: z.string().trim().min(1, "Grade is required").max(20),
+    parentFirstName: z.string().trim().min(1, "Parent first name is required").max(75),
+    parentLastName: z.string().trim().min(1, "Parent last name is required").max(75),
     parentEmail: z.string().email("Enter a valid email"),
     parentPhone: z.string().regex(/^\+?[0-9]{10,15}$/, "Enter a valid phone number"),
 })
