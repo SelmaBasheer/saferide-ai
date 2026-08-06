@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+<div style="font-family:Arial,sans-serif;max-width:480px;margin:auto">
+    <h2 style="color:#1e3a8a">SafeRide AI</h2>
+    <p>Hi <span th:text="${name}">there</span>,</p>
+    <p>You've been added to SafeRide by your school.</p>
+    <p>Use this code to set your password, then sign in:</p>
+    <p style="font-size:28px;font-weight:bold;letter-spacing:4px" th:text="${code}">000000</p>
+    <p style="margin-top:20px">
+        <a th:href="${resetUrl}"
+           style="display:inline-block;background:#1e3a8a;color:#ffffff;padding:10px 20px;
+              border-radius:6px;text-decoration:none">Set your password</a>
+    </p>
+    <p>This code expires shortly. If you weren't expecting this email, you can ignore it.</p>
+</div>
+</body>
+</html>

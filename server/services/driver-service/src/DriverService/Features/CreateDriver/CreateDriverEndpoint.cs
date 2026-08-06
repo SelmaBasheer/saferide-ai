@@ -50,6 +50,7 @@ public static class CreateDriverEndpoint
             driver.FirstName,
             driver.LastName,
             driver.Email,
+            driver.Phone,
             DateTime.UtcNow
         );
 

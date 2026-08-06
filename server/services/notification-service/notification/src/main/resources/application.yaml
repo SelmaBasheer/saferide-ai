@@ -29,3 +29,5 @@ saferide:
     school-rejected-queue: notification.school-rejected
   notification:
     superadmin-email: ${SUPERADMIN_EMAIL}
+  app:
+    base-url: ${APP_BASE_URL:http://localhost:5173}

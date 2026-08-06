@@ -79,6 +79,22 @@ public class User
             UpdatedAtUtc = DateTime.UtcNow,
         };
 
+    public static User CreateInvited(
+        Email email,
+        string passwordHash,
+        string firstName,
+        string lastName,
+        Phone phone,
+        UserRole role,
+        Guid schoolId
+    )
+    {
+        var user = Create(email, passwordHash, firstName, lastName, phone, role, UserStatus.Active);
+        user.SchoolId = schoolId;
+        user.MustChangePassword = true;
+        return user;
+    }
+
     public void VerifyEmail()
     {
         if (Status != UserStatus.PendingVerification)
@@ -112,6 +128,7 @@ public class User
     public void ResetPassword(string newPasswordHash)
     {
         PasswordHash = newPasswordHash;
+        MustChangePassword = false; // invitation completed / password now user-chosen
         UpdatedAtUtc = DateTime.UtcNow;
     }
 }

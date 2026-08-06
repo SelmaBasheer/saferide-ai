@@ -156,6 +156,8 @@ services:
       SPRING_RABBITMQ_PASSWORD: ${RABBITMQ_PASSWORD}
       SENDGRID_API_KEY: ${SENDGRID_API_KEY}
       SENDGRID_FROM_EMAIL: ${SENDGRID_FROM_EMAIL}
+      SUPERADMIN_EMAIL: ${SUPERADMIN_EMAIL}
+      APP_BASE_URL: ${APP_BASE_URL}
     depends_on:
       rabbitmq:
         condition: service_healthy
