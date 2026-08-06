@@ -61,7 +61,13 @@ public sealed class RabbitMqEventPublisher(IOptions<RabbitMqSettings> options)
                 Password = _settings.Password,
             };
             _connection = await factory.CreateConnectionAsync(ct);
-            _channel = await _connection.CreateChannelAsync(cancellationToken: ct);
+            _channel = await _connection.CreateChannelAsync(
+                new CreateChannelOptions(
+                    publisherConfirmationsEnabled: true,
+                    publisherConfirmationTrackingEnabled: true
+                ),
+                cancellationToken: ct
+            );
             return _channel;
         }
         finally

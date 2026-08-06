@@ -1,3 +1,5 @@
+using AutoMapper;
+using AutoMapper.QueryableExtensions;
 using DriverService.Common;
 using DriverService.Persistence;
 using Microsoft.EntityFrameworkCore;
@@ -7,11 +9,12 @@ namespace DriverService.Features.GetDrivers;
 public static class GetDriversEndpoint
 {
     public static void MapGetDrivers(this IEndpointRouteBuilder app) =>
-        app.MapGet("/api/drivers", Handle).RequireAuthorization();
+        app.MapGet("/api/drivers", Handle).RequireAuthorization("SchoolAdmin");
 
     private static async Task<IResult> Handle(
         ICurrentUser currentUser,
         DriverDbContext db,
+        IMapper mapper,
         string? search,
         int page = 1,
         int pageSize = 10,
@@ -19,9 +22,9 @@ public static class GetDriversEndpoint
     )
     {
         if (currentUser.SchoolId is not Guid schoolId)
-            return Results.Forbid();
+            throw new ForbiddenException("No school context on this account.");
 
-        page = Math.Max(page, 1);
+        page = Math.Clamp(page, 1, 1_000_000);
         pageSize = Math.Clamp(pageSize, 1, 50);
 
         var query = db.Drivers.AsNoTracking().Where(d => d.SchoolId == schoolId);
@@ -42,9 +45,13 @@ public static class GetDriversEndpoint
             .OrderByDescending(d => d.CreatedAt)
             .Skip((page - 1) * pageSize)
             .Take(pageSize)
-            .Select(d => DriverListItem.From(d))
+            .ProjectTo<DriverListItem>(mapper.ConfigurationProvider) // ← replaces Select(From)
             .ToListAsync(ct);
 
-        return Results.Ok(new PagedResult<DriverListItem>(items, total, page, pageSize));
+        return Results.Ok(
+            ApiResponse<PagedResult<DriverListItem>>.Ok(
+                new PagedResult<DriverListItem>(items, total, page, pageSize)
+            )
+        );
     }
 }
