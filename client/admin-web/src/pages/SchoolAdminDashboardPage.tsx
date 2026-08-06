@@ -1,5 +1,4 @@
 import {
-    School, Bus as BusIcon, Route as RouteIcon, Users, ClipboardList,
     Clock, AlertTriangle, CheckCircle2, Ban, Send
 } from "lucide-react"
 import DashboardLayout from "@/components/layout/DashboardLayout"
@@ -8,6 +7,7 @@ import { Button } from "@/components/ui/button"
 import { useGetMySchoolQuery, useSubmitSchoolMutation, type SchoolDetail } from "@/features/schools/schoolApi"
 import OnboardingProfileForm from "@/features/schools/OnboardingProfileForm"
 import DocumentsCard from "@/features/schools/DocumentsCard"
+import { schoolAdminNav } from "@/components/layout/schoolAdminNav"
 
 // ---------- Onboarding (Draft / Rejected) ----------
 
@@ -124,13 +124,7 @@ export default function SchoolAdminDashboardPage() {
     const { data: school, isLoading, isError } = useGetMySchoolQuery()
 
     return (
-        <DashboardLayout roleLabel="School Admin" nav={[
-            { label: "Overview", icon: School, active: true },
-            { label: "Buses", icon: BusIcon },
-            { label: "Routes", icon: RouteIcon },
-            { label: "Drivers", icon: Users },
-            { label: "Students", icon: ClipboardList },
-        ]}>
+        <DashboardLayout roleLabel="School Admin" nav={schoolAdminNav("Overview")}>
             {isLoading ? (
                 <p className="text-sm text-slate-500">Loading your school…</p>
             ) : isError || !school ? (

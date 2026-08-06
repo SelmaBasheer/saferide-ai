@@ -9,4 +9,6 @@ export const ROUTES = {
     schoolAdmin: "/school-admin",     // SchoolAdmin → their school
     verifyEmail: "/verify-email",
     superAdminSchool: "/super-admin/schools/:id",
+    schoolDrivers: "/school-admin/drivers",
+    schoolStudents: "/school-admin/students",
 } as const
