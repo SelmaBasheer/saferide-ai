@@ -63,45 +63,42 @@ public sealed class InvitationEventsConsumer(
         CancellationToken ct
     )
     {
-        await _channel!.ExchangeDeclareAsync(
+        var channel = _channel!;
+        await channel.ExchangeDeclareAsync(
             exchange,
             ExchangeType.Topic,
             durable: true,
             cancellationToken: ct
         );
-        await _channel.QueueDeclareAsync(
+        await channel.QueueDeclareAsync(
             queue,
             durable: true,
             exclusive: false,
             autoDelete: false,
             cancellationToken: ct
         );
-        await _channel.QueueBindAsync(queue, exchange, key, cancellationToken: ct);
+        await channel.QueueBindAsync(queue, exchange, key, cancellationToken: ct);
     }
 
     private async Task ConsumeAsync(string queue, CancellationToken stoppingToken)
     {
-        var consumer = new AsyncEventingBasicConsumer(_channel!);
+        var channel = _channel!;
+        var consumer = new AsyncEventingBasicConsumer(channel);
         consumer.ReceivedAsync += async (_, ea) =>
         {
             var json = Encoding.UTF8.GetString(ea.Body.ToArray());
             try
             {
                 await HandleAsync(ea.RoutingKey, json, stoppingToken);
-                await _channel!.BasicAckAsync(ea.DeliveryTag, false, stoppingToken);
+                await channel.BasicAckAsync(ea.DeliveryTag, false, stoppingToken);
             }
             catch (Exception ex)
             {
                 logger.LogError(ex, "Failed to process {Key}", ea.RoutingKey);
-                await _channel!.BasicNackAsync(
-                    ea.DeliveryTag,
-                    false,
-                    requeue: false,
-                    stoppingToken
-                );
+                await channel.BasicNackAsync(ea.DeliveryTag, false, requeue: false, stoppingToken);
             }
         };
-        await _channel!.BasicConsumeAsync(
+        await channel.BasicConsumeAsync(
             queue,
             autoAck: false,
             consumer,
@@ -126,7 +123,7 @@ public sealed class InvitationEventsConsumer(
                 e.SchoolId,
                 ct
             );
-            logger.LogInformation("Driver account invited for {Email}", e.Email);
+            logger.LogInformation("Driver account invited for driver {DriverId}", e.DriverId);
         }
         else if (routingKey == "student-created")
         {
@@ -140,7 +137,7 @@ public sealed class InvitationEventsConsumer(
                 e.SchoolId,
                 ct
             );
-            logger.LogInformation("Parent account invited for {Email}", e.ParentEmail);
+            logger.LogInformation("Parent account invited for student {StudentId}", e.StudentId);
         }
     }
 }

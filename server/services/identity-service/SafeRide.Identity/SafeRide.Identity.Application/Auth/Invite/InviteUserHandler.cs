@@ -34,8 +34,9 @@ public sealed class InviteUserHandler(
         if (await users.ExistsByEmailAsync(normalized, ct))
         {
             logger.LogInformation(
-                "Invite skipped — account already exists for {Email}",
-                normalized
+                "Invite skipped — account already exists ({Role}, school {SchoolId})",
+                role,
+                schoolId
             );
             return;
         }
@@ -84,8 +85,9 @@ public sealed class InviteUserHandler(
         catch (Exception ex)
         {
             logger.LogError(ex, "Failed to publish invitation email for {UserId}", user.Id);
+            throw;
         }
 
-        logger.LogInformation("DEV invite OTP for {UserId} ({Role}): {Code}", user.Id, role, code);
+        logger.LogDebug("Invite OTP issued for {UserId} ({Role})", user.Id, role);
     }
 }
