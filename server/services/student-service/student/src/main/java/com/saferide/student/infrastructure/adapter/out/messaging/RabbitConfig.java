@@ -1,4 +1,8 @@
-package com.saferide.student.infrastructure.messaging;
+package com.saferide.student.infrastructure.adapter.out.messaging;
+
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.SerializationFeature;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 
 import org.springframework.amqp.core.TopicExchange;
 import org.springframework.amqp.rabbit.connection.ConnectionFactory;
@@ -20,14 +24,17 @@ public class RabbitConfig {
     }
 
     @Bean
-    Jackson2JsonMessageConverter jsonConverter() {
-        return new Jackson2JsonMessageConverter();
-    }
-
-    @Bean
     RabbitTemplate rabbitTemplate(ConnectionFactory cf, Jackson2JsonMessageConverter conv) {
         var template = new RabbitTemplate(cf);
         template.setMessageConverter(conv);
         return template;
+    }
+
+    @Bean
+    Jackson2JsonMessageConverter jsonConverter() {
+        ObjectMapper mapper = new ObjectMapper();
+        mapper.registerModule(new JavaTimeModule());                      // Java time support
+        mapper.disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);   // ISO-8601 strings, not numbers
+        return new Jackson2JsonMessageConverter(mapper);
     }
 }
