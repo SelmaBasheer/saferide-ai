@@ -1,4 +1,4 @@
-package com.saferide.student.infrastructure.messaging;
+package com.saferide.student.infrastructure.adapter.out.messaging;
 
 import com.saferide.student.application.port.EventPublisherPort;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;

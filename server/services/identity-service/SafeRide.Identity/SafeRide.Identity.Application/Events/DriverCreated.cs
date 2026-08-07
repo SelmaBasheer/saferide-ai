@@ -1,6 +1,6 @@
-namespace DriverService.Features.CreateDriver;
+namespace SafeRide.Identity.Application.Events;
 
-public record DriverCreatedEvent(
+public sealed record DriverCreated(
     Guid DriverId,
     Guid SchoolId,
     string FirstName,

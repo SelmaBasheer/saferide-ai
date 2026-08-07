@@ -1,5 +1,6 @@
 using FluentValidation;
 using Microsoft.Extensions.DependencyInjection;
+using SafeRide.Identity.Application.Auth.Invite;
 using SafeRide.Identity.Application.Auth.Login;
 using SafeRide.Identity.Application.Auth.Password;
 using SafeRide.Identity.Application.Auth.Refresh;
@@ -21,6 +22,8 @@ public static class DependencyInjection
         services.AddScoped<ForgotPasswordHandler>();
         services.AddScoped<ResendOtpHandler>();
         services.AddScoped<ResetPasswordHandler>();
+
+        services.AddScoped<InviteUserHandler>();
 
         return services;
     }

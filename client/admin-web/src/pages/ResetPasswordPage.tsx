@@ -2,7 +2,7 @@ import { useState } from "react"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { z } from "zod"
-import { useNavigate, useLocation, Link } from "react-router-dom"
+import { useNavigate, useLocation, Link, useSearchParams } from "react-router-dom"
 import { useResetPasswordMutation, useResendOtpMutation } from "@/features/auth/authApi"
 import { ROUTES } from "@/routes/paths"
 import { FormField } from "@/components/ui/form-field"
@@ -22,7 +22,11 @@ type FormValues = z.infer<typeof schema>
 export default function ResetPasswordPage() {
     const navigate = useNavigate()
     const location = useLocation()
-    const prefillEmail = (location.state as { email?: string } | null)?.email ?? ""
+    const [params] = useSearchParams()
+    const prefillEmail =
+        (location.state as { email?: string } | null)?.email
+        ?? params.get("email")
+        ?? ""
     const [resetPassword, { isLoading }] = useResetPasswordMutation()
     const [resendOtp, { isLoading: resending }] = useResendOtpMutation()
     const [banner, setBanner] = useState<string | null>(null)

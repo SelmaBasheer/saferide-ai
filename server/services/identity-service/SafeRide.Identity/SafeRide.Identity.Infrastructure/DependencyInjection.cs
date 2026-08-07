@@ -41,6 +41,8 @@ public static class DependencyInjection
         services.AddSingleton<IOtpService, OtpService>();
         services.AddScoped<IOtpCodeRepository, OtpCodeRepository>();
 
+        services.AddHostedService<InvitationEventsConsumer>();
+
         return services;
     }
 }

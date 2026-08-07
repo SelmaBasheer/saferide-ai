@@ -3,12 +3,10 @@ import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 import { fileURLToPath, URL } from 'node:url'
 
-// Local `dotnet run` ports by default; override via env vars for container mode:
-//   $env:VITE_IDENTITY_URL="http://localhost:5001"; $env:VITE_SCHOOL_URL="http://localhost:5003"; npm run dev
-const identity = process.env.VITE_IDENTITY_URL ?? 'http://localhost:5000'
-const school = process.env.VITE_SCHOOL_URL ?? 'http://localhost:5002'
-const driver = process.env.VITE_IDENTITY_URL ?? 'http://localhost:5007'
-const student = process.env.VITE_SCHOOL_URL ?? 'http://localhost:5009'
+const identity = process.env.VITE_IDENTITY_API ?? 'http://localhost:5001'
+const school = process.env.VITE_SCHOOL_API ?? 'http://localhost:5003'
+const driver = process.env.VITE_DRIVER_API ?? 'http://localhost:5007'
+const student = process.env.VITE_STUDENT_API ?? 'http://localhost:5009'
 
 export default defineConfig({
   plugins: [react(), tailwindcss()],
