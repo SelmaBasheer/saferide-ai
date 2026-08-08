@@ -1,10 +1,11 @@
 package com.saferide.student.infrastructure.adapter.out.messaging;
 
+import com.fasterxml.jackson.databind.DeserializationFeature;
+import com.fasterxml.jackson.databind.MapperFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
-
-import org.springframework.amqp.core.TopicExchange;
+import org.springframework.amqp.core.*;
 import org.springframework.amqp.rabbit.connection.ConnectionFactory;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.amqp.support.converter.Jackson2JsonMessageConverter;
@@ -18,9 +19,39 @@ public class RabbitConfig {
     @Value("${saferide.rabbitmq.student-exchange}")
     String studentExchange;
 
+    @Value("${saferide.rabbitmq.school-exchange}")
+    String schoolExchange;
+
+    @Value("${saferide.rabbitmq.school-events-queue}")
+    String schoolEventsQueue;
+
     @Bean
     TopicExchange studentEventsExchange() {
         return new TopicExchange(studentExchange, true, false);
+    }
+
+    @Bean
+    TopicExchange schoolEventsExchange() {
+        return new TopicExchange(schoolExchange, true, false);
+    }
+
+    @Bean
+    Queue schoolEventsQueueBean() {
+        return QueueBuilder.durable(schoolEventsQueue).build();
+    }
+
+    @Bean
+    Binding schoolApprovedBinding() {
+        return BindingBuilder.bind(schoolEventsQueueBean())
+                .to(schoolEventsExchange())
+                .with("school-approved");
+    }
+
+    @Bean
+    Binding schoolSuspendedBinding() {
+        return BindingBuilder.bind(schoolEventsQueueBean())
+                .to(schoolEventsExchange())
+                .with("school-suspended");
     }
 
     @Bean
@@ -33,8 +64,10 @@ public class RabbitConfig {
     @Bean
     Jackson2JsonMessageConverter jsonConverter() {
         ObjectMapper mapper = new ObjectMapper();
-        mapper.registerModule(new JavaTimeModule());                      // Java time support
-        mapper.disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);   // ISO-8601 strings, not numbers
+        mapper.registerModule(new JavaTimeModule()); // Java time support
+        mapper.disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS); // ISO-8601 strings, not numbers
+        mapper.configure(MapperFeature.ACCEPT_CASE_INSENSITIVE_PROPERTIES, true);
+        mapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
         return new Jackson2JsonMessageConverter(mapper);
     }
 }

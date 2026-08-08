@@ -104,6 +104,25 @@ namespace DriverService.Migrations
 
                     b.ToTable("OutboxMessages");
                 });
+
+            modelBuilder.Entity("DriverService.Persistence.SchoolStatusProjection", b =>
+                {
+                    b.Property<Guid>("SchoolId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("SchoolId");
+
+                    b.ToTable("SchoolStatuses");
+                });
 #pragma warning restore 612, 618
         }
     }

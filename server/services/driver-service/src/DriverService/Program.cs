@@ -36,6 +36,7 @@ builder.Services.AddAutoMapper(cfg => cfg.AddProfile<DriverMappingProfile>());
 builder.Services.Configure<RabbitMqSettings>(builder.Configuration.GetSection("RabbitMQ"));
 builder.Services.AddSingleton<IEventPublisher, RabbitMqEventPublisher>();
 builder.Services.AddHostedService<OutboxRelay>();
+builder.Services.AddHostedService<SchoolEventsConsumer>();
 
 // ---------- API docs ----------
 builder.Services.AddOpenApi();
