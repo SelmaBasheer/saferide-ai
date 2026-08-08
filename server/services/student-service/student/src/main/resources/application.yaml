@@ -25,3 +25,5 @@ saferide:
     audience: ${JWT_AUDIENCE:saferide-ai-clients}
   rabbitmq:
     student-exchange: student.events
+    school-exchange: school.events
+    school-events-queue: student.school-events

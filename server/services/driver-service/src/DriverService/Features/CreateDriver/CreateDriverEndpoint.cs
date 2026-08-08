@@ -2,6 +2,7 @@ using System.Text.Json;
 using AutoMapper;
 using DriverService.Common;
 using DriverService.Domain;
+using DriverService.Messaging;
 using DriverService.Persistence;
 using FluentValidation;
 using Microsoft.EntityFrameworkCore;
@@ -28,6 +29,13 @@ public static class CreateDriverEndpoint
 
         if (currentUser.SchoolId is not Guid schoolId)
             throw new ForbiddenException("No school context on this account.");
+
+        var schoolApproved = await db.SchoolStatuses.AnyAsync(
+            s => s.SchoolId == schoolId && s.Status == MessagingConstants.StatusApproved,
+            ct
+        );
+        if (!schoolApproved)
+            throw new ForbiddenException(ResponseMessages.SchoolNotApproved);
 
         var email = request.Email.Trim().ToLowerInvariant();
         var exists = await db.Drivers.AnyAsync(d => d.SchoolId == schoolId && d.Email == email, ct);
@@ -59,7 +67,7 @@ public static class CreateDriverEndpoint
             new OutboxMessage
             {
                 Id = Guid.NewGuid(),
-                Type = "driver-created",
+                Type = MessagingConstants.DriverCreatedKey, //   "driver-created",
                 Payload = JsonSerializer.Serialize(evt),
                 OccurredAt = DateTime.UtcNow,
             }

@@ -1,8 +1,10 @@
 package com.saferide.student.application.service;
 
 import com.saferide.student.application.event.StudentCreated;
+import com.saferide.student.application.exception.AppException;
 import com.saferide.student.application.exception.AppException.ConflictException;
 import com.saferide.student.application.port.EventPublisherPort;
+import com.saferide.student.application.port.SchoolStatusPort;
 import com.saferide.student.application.port.StudentRepositoryPort;
 import com.saferide.student.domain.Student;
 import java.time.Instant;
@@ -17,13 +19,16 @@ public class StudentService {
 
     public static final String STUDENT_CREATED_KEY = "student-created";
     public static final String DUPLICATE_ADMISSION = "A student with this admission number already exists.";
+    public static final String SCHOOL_NOT_APPROVED = "Your school is not approved yet.";
 
     private final StudentRepositoryPort repository;
     private final EventPublisherPort events;
+    private final SchoolStatusPort schoolStatus;
 
-    public StudentService(StudentRepositoryPort repository, EventPublisherPort events) {
+    public StudentService(StudentRepositoryPort repository, EventPublisherPort events, SchoolStatusPort schoolStatus) {
         this.repository = repository;
         this.events = events;
+        this.schoolStatus = schoolStatus;
     }
 
     @Transactional
@@ -37,6 +42,8 @@ public class StudentService {
             String parentLastName,
             String parentEmail,
             String parentPhone) {
+
+        if (!schoolStatus.isApproved(schoolId)) throw new AppException.ForbiddenException(SCHOOL_NOT_APPROVED);
 
         if (repository.existsBySchoolIdAndAdmissionNumber(schoolId, admissionNumber.trim()))
             throw new ConflictException(DUPLICATE_ADMISSION);

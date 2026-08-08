@@ -9,6 +9,8 @@ public class DriverDbContext(DbContextOptions<DriverDbContext> options) : DbCont
 
     public DbSet<OutboxMessage> OutboxMessages => Set<OutboxMessage>();
 
+    public DbSet<SchoolStatusProjection> SchoolStatuses => Set<SchoolStatusProjection>();
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.Entity<Driver>(e =>
@@ -25,6 +27,12 @@ public class DriverDbContext(DbContextOptions<DriverDbContext> options) : DbCont
         {
             e.Property(m => m.Type).HasMaxLength(100);
             e.HasIndex(m => m.ProcessedAt).HasFilter("\"ProcessedAt\" IS NULL"); // relay scans pending only
+        });
+
+        modelBuilder.Entity<SchoolStatusProjection>(e =>
+        {
+            e.HasKey(s => s.SchoolId);
+            e.Property(s => s.Status).HasMaxLength(20);
         });
     }
 }
