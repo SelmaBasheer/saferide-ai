@@ -34,28 +34,28 @@ public sealed class SchoolEventsConsumer(
         _channel = channel;
 
         await channel.ExchangeDeclareAsync(
-            "school.events",
+            MessagingConstants.SchoolEventsExchange, //"school.events",
             ExchangeType.Topic,
             durable: true,
             cancellationToken: stoppingToken
         );
         await channel.QueueDeclareAsync(
-            "driver.school-events",
+            MessagingConstants.SchoolEventsQueue, //"driver.school-events"
             durable: true,
             exclusive: false,
             autoDelete: false,
             cancellationToken: stoppingToken
         );
         await channel.QueueBindAsync(
-            "driver.school-events",
-            "school.events",
-            "school-approved",
+            MessagingConstants.SchoolEventsQueue, //"driver.school-events"
+            MessagingConstants.SchoolEventsExchange, //"school.events",
+            MessagingConstants.SchoolApprovedKey, // "school-approved",
             cancellationToken: stoppingToken
         );
         await channel.QueueBindAsync(
-            "driver.school-events",
-            "school.events",
-            "school-suspended",
+            MessagingConstants.SchoolEventsQueue, //"driver.school-events"
+            MessagingConstants.SchoolEventsExchange, //"school.events",
+            MessagingConstants.SchoolSuspendedKey, //"school-suspended",
             cancellationToken: stoppingToken
         );
 
@@ -75,7 +75,7 @@ public sealed class SchoolEventsConsumer(
             }
         };
         await channel.BasicConsumeAsync(
-            "driver.school-events",
+            MessagingConstants.SchoolEventsQueue, //"driver.school-events"
             autoAck: false,
             consumer,
             cancellationToken: stoppingToken
@@ -84,35 +84,61 @@ public sealed class SchoolEventsConsumer(
 
     private async Task HandleAsync(string routingKey, string json, CancellationToken ct)
     {
-        var schoolId = routingKey switch
-        {
-            "school-approved" => JsonSerializer.Deserialize<SchoolApproved>(json, Json)!.SchoolId,
-            "school-suspended" => JsonSerializer.Deserialize<SchoolSuspended>(json, Json)!.SchoolId,
-            _ => Guid.Empty,
-        };
-        if (schoolId == Guid.Empty)
-            return;
+        Guid schoolId;
+        DateTime occurredAtUtc;
+        string status;
 
-        var status = routingKey == "school-approved" ? "Approved" : "Suspended";
+        if (routingKey == MessagingConstants.SchoolApprovedKey)
+        {
+            var e = JsonSerializer.Deserialize<SchoolApproved>(json, Json)!;
+            schoolId = e.SchoolId;
+            occurredAtUtc = e.OccurredAtUtc;
+            status = MessagingConstants.StatusApproved;
+        }
+        else if (routingKey == MessagingConstants.SchoolSuspendedKey)
+        {
+            var e = JsonSerializer.Deserialize<SchoolSuspended>(json, Json)!;
+            schoolId = e.SchoolId;
+            occurredAtUtc = e.OccurredAtUtc;
+            status = MessagingConstants.StatusSuspended;
+        }
+        else
+        {
+            return;
+        }
 
         using var scope = scopeFactory.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<DriverDbContext>();
 
         var row = await db.SchoolStatuses.FindAsync([schoolId], ct);
         if (row is null)
+        {
             db.SchoolStatuses.Add(
                 new SchoolStatusProjection
                 {
                     SchoolId = schoolId,
                     Status = status,
+                    EventAtUtc = occurredAtUtc,
                     UpdatedAt = DateTime.UtcNow,
                 }
             );
-        else
+        }
+        else if (occurredAtUtc > row.EventAtUtc)
         {
             row.Status = status;
+            row.EventAtUtc = occurredAtUtc;
             row.UpdatedAt = DateTime.UtcNow;
         }
+        else
+        {
+            logger.LogInformation(
+                "Ignored stale {Key} for school {SchoolId}",
+                routingKey,
+                schoolId
+            );
+            return; // nothing to save
+        }
+
         await db.SaveChangesAsync(ct);
         logger.LogInformation("School {SchoolId} projected as {Status}", schoolId, status);
     }

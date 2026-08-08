@@ -27,7 +27,7 @@ public class OutboxRelay(
                 foreach (var msg in pending)
                 {
                     await publisher.PublishAsync(
-                        "driver.events",
+                        MessagingConstants.DriverEventsExchange, // "driver.events",
                         msg.Type,
                         msg.Payload,
                         stoppingToken

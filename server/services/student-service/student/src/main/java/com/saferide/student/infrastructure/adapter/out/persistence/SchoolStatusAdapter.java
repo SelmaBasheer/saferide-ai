@@ -2,6 +2,7 @@ package com.saferide.student.infrastructure.adapter.out.persistence;
 
 import com.saferide.student.application.port.SchoolStatusPort;
 import com.saferide.student.application.port.SchoolStatuses;
+import java.time.Instant;
 import java.util.UUID;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
@@ -22,13 +23,15 @@ public class SchoolStatusAdapter implements SchoolStatusPort {
 
     @Override
     @Transactional
-    public void upsert(UUID schoolId, String status) {
+    public void upsert(UUID schoolId, String status, Instant occurredAtUtc) {
         jpa.findById(schoolId)
                 .ifPresentOrElse(
                         row -> {
-                            row.update(status);
-                            jpa.save(row);
+                            if (row.getEventAtUtc() == null || occurredAtUtc.isAfter(row.getEventAtUtc())) {
+                                row.update(status, occurredAtUtc);
+                                jpa.save(row);
+                            }
                         },
-                        () -> jpa.save(new SchoolStatusProjection(schoolId, status)));
+                        () -> jpa.save(new SchoolStatusProjection(schoolId, status, occurredAtUtc)));
     }
 }

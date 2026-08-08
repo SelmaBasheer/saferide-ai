@@ -23,16 +23,25 @@ public class SchoolStatusProjection {
     @Column(nullable = false)
     private Instant updatedAt;
 
+    @Column
+    private Instant eventAtUtc; // source event time — stale-replay guard; null = pre-guard row
+
+    public Instant getEventAtUtc() {
+        return eventAtUtc;
+    }
+
     protected SchoolStatusProjection() {}
 
-    public SchoolStatusProjection(UUID schoolId, String status) {
+    public SchoolStatusProjection(UUID schoolId, String status, Instant occurredAtUtc) {
         this.schoolId = schoolId;
         this.status = status;
+        this.eventAtUtc = occurredAtUtc;
         this.updatedAt = Instant.now();
     }
 
-    public void update(String status) {
+    public void update(String status, Instant occurredAtUtc) {
         this.status = status;
+        this.eventAtUtc = occurredAtUtc;
         this.updatedAt = Instant.now();
     }
 

@@ -31,7 +31,7 @@ public static class CreateDriverEndpoint
             throw new ForbiddenException("No school context on this account.");
 
         var schoolApproved = await db.SchoolStatuses.AnyAsync(
-            s => s.SchoolId == schoolId && s.Status == "Approved",
+            s => s.SchoolId == schoolId && s.Status == MessagingConstants.StatusApproved,
             ct
         );
         if (!schoolApproved)
@@ -67,7 +67,7 @@ public static class CreateDriverEndpoint
             new OutboxMessage
             {
                 Id = Guid.NewGuid(),
-                Type = "driver-created",
+                Type = MessagingConstants.DriverCreatedKey, //   "driver-created",
                 Payload = JsonSerializer.Serialize(evt),
                 OccurredAt = DateTime.UtcNow,
             }

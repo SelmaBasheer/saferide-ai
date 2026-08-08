@@ -7,4 +7,6 @@ public class SchoolStatusProjection
     public Guid SchoolId { get; set; }
     public string Status { get; set; } = null!; // "Approved" | "Suspended"
     public DateTime UpdatedAt { get; set; }
+
+    public DateTime EventAtUtc { get; set; } // source event time — guards against stale replays
 }
