@@ -64,8 +64,8 @@ public sealed class RegisterSchoolAdminHandler(
         try
         {
             await publisher.PublishAsync(
-                "identity.events",
-                "school-admin-registered",
+                MessagingConstants.IdentityEventsExchange, //"identity.events",
+                MessagingConstants.SchoolAdminRegisteredKey, //"school-admin-registered",
                 new SchoolAdminRegistered(
                     user.Id,
                     user.Email.Value,
@@ -84,8 +84,8 @@ public sealed class RegisterSchoolAdminHandler(
             );
 
             await publisher.PublishAsync(
-                "identity.events",
-                "otp-email-requested",
+                MessagingConstants.IdentityEventsExchange, //"identity.events",
+                MessagingConstants.OtpEmailRequestedKey, //"otp-email-requested",
                 new OtpEmailRequested(
                     user.Id,
                     user.Email.Value,

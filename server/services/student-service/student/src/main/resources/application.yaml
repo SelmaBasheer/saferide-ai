@@ -17,6 +17,14 @@ spring:
     port: 5672
     username: ${SPRING_RABBITMQ_USERNAME:saferide}
     password: ${SPRING_RABBITMQ_PASSWORD:password}
+    listener:
+      simple:
+        default-requeue-rejected: false
+        retry:
+          enabled: true
+          max-attempts: 3
+          initial-interval: 2s
+          multiplier: 2
 
 saferide:
   jwt:

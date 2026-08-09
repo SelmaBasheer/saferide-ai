@@ -16,6 +16,8 @@ import org.springframework.context.annotation.Configuration;
 @Configuration
 public class RabbitConfig {
 
+    private static final String DLX = "saferide.dlx";
+
     @Value("${saferide.rabbitmq.student-exchange}")
     String studentExchange;
 
@@ -37,7 +39,25 @@ public class RabbitConfig {
 
     @Bean
     Queue schoolEventsQueueBean() {
-        return QueueBuilder.durable(schoolEventsQueue).build();
+        return QueueBuilder.durable(schoolEventsQueue)
+                .withArgument("x-dead-letter-exchange", DLX)
+                .withArgument("x-dead-letter-routing-key", schoolEventsQueue)
+                .build();
+    }
+
+    @Bean
+    TopicExchange deadLetterExchange() {
+        return new TopicExchange(DLX, true, false);
+    }
+
+    @Bean
+    Queue schoolEventsDlq() {
+        return QueueBuilder.durable(schoolEventsQueue + ".dlq").build();
+    }
+
+    @Bean
+    Binding schoolEventsDlqBinding() {
+        return BindingBuilder.bind(schoolEventsDlq()).to(deadLetterExchange()).with(schoolEventsQueue);
     }
 
     @Bean

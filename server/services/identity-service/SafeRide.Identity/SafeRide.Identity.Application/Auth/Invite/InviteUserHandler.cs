@@ -1,5 +1,6 @@
 using Microsoft.Extensions.Logging;
 using SafeRide.Identity.Application.Abstractions;
+using SafeRide.Identity.Application.Common;
 using SafeRide.Identity.Application.Events;
 using SafeRide.Identity.Domain.Entities;
 using SafeRide.Identity.Domain.Enums;
@@ -69,8 +70,8 @@ public sealed class InviteUserHandler(
         try
         {
             await publisher.PublishAsync(
-                "identity.events",
-                "otp-email-requested",
+                MessagingConstants.IdentityEventsExchange, //"identity.events",
+                MessagingConstants.OtpEmailRequestedKey, //"otp-email-requested",
                 new OtpEmailRequested(
                     user.Id,
                     user.Email.Value,

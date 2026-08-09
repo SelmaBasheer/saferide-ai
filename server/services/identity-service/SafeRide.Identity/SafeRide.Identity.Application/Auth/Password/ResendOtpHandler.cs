@@ -44,8 +44,8 @@ public sealed class ResendOtpHandler(
         try
         {
             await publisher.PublishAsync(
-                "identity.events",
-                "otp-email-requested",
+                MessagingConstants.IdentityEventsExchange, //"identity.events",
+                MessagingConstants.OtpEmailRequestedKey, //"otp-email-requested",
                 new OtpEmailRequested(
                     user.Id,
                     user.Email.Value,
