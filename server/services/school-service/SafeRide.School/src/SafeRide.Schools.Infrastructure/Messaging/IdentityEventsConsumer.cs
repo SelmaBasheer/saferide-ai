@@ -7,6 +7,7 @@ using Microsoft.Extensions.Options;
 using RabbitMQ.Client;
 using RabbitMQ.Client.Events;
 using SafeRide.Schools.Application.Abstractions;
+using SafeRide.Schools.Application.Common;
 using SafeRide.Schools.Application.Events;
 using SafeRide.Schools.Domain.Entities;
 using SafeRide.Schools.Domain.Repositories;
@@ -35,22 +36,22 @@ public sealed class IdentityEventsConsumer(
         _channel = await _connection.CreateChannelAsync(cancellationToken: stoppingToken);
 
         await _channel.ExchangeDeclareAsync(
-            "identity.events",
+            MessagingConstants.IdentityEventsExchange, //"identity.events",
             ExchangeType.Topic,
             durable: true,
             cancellationToken: stoppingToken
         );
-        await _channel.QueueDeclareAsync(
-            "school.identity-events",
-            durable: true,
-            exclusive: false,
-            autoDelete: false,
-            cancellationToken: stoppingToken
+
+        await RabbitDLQTopology.DeclareQueueWithDlqAsync(
+            _channel!, // your captured local (or _channel!)
+            MessagingConstants.IdentityEventsQueue,
+            stoppingToken
         );
+
         await _channel.QueueBindAsync(
-            "school.identity-events",
-            "identity.events",
-            "school-admin-registered",
+            MessagingConstants.IdentityEventsQueue, //"school.identity-events",
+            MessagingConstants.IdentityEventsExchange, //"identity.events",
+            MessagingConstants.SchoolAdminRegisteredKey, //"school-admin-registered",
             cancellationToken: stoppingToken
         );
 
@@ -71,7 +72,7 @@ public sealed class IdentityEventsConsumer(
         };
 
         await _channel.BasicConsumeAsync(
-            "school.identity-events",
+            MessagingConstants.IdentityEventsQueue, //"school.identity-events",
             autoAck: false,
             consumer,
             cancellationToken: stoppingToken
@@ -103,8 +104,8 @@ public sealed class IdentityEventsConsumer(
 
         var publisher = scope.ServiceProvider.GetRequiredService<IEventPublisher>();
         await publisher.PublishAsync(
-            "school.events",
-            "school-created",
+            MessagingConstants.SchoolEventsExchange, //"school.events",
+            MessagingConstants.SchoolCreatedKey, //"school-created",
             new SchoolCreated(school.Id, school.AdminUserId, DateTime.UtcNow),
             ct
         );

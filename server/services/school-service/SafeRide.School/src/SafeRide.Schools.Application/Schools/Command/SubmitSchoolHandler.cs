@@ -34,8 +34,8 @@ public sealed class SubmitSchoolHandler(
         await unitOfWork.SaveChangesAsync(ct);
 
         await publisher.PublishAsync(
-            "school.events",
-            "school-submitted-for-approval",
+            MessagingConstants.SchoolEventsExchange, //"school.events",
+            MessagingConstants.SchoolSubmittedForApprovalKey, //"school-submitted-for-approval",
             new SchoolSubmittedForApproval(
                 school.Id,
                 school.Name,

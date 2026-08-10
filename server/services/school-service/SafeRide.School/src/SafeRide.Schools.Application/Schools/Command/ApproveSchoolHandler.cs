@@ -26,8 +26,8 @@ public sealed class ApproveSchoolHandler(
         school.Approve(reviewerUserId);
         await unitOfWork.SaveChangesAsync(ct);
         await publisher.PublishAsync(
-            "school.events",
-            "school-approved",
+            MessagingConstants.SchoolEventsExchange, //"school.events",
+            MessagingConstants.SchoolApprovedKey, //"school-approved",
             new SchoolApproved(
                 school.Id,
                 school.AdminUserId,
@@ -59,8 +59,8 @@ public sealed class ApproveSchoolHandler(
         school.Reject(reviewerUserId, reason);
         await unitOfWork.SaveChangesAsync(ct);
         await publisher.PublishAsync(
-            "school.events",
-            "school-rejected",
+            MessagingConstants.SchoolEventsExchange, //"school.events",
+            MessagingConstants.SchoolRejectedKey, //"school-rejected",
             new SchoolRejected(
                 school.Id,
                 school.AdminUserId,
@@ -83,8 +83,8 @@ public sealed class ApproveSchoolHandler(
         school.Suspend();
         await unitOfWork.SaveChangesAsync(ct);
         await publisher.PublishAsync(
-            "school.events",
-            "school-suspended",
+            MessagingConstants.SchoolEventsExchange, //"school.events",
+            MessagingConstants.SchoolSuspendedKey, //"school-suspended",
             new SchoolSuspended(school.Id, school.AdminUserId, DateTime.UtcNow),
             ct
         );

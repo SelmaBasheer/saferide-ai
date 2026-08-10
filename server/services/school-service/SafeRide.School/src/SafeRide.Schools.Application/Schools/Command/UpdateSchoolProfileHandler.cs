@@ -1,8 +1,9 @@
 using SafeRide.Schools.Application.Abstractions;
 using SafeRide.Schools.Application.Common;
-using SafeRide.Schools.Application.Schools.Command;
 using SafeRide.Schools.Domain.Enums;
 using SafeRide.Schools.Domain.Repositories;
+
+namespace SafeRide.Schools.Application.Schools.Command;
 
 public sealed class UpdateSchoolProfileHandler(ISchoolRepository schools, IUnitOfWork unitOfWork)
 {

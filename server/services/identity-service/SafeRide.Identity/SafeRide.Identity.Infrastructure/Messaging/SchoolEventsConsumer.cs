@@ -6,8 +6,9 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using RabbitMQ.Client;
 using RabbitMQ.Client.Events;
+using SafeRide.Identity.Application.Common;
 using SafeRide.Identity.Application.Events;
-using SafeRide.Identity.Domain.Repositories; // IUserRepository, IUnitOfWork (moved here)
+using SafeRide.Identity.Domain.Repositories;
 
 namespace SafeRide.Identity.Infrastructure.Messaging;
 
@@ -31,61 +32,58 @@ public sealed class SchoolEventsConsumer(
         };
         _connection = await factory.CreateConnectionAsync(stoppingToken);
         _channel = await _connection.CreateChannelAsync(cancellationToken: stoppingToken);
+        var channel = _channel;
 
-        await _channel.ExchangeDeclareAsync(
-            "school.events",
+        await channel.ExchangeDeclareAsync(
+            MessagingConstants.SchoolEventsExchange,
             ExchangeType.Topic,
             durable: true,
             cancellationToken: stoppingToken
         );
 
-        await _channel.QueueDeclareAsync(
-            "identity.school-events",
-            durable: true,
-            exclusive: false,
-            autoDelete: false,
+        await RabbitDLQTopology.DeclareQueueWithDlqAsync(
+            channel,
+            MessagingConstants.SchoolEventsQueue,
+            stoppingToken
+        );
+
+        await channel.QueueBindAsync(
+            MessagingConstants.SchoolEventsQueue,
+            MessagingConstants.SchoolEventsExchange,
+            MessagingConstants.SchoolCreatedKey,
+            cancellationToken: stoppingToken
+        );
+        await channel.QueueBindAsync(
+            MessagingConstants.SchoolEventsQueue,
+            MessagingConstants.SchoolEventsExchange,
+            MessagingConstants.SchoolApprovedKey,
+            cancellationToken: stoppingToken
+        );
+        await channel.QueueBindAsync(
+            MessagingConstants.SchoolEventsQueue,
+            MessagingConstants.SchoolEventsExchange,
+            MessagingConstants.SchoolSuspendedKey,
             cancellationToken: stoppingToken
         );
 
-        await _channel.QueueBindAsync(
-            "identity.school-events",
-            "school.events",
-            "school-created",
-            cancellationToken: stoppingToken
-        );
-
-        await _channel.QueueBindAsync(
-            "identity.school-events",
-            "school.events",
-            "school-approved",
-            cancellationToken: stoppingToken
-        );
-
-        await _channel.QueueBindAsync(
-            "identity.school-events",
-            "school.events",
-            "school-suspended",
-            cancellationToken: stoppingToken
-        );
-
-        var consumer = new AsyncEventingBasicConsumer(_channel);
+        var consumer = new AsyncEventingBasicConsumer(channel);
         consumer.ReceivedAsync += async (_, ea) =>
         {
             var json = Encoding.UTF8.GetString(ea.Body.ToArray());
             try
             {
                 await HandleAsync(ea.RoutingKey, json, stoppingToken);
-                await _channel.BasicAckAsync(ea.DeliveryTag, false, stoppingToken);
+                await channel.BasicAckAsync(ea.DeliveryTag, false, stoppingToken);
             }
             catch (Exception ex)
             {
                 logger.LogError(ex, "Failed to process {Key}", ea.RoutingKey);
-                await _channel.BasicNackAsync(ea.DeliveryTag, false, requeue: false, stoppingToken);
+                await channel.BasicNackAsync(ea.DeliveryTag, false, requeue: false, stoppingToken);
             }
         };
 
-        await _channel.BasicConsumeAsync(
-            "identity.school-events",
+        await channel.BasicConsumeAsync(
+            MessagingConstants.SchoolEventsQueue,
             autoAck: false,
             consumer,
             cancellationToken: stoppingToken
@@ -98,7 +96,7 @@ public sealed class SchoolEventsConsumer(
         var users = scope.ServiceProvider.GetRequiredService<IUserRepository>();
         var uow = scope.ServiceProvider.GetRequiredService<IUnitOfWork>();
 
-        if (routingKey == "school-created")
+        if (routingKey == MessagingConstants.SchoolCreatedKey)
         {
             var e = JsonSerializer.Deserialize<SchoolCreated>(json)!;
             var user = await users.GetByIdAsync(e.AdminUserId, ct);
@@ -112,7 +110,7 @@ public sealed class SchoolEventsConsumer(
                 user.Id
             );
         }
-        else if (routingKey == "school-approved")
+        else if (routingKey == MessagingConstants.SchoolApprovedKey)
         {
             var e = JsonSerializer.Deserialize<SchoolApproved>(json)!;
             var user = await users.GetByIdAsync(e.AdminUserId, ct);
@@ -120,9 +118,9 @@ public sealed class SchoolEventsConsumer(
                 return;
             user.LinkSchool(e.SchoolId);
             await uow.SaveChangesAsync(ct);
-            logger.LogInformation("Linked school {SchoolId} to user {UserId}", user.Id, e.SchoolId);
+            logger.LogInformation("Linked school {SchoolId} to user {UserId}", e.SchoolId, user.Id);
         }
-        else if (routingKey == "school-suspended")
+        else if (routingKey == MessagingConstants.SchoolSuspendedKey)
         {
             var e = JsonSerializer.Deserialize<SchoolSuspended>(json)!;
             var user = await users.GetByIdAsync(e.AdminUserId, ct);

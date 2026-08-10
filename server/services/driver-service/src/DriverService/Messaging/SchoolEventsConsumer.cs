@@ -39,13 +39,13 @@ public sealed class SchoolEventsConsumer(
             durable: true,
             cancellationToken: stoppingToken
         );
-        await channel.QueueDeclareAsync(
+
+        await DeclareQueueWithDlqAsync(
+            channel,
             MessagingConstants.SchoolEventsQueue, //"driver.school-events"
-            durable: true,
-            exclusive: false,
-            autoDelete: false,
-            cancellationToken: stoppingToken
+            stoppingToken
         );
+
         await channel.QueueBindAsync(
             MessagingConstants.SchoolEventsQueue, //"driver.school-events"
             MessagingConstants.SchoolEventsExchange, //"school.events",
@@ -82,6 +82,44 @@ public sealed class SchoolEventsConsumer(
         );
     }
 
+    private static async Task DeclareQueueWithDlqAsync(
+        IChannel channel,
+        string queue,
+        CancellationToken ct
+    )
+    {
+        const string Dlx = "saferide.dlx";
+
+        await channel.ExchangeDeclareAsync(
+            Dlx,
+            ExchangeType.Topic,
+            durable: true,
+            cancellationToken: ct
+        );
+
+        await channel.QueueDeclareAsync(
+            $"{queue}.dlq",
+            durable: true,
+            exclusive: false,
+            autoDelete: false,
+            cancellationToken: ct
+        );
+        await channel.QueueBindAsync($"{queue}.dlq", Dlx, queue, cancellationToken: ct);
+
+        await channel.QueueDeclareAsync(
+            queue,
+            durable: true,
+            exclusive: false,
+            autoDelete: false,
+            arguments: new Dictionary<string, object?>
+            {
+                ["x-dead-letter-exchange"] = Dlx,
+                ["x-dead-letter-routing-key"] = queue,
+            },
+            cancellationToken: ct
+        );
+    }
+
     private async Task HandleAsync(string routingKey, string json, CancellationToken ct)
     {
         Guid schoolId;
@@ -106,6 +144,9 @@ public sealed class SchoolEventsConsumer(
         {
             return;
         }
+
+        if (schoolId == Guid.Empty)
+            return;
 
         using var scope = scopeFactory.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<DriverDbContext>();

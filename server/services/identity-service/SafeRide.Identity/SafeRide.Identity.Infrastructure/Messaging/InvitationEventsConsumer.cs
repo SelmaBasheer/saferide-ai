@@ -7,6 +7,7 @@ using Microsoft.Extensions.Options;
 using RabbitMQ.Client;
 using RabbitMQ.Client.Events;
 using SafeRide.Identity.Application.Auth.Invite;
+using SafeRide.Identity.Application.Common;
 using SafeRide.Identity.Application.Events;
 using SafeRide.Identity.Domain.Enums;
 
@@ -40,20 +41,20 @@ public sealed class InvitationEventsConsumer(
         _channel = await _connection.CreateChannelAsync(cancellationToken: stoppingToken);
 
         await DeclareAndBindAsync(
-            "driver.events",
-            "identity.driver-events",
-            "driver-created",
+            MessagingConstants.DriverEventsExchange,
+            MessagingConstants.DriverEventsQueue,
+            MessagingConstants.DriverCreatedKey,
             stoppingToken
         );
         await DeclareAndBindAsync(
-            "student.events",
-            "identity.student-events",
-            "student-created",
+            MessagingConstants.StudentEventsExchange,
+            MessagingConstants.StudentEventsQueue,
+            MessagingConstants.StudentCreatedKey,
             stoppingToken
         );
 
-        await ConsumeAsync("identity.driver-events", stoppingToken);
-        await ConsumeAsync("identity.student-events", stoppingToken);
+        await ConsumeAsync(MessagingConstants.DriverEventsQueue, stoppingToken);
+        await ConsumeAsync(MessagingConstants.StudentEventsQueue, stoppingToken);
     }
 
     private async Task DeclareAndBindAsync(
@@ -70,13 +71,7 @@ public sealed class InvitationEventsConsumer(
             durable: true,
             cancellationToken: ct
         );
-        await channel.QueueDeclareAsync(
-            queue,
-            durable: true,
-            exclusive: false,
-            autoDelete: false,
-            cancellationToken: ct
-        );
+        await RabbitDLQTopology.DeclareQueueWithDlqAsync(channel, queue, ct);
         await channel.QueueBindAsync(queue, exchange, key, cancellationToken: ct);
     }
 
@@ -111,7 +106,7 @@ public sealed class InvitationEventsConsumer(
         using var scope = scopeFactory.CreateScope();
         var invite = scope.ServiceProvider.GetRequiredService<InviteUserHandler>();
 
-        if (routingKey == "driver-created")
+        if (routingKey == MessagingConstants.DriverCreatedKey)
         {
             var e = JsonSerializer.Deserialize<DriverCreated>(json, Json)!;
             await invite.HandleAsync(
@@ -125,7 +120,7 @@ public sealed class InvitationEventsConsumer(
             );
             logger.LogInformation("Driver account invited for driver {DriverId}", e.DriverId);
         }
-        else if (routingKey == "student-created")
+        else if (routingKey == MessagingConstants.StudentCreatedKey)
         {
             var e = JsonSerializer.Deserialize<StudentCreated>(json, Json)!;
             await invite.HandleAsync(
