@@ -4,6 +4,8 @@ on:
   push:
     branches: [main, master]   
   pull_request:
+  permissions:
+    contents: read
 
 jobs:
   branch-name:
@@ -31,7 +33,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-
+        with:
+          persist-credentials: false
       - uses: actions/setup-dotnet@v4
         with:
           dotnet-version: '10.0.x'
@@ -66,7 +69,8 @@ jobs:
           - { name: bus,          path: server/services/bus-service/bus }
     steps:
       - uses: actions/checkout@v4
-
+        with:
+          persist-credentials: false
       - uses: actions/setup-java@v4
         with:
           distribution: temurin

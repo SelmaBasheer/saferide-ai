@@ -27,6 +27,10 @@ public class SchoolEventsListener {
     @RabbitListener(queues = "${saferide.rabbitmq.school-events-queue}")
     public void handle(SchoolEventPayload event, @Header(AmqpHeaders.RECEIVED_ROUTING_KEY) String routingKey) {
         String status;
+        if (event == null || event.schoolId() == null || event.occurredAtUtc() == null) {
+            log.warn("Discarding malformed school event, routingKey={}", routingKey);
+            return;
+        }
         if ("school-approved".equals(routingKey)) {
             status = SchoolStatuses.APPROVED;
         } else if ("school-suspended".equals(routingKey)) {
