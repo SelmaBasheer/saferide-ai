@@ -1,0 +1,38 @@
+server:
+  port: 5011
+
+spring:
+  application:
+    name: bus
+  datasource:
+    url: jdbc:mysql://localhost:3307/saferide_bus?createDatabaseIfNotExist=true&allowPublicKeyRetrieval=true&useSSL=false
+    username: root
+    password: ${MYSQL_ROOT_PASSWORD:Admin@123}
+  jpa:
+    hibernate:
+      ddl-auto: update
+    open-in-view: false
+  rabbitmq:
+    host: ${SPRING_RABBITMQ_HOST:localhost}
+
+    port: 5672
+    username: ${SPRING_RABBITMQ_USERNAME:saferide}
+    password: ${SPRING_RABBITMQ_PASSWORD:password}
+    listener:
+      simple:
+        default-requeue-rejected: false
+        retry:
+          enabled: true
+          max-attempts: 3
+          initial-interval: 2s
+          multiplier: 2
+
+saferide:
+  jwt:
+    secret: ${JWT_SECRET:SaferideIdentitySecretKey2026!VeryStrongRandomKey12345}
+    issuer: ${JWT_ISSUER:saferide-ai}
+    audience: ${JWT_AUDIENCE:saferide-ai-clients}
+  rabbitmq:
+    bus-exchange: bus.events
+    school-exchange: school.events
+    school-events-queue: bus.school-events

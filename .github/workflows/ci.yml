@@ -6,6 +6,26 @@ on:
   pull_request:
 
 jobs:
+  branch-name:
+    name: Branch name convention
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Validate branch name
+        shell: bash
+        env:
+          BRANCH: ${{ github.head_ref }}
+        run: |
+          echo "Branch: $BRANCH"
+          PATTERN='^(feat|fix|chore|refactor|docs|test|perf|ci|build|revert)/[a-z0-9]+(-[a-z0-9]+)*$'
+          if [[ ! "$BRANCH" =~ $PATTERN ]]; then
+            echo "::error::Invalid branch name '$BRANCH'"
+            echo "Expected: <type>/<kebab-case-description>"
+            echo "Allowed types: feat, fix, chore, refactor, docs, test, perf, ci, build, revert"
+            echo "Example: feat/bus-service"
+            exit 1
+          fi
+          echo "Branch name OK"
   dotnet:
     name: .NET build & check
     runs-on: ubuntu-latest
@@ -34,3 +54,29 @@ jobs:
 
       - name: Check formatting (CSharpier)
         run: dotnet csharpier check .
+  java:
+    name: Java build & check
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        service:
+          - { name: notification, path: server/services/notification-service/notification }
+          - { name: student,      path: server/services/student-service/student }
+          - { name: bus,          path: server/services/bus-service/bus }
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: maven
+
+      - name: Spotless check
+        working-directory: ${{ matrix.service.path }}
+        run: ./mvnw -B spotless:check
+
+      - name: Compile
+        working-directory: ${{ matrix.service.path }}
+        run: ./mvnw -B -DskipTests compile

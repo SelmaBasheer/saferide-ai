@@ -21,3 +21,7 @@ build/
 
 # dev-env
 dev-env.ps1
+
+# IntelliJ IDEA
+.idea/
+*.iml
