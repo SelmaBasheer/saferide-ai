@@ -2,13 +2,12 @@ package com.saferide.notification.application.service;
 
 import com.saferide.notification.application.event.OtpEmailRequested;
 import com.saferide.notification.application.port.EmailSender;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.thymeleaf.context.Context;
 import org.thymeleaf.spring6.SpringTemplateEngine;
-
-import java.net.URLEncoder;
-import java.nio.charset.StandardCharsets;
 
 @Service
 public class OtpEmailService {
@@ -19,8 +18,10 @@ public class OtpEmailService {
     private final SpringTemplateEngine templateEngine;
     private final String appBaseUrl;
 
-    public OtpEmailService(EmailSender emailSender, SpringTemplateEngine templateEngine,
-                           @Value("${saferide.app.base-url}") String appBaseUrl) {
+    public OtpEmailService(
+            EmailSender emailSender,
+            SpringTemplateEngine templateEngine,
+            @Value("${saferide.app.base-url}") String appBaseUrl) {
         this.emailSender = emailSender;
         this.templateEngine = templateEngine;
         this.appBaseUrl = appBaseUrl;
@@ -36,8 +37,9 @@ public class OtpEmailService {
         Context ctx = new Context();
         ctx.setVariable("name", name);
         ctx.setVariable("code", event.code());
-        ctx.setVariable("resetUrl", appBaseUrl + "/reset-password?email="
-            + URLEncoder.encode(event.email(), StandardCharsets.UTF_8));
+        ctx.setVariable(
+                "resetUrl",
+                appBaseUrl + "/reset-password?email=" + URLEncoder.encode(event.email(), StandardCharsets.UTF_8));
 
         String template = invitation ? "invitation-email" : "otp-email";
         String subject = invitation ? INVITATION_SUBJECT : OTP_SUBJECT;
