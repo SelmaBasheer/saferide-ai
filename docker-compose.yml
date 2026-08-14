@@ -63,6 +63,23 @@ services:
       retries: 10
       start_period: 20s
 
+  mongodb:
+    image: mongo:8
+    container_name: saferide-mongodb
+    restart: unless-stopped
+    ports:
+      - "27018:27017"
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_ROOT_USERNAME}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_ROOT_PASSWORD}
+    volumes:
+      - mongodb_data:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
   rabbitmq:
     <<: *common
     image: rabbitmq:4-management-alpine
@@ -189,3 +206,4 @@ volumes:
   sqlserver-data:
   azurite-data:
   mysql-data:
+  mongodb_data:

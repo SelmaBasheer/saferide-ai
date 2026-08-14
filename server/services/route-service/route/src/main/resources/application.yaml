@@ -1,0 +1,38 @@
+server:
+  port: 5013
+
+spring:
+  application:
+    name: route
+  data:
+    mongodb:
+      host: ${MONGO_HOST:localhost}
+      port: ${MONGO_PORT:27018}
+      database: saferide_route
+      username: ${MONGO_USERNAME:saferide}
+      password: ${MONGO_PASSWORD}
+      authentication-database: admin
+      auto-index-creation: true
+  rabbitmq:
+    host: ${SPRING_RABBITMQ_HOST:localhost}
+    port: 5672
+    username: ${SPRING_RABBITMQ_USERNAME:saferide}
+    password: ${SPRING_RABBITMQ_PASSWORD:password}
+    listener:
+      simple:
+        default-requeue-rejected: false
+        retry:
+          enabled: true
+          max-attempts: 3
+          initial-interval: 2s
+          multiplier: 2
+
+saferide:
+  jwt:
+    secret: ${JWT_SECRET:SaferideIdentitySecretKey2026!VeryStrongRandomKey12345}
+    issuer: ${JWT_ISSUER:saferide-ai}
+    audience: ${JWT_AUDIENCE:saferide-ai-clients}
+  rabbitmq:
+    route-exchange: route.events
+    school-exchange: school.events
+    school-events-queue: route.school-events
