@@ -66,4 +66,11 @@ public class GlobalExceptionHandler {
         log.error("Unhandled", ex);
         return ResponseEntity.status(500).body(ApiResponse.fail("Server.Error", "An unexpected error occurred."));
     }
+
+    @ExceptionHandler(org.springframework.dao.DuplicateKeyException.class)
+    ResponseEntity<ApiResponse<Object>> handleDuplicateKey(org.springframework.dao.DuplicateKeyException ex) {
+        log.warn("Handled: Db.Duplicate");
+        return ResponseEntity.status(409)
+                .body(ApiResponse.fail("Db.Duplicate", "A record with the same value already exists."));
+    }
 }

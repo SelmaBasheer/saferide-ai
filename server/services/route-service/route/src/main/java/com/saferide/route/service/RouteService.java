@@ -199,11 +199,12 @@ public class RouteService {
         Route route = findOwned(schoolId, routeId);
 
         route.assignBus(request.busId());
+        Route saved = routeRepository.save(route);
 
         publisher.publish(
                 MessagingConstants.ROUTE_BUS_ASSIGNED,
                 new RouteBusAssigned(route.getId(), schoolId, request.busId(), Instant.now()));
 
-        return routeMapper.toResponse(routeRepository.save(route));
+        return routeMapper.toResponse(saved);
     }
 }

@@ -47,7 +47,13 @@ public class SchoolStatusProjector {
             mongo.insert(new SchoolStatus(schoolId, status, occurredAtUtc));
             log.info("School {} projected as {} (first event)", schoolId, status);
         } catch (DuplicateKeyException e) {
-            log.debug("Ignoring stale school event for {}: event={}", schoolId, occurredAtUtc);
+            long retried = mongo.updateFirst(newerThanStored, update, SchoolStatus.class)
+                    .getMatchedCount();
+            if (retried > 0) {
+                log.info("School {} projected as {} (after insert race)", schoolId, status);
+            } else {
+                log.debug("Ignoring stale school event for {}: event={}", schoolId, occurredAtUtc);
+            }
         }
     }
 }
