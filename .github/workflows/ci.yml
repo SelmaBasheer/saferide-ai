@@ -68,6 +68,7 @@ jobs:
           - { name: notification, path: server/services/notification-service/notification }
           - { name: student,      path: server/services/student-service/student }
           - { name: bus,          path: server/services/bus-service/bus }
+          - { name: route,        path: server/services/route-service/route }
     steps:
       - uses: actions/checkout@v4
         with:
