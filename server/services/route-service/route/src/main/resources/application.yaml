@@ -10,9 +10,10 @@ spring:
       port: ${MONGO_PORT:27018}
       database: saferide_route
       username: ${MONGO_USERNAME:saferide}
-      password: ${MONGO_PASSWORD}
+      password: ${MONGO_PASSWORD:Admin@123}
       authentication-database: admin
       auto-index-creation: true
+      uuid-representation: standard
   rabbitmq:
     host: ${SPRING_RABBITMQ_HOST:localhost}
     port: 5672

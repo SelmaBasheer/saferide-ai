@@ -30,4 +30,10 @@ public class AppException extends RuntimeException {
             super("Resource.NotFound", message, 404);
         }
     }
+
+    public static class ValidationException extends AppException {
+        public ValidationException(String message) {
+            super("Validation.Error", message, 400);
+        }
+    }
 }
