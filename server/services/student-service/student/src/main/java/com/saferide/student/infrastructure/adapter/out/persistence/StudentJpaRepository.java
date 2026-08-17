@@ -1,6 +1,9 @@
 package com.saferide.student.infrastructure.adapter.out.persistence;
 
 import com.saferide.student.domain.Student;
+import com.saferide.student.domain.StudentStatus;
+import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -23,4 +26,8 @@ public interface StudentJpaRepository extends JpaRepository<Student, UUID> {
                OR LOWER(s.parentEmail) LIKE LOWER(CONCAT('%', :search, '%')))
         """)
     Page<Student> search(@Param("schoolId") UUID schoolId, @Param("search") String search, Pageable pageable);
+
+    Optional<Student> findByIdAndSchoolId(UUID id, UUID schoolId);
+
+    List<Student> findBySchoolIdAndRouteIdAndStatus(UUID schoolId, UUID routeId, StudentStatus status);
 }

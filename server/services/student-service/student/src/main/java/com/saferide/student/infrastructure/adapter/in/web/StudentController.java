@@ -2,11 +2,9 @@ package com.saferide.student.infrastructure.adapter.in.web;
 
 import com.saferide.student.application.exception.AppException.ForbiddenException;
 import com.saferide.student.application.service.StudentService;
-import com.saferide.student.infrastructure.adapter.in.web.dto.ApiResponse;
-import com.saferide.student.infrastructure.adapter.in.web.dto.CreateStudentRequest;
-import com.saferide.student.infrastructure.adapter.in.web.dto.PagedResult;
-import com.saferide.student.infrastructure.adapter.in.web.dto.StudentResponse;
+import com.saferide.student.infrastructure.adapter.in.web.dto.*;
 import jakarta.validation.Valid;
+import java.util.List;
 import java.util.UUID;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
@@ -74,5 +72,21 @@ public class StudentController {
 
         var items = result.getContent().stream().map(mapper::toResponse).toList();
         return ApiResponse.ok(new PagedResult<>(items, result.getTotalElements(), page, pageSize));
+    }
+
+    @PutMapping("/{id}/route")
+    public ApiResponse<StudentResponse> assignRoute(
+            @AuthenticationPrincipal Jwt jwt, @PathVariable UUID id, @Valid @RequestBody AssignRouteRequest req) {
+        var student = service.assignRoute(schoolId(jwt), id, req.routeId(), req.pickupStopId(), req.dropStopId());
+        return ApiResponse.ok(mapper.toResponse(student), "Route assigned successfully.");
+    }
+
+    @GetMapping("/roster")
+    public ApiResponse<List<RosterEntryResponse>> roster(@AuthenticationPrincipal Jwt jwt, @RequestParam UUID routeId) {
+        var items = service.roster(schoolId(jwt), routeId).stream()
+                .map(s -> new RosterEntryResponse(
+                        s.getId(), s.getFirstName(), s.getLastName(), s.getParentEmail(), s.getPickupStopId()))
+                .toList();
+        return ApiResponse.ok(items);
     }
 }

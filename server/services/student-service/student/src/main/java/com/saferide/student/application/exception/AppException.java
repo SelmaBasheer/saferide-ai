@@ -24,4 +24,10 @@ public class AppException extends RuntimeException {
             super("Auth.Forbidden", message, 403);
         }
     }
+
+    public static class NotFoundException extends AppException {
+        public NotFoundException(String message) {
+            super("Resource.NotFound", message, 404);
+        }
+    }
 }

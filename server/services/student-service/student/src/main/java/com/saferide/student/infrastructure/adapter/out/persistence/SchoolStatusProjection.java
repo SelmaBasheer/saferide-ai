@@ -15,6 +15,7 @@ public class SchoolStatusProjection {
 
     @Id
     @JdbcTypeCode(SqlTypes.CHAR)
+    @Column(length = 36)
     private UUID schoolId;
 
     @Column(nullable = false, length = 20)
