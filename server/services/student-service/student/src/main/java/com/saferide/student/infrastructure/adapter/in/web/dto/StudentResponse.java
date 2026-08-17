@@ -12,4 +12,7 @@ public record StudentResponse(
         String parentLastName,
         String parentEmail,
         String parentPhone,
-        String status) {}
+        String status,
+        UUID routeId,
+        UUID pickupStopId,
+        UUID dropStopId) {}

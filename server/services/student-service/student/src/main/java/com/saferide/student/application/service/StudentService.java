@@ -8,6 +8,7 @@ import com.saferide.student.application.port.SchoolStatusPort;
 import com.saferide.student.application.port.StudentRepositoryPort;
 import com.saferide.student.domain.Student;
 import java.time.Instant;
+import java.util.List;
 import java.util.UUID;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -20,6 +21,7 @@ public class StudentService {
     public static final String STUDENT_CREATED_KEY = "student-created";
     public static final String DUPLICATE_ADMISSION = "A student with this admission number already exists.";
     public static final String SCHOOL_NOT_APPROVED = "Your school is not approved yet.";
+    public static final String STUDENT_NOT_FOUND = "Student not found.";
 
     private final StudentRepositoryPort repository;
     private final EventPublisherPort events;
@@ -79,5 +81,21 @@ public class StudentService {
     @Transactional(readOnly = true)
     public Page<Student> list(UUID schoolId, String search, Pageable pageable) {
         return repository.findPage(schoolId, search, pageable);
+    }
+
+    @Transactional
+    public Student assignRoute(UUID schoolId, UUID studentId, UUID routeId, UUID pickupStopId, UUID dropStopId) {
+        var student = repository
+                .findByIdAndSchoolId(studentId, schoolId)
+                .orElseThrow(() -> new AppException.NotFoundException(STUDENT_NOT_FOUND));
+
+        student.assignRoute(routeId, pickupStopId, dropStopId);
+        repository.save(student);
+        return student;
+    }
+
+    @Transactional(readOnly = true)
+    public List<Student> roster(UUID schoolId, UUID routeId) {
+        return repository.findRoster(schoolId, routeId);
     }
 }

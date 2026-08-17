@@ -6,6 +6,8 @@ import java.util.UUID;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 @Entity
 @Table(
@@ -19,9 +21,12 @@ import lombok.NoArgsConstructor;
 public class Student {
 
     @Id
+    @JdbcTypeCode(SqlTypes.CHAR)
+    @Column(length = 36)
     private UUID id;
 
-    @Column(nullable = false)
+    @JdbcTypeCode(SqlTypes.CHAR)
+    @Column(nullable = false, length = 36)
     private UUID schoolId; // tenant key — from JWT claim
 
     @Column(nullable = false, length = 75)
@@ -48,6 +53,19 @@ public class Student {
 
     @Column(nullable = false, length = 20)
     private String parentPhone;
+
+    // route assignment — ids live in Route service, not validated across services
+    @JdbcTypeCode(SqlTypes.CHAR)
+    @Column(length = 36)
+    private UUID routeId;
+
+    @JdbcTypeCode(SqlTypes.CHAR)
+    @Column(length = 36)
+    private UUID pickupStopId;
+
+    @JdbcTypeCode(SqlTypes.CHAR)
+    @Column(length = 36)
+    private UUID dropStopId;
 
     @Enumerated(EnumType.ORDINAL)
     @Column(nullable = false)
@@ -81,6 +99,14 @@ public class Student {
         s.parentPhone = parentPhone.trim();
         s.status = StudentStatus.ACTIVE;
         s.createdAt = Instant.now();
+        s.updatedAt = s.createdAt;
         return s;
+    }
+
+    public void assignRoute(UUID routeId, UUID pickupStopId, UUID dropStopId) {
+        this.routeId = routeId;
+        this.pickupStopId = pickupStopId;
+        this.dropStopId = dropStopId;
+        this.updatedAt = Instant.now();
     }
 }

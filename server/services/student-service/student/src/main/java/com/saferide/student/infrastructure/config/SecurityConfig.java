@@ -70,6 +70,8 @@ public class SecurityConfig {
                 .authorizeHttpRequests(
                         auth -> auth.requestMatchers("/actuator/health", "/swagger-ui/**", "/v3/api-docs/**")
                                 .permitAll()
+                                .requestMatchers("/api/students/roster")
+                                .hasAnyRole("SchoolAdmin", "Driver")
                                 .requestMatchers("/api/students/**")
                                 .hasRole("SchoolAdmin")
                                 .anyRequest()
