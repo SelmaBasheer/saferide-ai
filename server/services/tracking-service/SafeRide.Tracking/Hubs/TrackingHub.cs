@@ -23,9 +23,16 @@ public sealed class TrackingHub(
         string? source
     )
     {
-        var parsedSource = Enum.TryParse<PositionSource>(source, true, out var s)
-            ? s
-            : PositionSource.Gps;
+        PositionSource parsedSource;
+
+        if (string.IsNullOrWhiteSpace(source))
+        {
+            parsedSource = PositionSource.Gps;
+        }
+        else if (!Enum.TryParse(source, true, out parsedSource) || !Enum.IsDefined(parsedSource))
+        {
+            throw new HubException($"Unknown position source '{source}'.");
+        }
 
         await ingest.HandleAsync(
             tripId,

@@ -70,6 +70,10 @@
         .warn {
             color: #ff9f68;
         }
+
+        .err {
+            color: #ff6b6b;
+        }
     </style>
 </head>
 
@@ -122,15 +126,15 @@
             iconAnchor: [14, 14],
         });
 
-        const stopIcon = (n, reached) => L.divIcon({
-            className: '',
-            html: `<div style="width:24px;height:24px;border-radius:50%;
-             background:${reached ? '#22c55e' : '#fff'};border:2px solid #444;
-             display:flex;align-items:center;justify-content:center;
-             font:600 12px system-ui;color:${reached ? '#fff' : '#222'}">${n}</div>`,
-            iconSize: [24, 24],
-            iconAnchor: [12, 12],
-        });
+        function stopIcon(n, reached) {
+            const el = document.createElement('div');
+            el.style.cssText = `width:24px;height:24px;border-radius:50%;
+        background:${reached ? '#22c55e' : '#fff'};border:2px solid #444;
+        display:flex;align-items:center;justify-content:center;
+        font:600 12px system-ui;color:${reached ? '#fff' : '#222'}`;
+            el.textContent = String(n);
+            return L.divIcon({ className: '', html: el.outerHTML, iconSize: [24, 24], iconAnchor: [12, 12] });
+        }
 
         const token = () => document.getElementById('token').value.trim();
         const tripId = () => document.getElementById('tripId').value.trim();
@@ -138,10 +142,18 @@
 
         function log(msg, obj, cls) {
             const el = document.getElementById('log');
-            const time = new Date().toLocaleTimeString();
-            const span = cls ? `<span class="${cls}">${msg}</span>` : msg;
-            el.innerHTML += `[${time}] ${span}` + (obj ? ' ' + JSON.stringify(obj) : '') + '<br>';
+            const line = document.createElement('div');
+            if (cls) line.className = cls;
+            line.textContent = `[${new Date().toLocaleTimeString()}] ${msg}`
+                + (obj ? ' ' + JSON.stringify(obj) : '');
+            el.appendChild(line);
+            while (el.childElementCount > 300) el.removeChild(el.firstChild);
             el.scrollTop = el.scrollHeight;
+        }
+
+        function ready() {
+            if (!conn) { log('press Connect first', null, 'err'); return false; }
+            return true;
         }
 
         function metres(a, b) {
@@ -166,10 +178,16 @@
             return out;
         }
 
+        function popupNode(text) {
+            const el = document.createElement('div');
+            el.textContent = text;
+            return el;
+        }
+
         function placeBus(ll, label) {
             if (!busMarker) {
                 busMarker = L.marker(ll, { icon: busIcon, zIndexOffset: 1000 })
-                    .addTo(map).bindPopup(label);
+                    .addTo(map).bindPopup(popupNode(label));
             } else {
                 busMarker.setLatLng(ll);
             }
@@ -183,87 +201,119 @@
         }
 
         async function connect() {
-            conn = new signalR.HubConnectionBuilder()
-                .withUrl(baseUrl() + '/hubs/tracking', { accessTokenFactory: () => token() })
-                .withAutomaticReconnect()
-                .build();
+            try {
+                conn = new signalR.HubConnectionBuilder()
+                    .withUrl(baseUrl() + '/hubs/tracking', { accessTokenFactory: () => token() })
+                    .withAutomaticReconnect()
+                    .build();
 
-            conn.on('PositionUpdated', u => {
-                log('PositionUpdated', u);
-                placeBus([u.latitude, u.longitude], 'Bus ' + u.routeCode);
-            });
+                conn.on('PositionUpdated', u => {
+                    log('PositionUpdated', u);
+                    placeBus([u.latitude, u.longitude], 'Bus ' + u.routeCode);
+                });
 
-            conn.on('StopReached', n => {
-                log('StopReached — ' + n.stopName, n, 'hit');
-                const m = stopMarkers[n.stopId];
-                if (m) m.setIcon(stopIcon(n.sequence, true));
-            });
+                conn.on('StopReached', n => {
+                    log('StopReached — ' + n.stopName, n, 'hit');
+                    const m = stopMarkers[n.stopId];
+                    if (m) m.setIcon(stopIcon(n.sequence, true));
+                });
 
-            conn.on('ApproachingStop', n => {
-                log(`ApproachingStop — bus is ${n.stopsAway} stops from ${n.stopName}`, n, 'warn');
-            });
+                conn.on('ApproachingStop', n =>
+                    log(`ApproachingStop — bus is ${n.stopsAway} stops from ${n.stopName}`, n, 'warn'));
 
-            conn.on('TripStarted', n => log('TripStarted', n));
-            conn.on('TripEnded', n => log('TripEnded', n));
-            conn.on('RouteDeviation', n => log('RouteDeviation — ' + n.metresOffRoute + 'm off route', n, 'warn'));
+                conn.on('StudentBoarded', n =>
+                    log(`StudentBoarded — ${n.studentName} ${n.status} at ${n.stopName}`, n, 'hit'));
 
-            conn.onreconnecting(() => log('reconnecting...'));
-            conn.onreconnected(() => log('reconnected'));
+                conn.on('RouteDeviation', n =>
+                    log(`RouteDeviation — ${n.metresOffRoute}m off route`, n, 'warn'));
 
-            await conn.start();
-            log('connected to hub');
+                conn.on('TripStarted', n => log('TripStarted', n));
+                conn.on('TripEnded', n => log('TripEnded', n));
+
+                conn.onreconnecting(() => log('reconnecting...', null, 'warn'));
+                conn.onreconnected(() => log('reconnected'));
+                conn.onclose(e => log('connection closed' + (e ? ': ' + e.message : ''), null, 'err'));
+
+                await conn.start();
+                log('connected to hub');
+            } catch (e) {
+                log('connect failed: ' + e.message, null, 'err');
+            }
         }
 
         async function joinTrip() {
-            await conn.invoke('JoinTrip', tripId());
-            log('joined trip group');
-            await drawTrip();
+            if (!ready()) return;
+            try {
+                await conn.invoke('JoinTrip', tripId());
+                log('joined trip group');
+                await drawTrip();
+            } catch (e) {
+                log('joinTrip failed: ' + e.message, null, 'err');
+            }
         }
 
         async function joinFleet() {
-            await conn.invoke('JoinSchoolFleet');
-            log('joined school fleet group');
+            if (!ready()) return;
+            try {
+                await conn.invoke('JoinSchoolFleet');
+                log('joined school fleet group');
+            } catch (e) {
+                log('joinFleet failed: ' + e.message, null, 'err');
+            }
         }
 
         async function drawTrip() {
-            const res = await fetch(baseUrl() + '/api/trips/' + tripId(),
-                { headers: { Authorization: 'Bearer ' + token() } });
-            const body = await res.json();
-            if (!body.success) { log('could not load trip', body.error); return; }
+            try {
+                const res = await fetch(baseUrl() + '/api/trips/' + tripId(),
+                    { headers: { Authorization: 'Bearer ' + token() } });
 
-            const trip = body.data;
-            log(`trip loaded: ${trip.routeCode} — ${trip.roster.length} students, ${trip.stops.length} stops`);
+                if (!res.ok) { log(`trip fetch failed: HTTP ${res.status}`, null, 'err'); return; }
 
-            trip.stops.forEach(s => {
-                L.circle([s.latitude, s.longitude], {
-                    radius: 100, color: '#9ca3af', weight: 1, fillOpacity: 0.08
-                }).addTo(map);
+                const body = await res.json();
+                if (!body.success) { log('could not load trip', body.error, 'err'); return; }
 
-                stopMarkers[s.stopId] = L.marker([s.latitude, s.longitude],
-                    { icon: stopIcon(s.sequence, !!s.reachedAt) })
-                    .addTo(map)
-                    .bindPopup(`${s.sequence}. ${s.name} — ${s.pickupTime}`);
-            });
+                const trip = body.data;
+                log(`trip loaded: ${trip.routeCode} — ${trip.roster.length} students, ${trip.stops.length} stops`);
 
-            if (trip.path && trip.path.length > 1) {
-                const pts = trip.path.map(p => [p.latitude, p.longitude]);
-                L.polyline(pts, { color: '#2563eb', weight: 4 }).addTo(map);
-                map.fitBounds(pts);
-                drivePoints = densify(pts, 40);
-                log(`path densified to ${drivePoints.length} points, 40m apart`);
-            }
+                trip.stops.forEach(s => {
+                    L.circle([s.latitude, s.longitude], {
+                        radius: 100, color: '#9ca3af', weight: 1, fillOpacity: 0.08
+                    }).addTo(map);
 
-            if (trip.lastPosition) {
-                placeBus([trip.lastPosition.latitude, trip.lastPosition.longitude], 'Bus ' + trip.routeCode);
+                    stopMarkers[s.stopId] = L.marker([s.latitude, s.longitude],
+                        { icon: stopIcon(s.sequence, !!s.reachedAt) })
+                        .addTo(map)
+                        .bindPopup(popupNode(`${s.sequence}. ${s.name} — ${s.pickupTime}`));
+                });
+
+                if (trip.path && trip.path.length > 1) {
+                    const pts = trip.path.map(p => [p.latitude, p.longitude]);
+                    L.polyline(pts, { color: '#2563eb', weight: 4 }).addTo(map);
+                    map.fitBounds(pts);
+                    drivePoints = densify(pts, 40);
+                    log(`path densified to ${drivePoints.length} points, 40m apart`);
+                }
+
+                if (trip.lastPosition) {
+                    placeBus([trip.lastPosition.latitude, trip.lastPosition.longitude], 'Bus ' + trip.routeCode);
+                }
+            } catch (e) {
+                log('drawTrip failed: ' + e.message, null, 'err');
             }
         }
 
         async function sendNext() {
-            if (drivePoints.length === 0) { log('load a trip with a path first'); return; }
+            if (!ready()) return;
+            if (drivePoints.length === 0) { log('load a trip with a path first', null, 'err'); return; }
             if (driveIndex >= drivePoints.length) { log('reached the end of the route'); stopAuto(); return; }
 
             const p = drivePoints[driveIndex++];
-            await conn.invoke('SendPosition', tripId(), p[0], p[1], 30, 'Simulated');
+            try {
+                await conn.invoke('SendPosition', tripId(), p[0], p[1], 30, 'Simulated');
+            } catch (e) {
+                log('sendPosition failed: ' + e.message, null, 'err');
+                stopAuto();
+            }
         }
 
         function toggleAuto() {
@@ -271,6 +321,7 @@
         }
 
         function startAuto() {
+            if (!ready()) return;
             autoTimer = setInterval(sendNext, 1500);
             document.getElementById('autoBtn').textContent = 'Stop auto-drive';
             log('auto-drive started — one position every 1.5s');

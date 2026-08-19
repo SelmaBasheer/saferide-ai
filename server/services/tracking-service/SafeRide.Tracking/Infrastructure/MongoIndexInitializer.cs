@@ -17,7 +17,16 @@ public sealed class MongoIndexInitializer(
                     Builders<Trip>.IndexKeys.Ascending(t => t.SchoolId).Ascending(t => t.Status)
                 ),
                 new CreateIndexModel<Trip>(
-                    Builders<Trip>.IndexKeys.Ascending(t => t.DriverId).Ascending(t => t.Status)
+                    Builders<Trip>.IndexKeys.Ascending(t => t.DriverId),
+                    new CreateIndexOptions<Trip>
+                    {
+                        Name = "uk_active_trip_per_driver",
+                        Unique = true,
+                        PartialFilterExpression = Builders<Trip>.Filter.Eq(
+                            t => t.Status,
+                            TripStatus.Active
+                        ),
+                    }
                 ),
             ],
             cancellationToken

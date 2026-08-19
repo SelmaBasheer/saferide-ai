@@ -104,7 +104,15 @@ public sealed class StartTripHandler(
             entries
         );
 
-        await trips.InsertOneAsync(trip, cancellationToken: ct);
+        try
+        {
+            await trips.InsertOneAsync(trip, cancellationToken: ct);
+        }
+        catch (MongoWriteException ex)
+            when (ex.WriteError.Category == ServerErrorCategory.DuplicateKey)
+        {
+            throw AppException.Conflict("You already have a trip in progress.");
+        }
 
         await events.PublishAsync(
             MessagingConstants.TripStarted,

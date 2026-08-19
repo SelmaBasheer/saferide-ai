@@ -35,5 +35,8 @@ public static class TripAccess
 
     public static bool CanEnd(Trip trip, ClaimsPrincipal user) =>
         trip.SchoolId == user.SchoolId()
-        && (user.IsInRole("SchoolAdmin") || trip.DriverId == user.UserId());
+        && (
+            user.IsInRole("SchoolAdmin")
+            || (user.IsInRole("Driver") && trip.DriverId == user.UserId())
+        );
 }

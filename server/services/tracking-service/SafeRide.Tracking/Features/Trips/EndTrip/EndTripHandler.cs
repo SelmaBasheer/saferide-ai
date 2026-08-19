@@ -7,6 +7,7 @@ using SafeRide.Tracking.Features.Trips.Contracts;
 using SafeRide.Tracking.Hubs;
 using SafeRide.Tracking.Hubs.Contracts;
 using SafeRide.Tracking.Infrastructure.Messaging;
+using SafeRide.Tracking.Security;
 
 namespace SafeRide.Tracking.Features.Trips.EndTrip;
 
@@ -32,44 +33,63 @@ public sealed class EndTripHandler(
             throw AppException.NotFound("Trip not found.");
         }
 
-        trip.End();
+        var now = DateTime.UtcNow;
 
-        await trips.ReplaceOneAsync(t => t.Id == trip.Id, trip, cancellationToken: ct);
+        var ended = await trips.FindOneAndUpdateAsync(
+            Builders<Trip>.Filter.And(
+                Builders<Trip>.Filter.Eq(t => t.Id, tripId),
+                Builders<Trip>.Filter.Eq(t => t.Status, TripStatus.Active)
+            ),
+            Builders<Trip>
+                .Update.Set(t => t.Status, TripStatus.Completed)
+                .Set(t => t.EndedAt, now)
+                .Set(t => t.UpdatedAt, now),
+            new FindOneAndUpdateOptions<Trip> { ReturnDocument = ReturnDocument.After },
+            ct
+        );
 
-        await hub
-            .Clients.Groups(TrackingHub.TripGroup(trip.Id), TrackingHub.SchoolGroup(trip.SchoolId))
-            .TripEnded(
-                new TripLifecycleNotification(
-                    trip.Id,
-                    trip.BusId,
-                    trip.Route.Code,
-                    trip.Route.Name,
-                    trip.EndedAt!.Value
-                )
-            );
+        if (ended is null)
+        {
+            throw AppException.Conflict("Trip is not active.");
+        }
 
         await events.PublishAsync(
             MessagingConstants.TripEnded,
             new TripEndedEvent(
-                trip.Id,
-                trip.SchoolId,
-                trip.RouteId,
-                trip.BusId,
-                trip.DriverId,
-                trip.Roster.Count(r => r.BoardingStatus == BoardingStatus.Boarded),
-                trip.Roster.Count(r => r.BoardingStatus == BoardingStatus.Absent),
-                trip.UnmarkedCount,
+                ended.Id,
+                ended.SchoolId,
+                ended.RouteId,
+                ended.BusId,
+                ended.DriverId,
+                ended.Roster.Count(r => r.BoardingStatus == BoardingStatus.Boarded),
+                ended.Roster.Count(r => r.BoardingStatus == BoardingStatus.Absent),
+                ended.UnmarkedCount,
                 DateTime.UtcNow
             ),
             ct
         );
 
+        await hub
+            .Clients.Groups(
+                TrackingHub.TripGroup(ended.Id),
+                TrackingHub.SchoolGroup(ended.SchoolId)
+            )
+            .TripEnded(
+                new TripLifecycleNotification(
+                    ended.Id,
+                    ended.BusId,
+                    ended.Route.Code,
+                    ended.Route.Name,
+                    ended.EndedAt!.Value
+                )
+            );
+
         logger.LogInformation(
             "Trip {TripId} ended with {UnmarkedCount} students unmarked",
-            trip.Id,
-            trip.UnmarkedCount
+            ended.Id,
+            ended.UnmarkedCount
         );
 
-        return trip.ToResponse();
+        return ended.ToResponse();
     }
 }

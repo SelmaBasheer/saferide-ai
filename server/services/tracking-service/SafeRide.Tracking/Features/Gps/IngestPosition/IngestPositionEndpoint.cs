@@ -26,9 +26,17 @@ public static class IngestPositionEndpoint
                     CancellationToken ct
                 ) =>
                 {
-                    var source = Enum.TryParse<PositionSource>(request.Source, true, out var s)
-                        ? s
-                        : PositionSource.Gps;
+                    PositionSource source;
+                    if (string.IsNullOrWhiteSpace(request.Source))
+                    {
+                        source = PositionSource.Gps;
+                    }
+                    else if (!Enum.TryParse(request.Source, true, out source))
+                    {
+                        throw AppException.Validation(
+                            $"Unknown position source '{request.Source}'."
+                        );
+                    }
 
                     await handler.HandleAsync(
                         id,

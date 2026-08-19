@@ -24,59 +24,82 @@ public sealed class DeviationCheckJob(
 
         foreach (var trip in active)
         {
-            if (trip.LastPosition is null || trip.Route.Path is null)
+            try
             {
-                continue;
+                await CheckTripAsync(trip, settings, cooldown, ct);
             }
-
-            if (!trip.ShouldAlertDeviation(cooldown))
+            catch (Exception ex)
             {
-                continue;
+                logger.LogError(ex, "Deviation check failed for trip {TripId}", trip.Id);
             }
-
-            var path = trip
-                .Route.Path.Coordinates.Positions.Select(p => (p.Latitude, p.Longitude))
-                .ToList();
-
-            var lat = trip.LastPosition.Location.Latitude();
-            var lon = trip.LastPosition.Location.Longitude();
-            var offRoute = GeoDistance.MetresToPath(lat, lon, path);
-
-            if (offRoute <= settings.DeviationThresholdMetres)
-            {
-                continue;
-            }
-
-            trip.MarkDeviationAlerted();
-
-            await trips.UpdateOneAsync(
-                t => t.Id == trip.Id,
-                Builders<Trip>
-                    .Update.Set(t => t.DeviationAlertedAt, trip.DeviationAlertedAt)
-                    .Set(t => t.UpdatedAt, trip.UpdatedAt),
-                cancellationToken: ct
-            );
-
-            logger.LogWarning(
-                "Trip {TripId} is {Metres:0} m off route {RouteCode}",
-                trip.Id,
-                offRoute,
-                trip.Route.Code
-            );
-
-            await hub
-                .Clients.Group(TrackingHub.SchoolGroup(trip.SchoolId))
-                .RouteDeviation(
-                    new RouteDeviationNotification(
-                        trip.Id,
-                        trip.BusId,
-                        trip.Route.Code,
-                        lat,
-                        lon,
-                        Math.Round(offRoute),
-                        DateTime.UtcNow
-                    )
-                );
         }
+    }
+
+    private async Task CheckTripAsync(
+        Trip trip,
+        TrackingOptions settings,
+        TimeSpan cooldown,
+        CancellationToken ct
+    )
+    {
+        if (trip.LastPosition is null || trip.Route.Path is null)
+        {
+            return;
+        }
+
+        if (!trip.ShouldAlertDeviation(cooldown))
+        {
+            return;
+        }
+
+        var path = trip
+            .Route.Path.Coordinates.Positions.Select(p => (p.Latitude, p.Longitude))
+            .ToList();
+
+        if (path.Count < 2)
+        {
+            logger.LogDebug("Trip {TripId} has no usable path, skipping", trip.Id);
+            return;
+        }
+
+        var lat = trip.LastPosition.Location.Latitude();
+        var lon = trip.LastPosition.Location.Longitude();
+        var offRoute = GeoDistance.MetresToPath(lat, lon, path);
+
+        if (offRoute <= settings.DeviationThresholdMetres)
+        {
+            return;
+        }
+
+        logger.LogWarning(
+            "Trip {TripId} is {Metres:0} m off route {RouteCode}",
+            trip.Id,
+            offRoute,
+            trip.Route.Code
+        );
+
+        await hub
+            .Clients.Group(TrackingHub.SchoolGroup(trip.SchoolId))
+            .RouteDeviation(
+                new RouteDeviationNotification(
+                    trip.Id,
+                    trip.BusId,
+                    trip.Route.Code,
+                    lat,
+                    lon,
+                    Math.Round(offRoute),
+                    DateTime.UtcNow
+                )
+            );
+
+        trip.MarkDeviationAlerted();
+
+        await trips.UpdateOneAsync(
+            t => t.Id == trip.Id,
+            Builders<Trip>
+                .Update.Set(t => t.DeviationAlertedAt, trip.DeviationAlertedAt)
+                .Set(t => t.UpdatedAt, trip.UpdatedAt),
+            cancellationToken: ct
+        );
     }
 }

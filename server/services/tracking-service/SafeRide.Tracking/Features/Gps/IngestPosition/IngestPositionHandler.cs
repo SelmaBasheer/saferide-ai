@@ -116,8 +116,25 @@ public sealed class IngestPositionHandler(
 
         var stopFilter = Builders<Trip>.Filter.And(
             Builders<Trip>.Filter.Eq(t => t.Id, trip.Id),
-            Builders<Trip>.Filter.ElemMatch(t => t.Route.Stops, s => s.StopId == stop.StopId)
+            Builders<Trip>.Filter.ElemMatch(
+                t => t.Route.Stops,
+                s => s.StopId == stop.StopId && s.ReachedAt == null
+            )
         );
+
+        var result = await trips.UpdateOneAsync(
+            stopFilter,
+            Builders<Trip>.Update.Set(
+                t => t.Route.Stops.FirstMatchingElement().ReachedAt,
+                stop.ReachedAt
+            ),
+            cancellationToken: ct
+        );
+
+        if (result.ModifiedCount == 0)
+        {
+            return; // another position post won the race
+        }
 
         await trips.UpdateOneAsync(
             stopFilter,

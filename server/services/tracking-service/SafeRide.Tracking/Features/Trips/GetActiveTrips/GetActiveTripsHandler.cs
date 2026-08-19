@@ -4,7 +4,7 @@ using SafeRide.Tracking.Domain;
 using SafeRide.Tracking.Features.Trips.Contracts;
 using SafeRide.Tracking.Security;
 
-namespace SafeRide.Tracking.Features.Trips.GetActiveTrips;
+namespace SafeRide.Tracking.Features.Trips.EndTrip.GetActiveTrips;
 
 public sealed class GetActiveTripsHandler(IMongoCollection<Trip> trips)
 {

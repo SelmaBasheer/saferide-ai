@@ -61,6 +61,8 @@ public sealed class RabbitMqEventPublisher(
             if (_channel is { IsOpen: true })
                 return _channel;
 
+            await CloseAsync();
+
             var factory = new ConnectionFactory
             {
                 HostName = _settings.Host,
@@ -85,11 +87,34 @@ public sealed class RabbitMqEventPublisher(
         }
     }
 
-    public async ValueTask DisposeAsync()
+    private async Task CloseAsync()
     {
         if (_channel is not null)
+        {
             await _channel.CloseAsync();
+            await _channel.DisposeAsync();
+            _channel = null;
+        }
+
         if (_connection is not null)
+        {
             await _connection.CloseAsync();
+            await _connection.DisposeAsync();
+            _connection = null;
+        }
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        await _lock.WaitAsync();
+        try
+        {
+            await CloseAsync();
+        }
+        finally
+        {
+            _lock.Release();
+            _lock.Dispose();
+        }
     }
 }

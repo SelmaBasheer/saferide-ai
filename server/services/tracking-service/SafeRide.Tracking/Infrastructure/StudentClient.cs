@@ -21,6 +21,11 @@ public sealed class StudentClient(HttpClient http)
             ct
         );
 
-        return envelope?.Data ?? [];
+        if (envelope?.Data is null)
+        {
+            throw new InvalidOperationException("Student service returned no roster payload.");
+        }
+
+        return envelope.Data;
     }
 }
