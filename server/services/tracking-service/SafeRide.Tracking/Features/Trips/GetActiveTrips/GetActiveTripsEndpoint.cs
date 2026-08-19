@@ -2,7 +2,7 @@ using System.Security.Claims;
 using SafeRide.Tracking.Common;
 using SafeRide.Tracking.Features.Trips.Contracts;
 
-namespace SafeRide.Tracking.Features.Trips.EndTrip.GetActiveTrips;
+namespace SafeRide.Tracking.Features.Trips.GetActiveTrips;
 
 public static class GetActiveTripsEndpoint
 {

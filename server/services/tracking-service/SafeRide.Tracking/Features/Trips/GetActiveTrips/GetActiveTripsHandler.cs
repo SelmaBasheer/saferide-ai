@@ -1,10 +1,11 @@
 using System.Security.Claims;
 using MongoDB.Driver;
+using SafeRide.Tracking.Common;
 using SafeRide.Tracking.Domain;
 using SafeRide.Tracking.Features.Trips.Contracts;
 using SafeRide.Tracking.Security;
 
-namespace SafeRide.Tracking.Features.Trips.EndTrip.GetActiveTrips;
+namespace SafeRide.Tracking.Features.Trips.GetActiveTrips;
 
 public sealed class GetActiveTripsHandler(IMongoCollection<Trip> trips)
 {
@@ -19,6 +20,6 @@ public sealed class GetActiveTripsHandler(IMongoCollection<Trip> trips)
             .Find(t => t.SchoolId == schoolId && t.Status == TripStatus.Active)
             .ToListAsync(ct);
 
-        return [.. active.Select(t => t.ToSummary())];
+        return [.. active.Where(t => TripAccess.CanView(t, user)).Select(t => t.ToSummary())];
     }
 }
