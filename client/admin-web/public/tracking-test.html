@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="utf-8" />
+    <title>SafeRide tracking test</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <style>
+        body {
+            font-family: system-ui, sans-serif;
+            margin: 24px;
+            max-width: 960px;
+        }
+
+        label {
+            display: block;
+            margin: 10px 0 4px;
+            font-size: 13px;
+            color: #555;
+        }
+
+        input,
+        textarea {
+            width: 100%;
+            padding: 6px;
+            font-family: monospace;
+            font-size: 12px;
+        }
+
+        textarea {
+            height: 58px;
+        }
+
+        button {
+            margin: 8px 8px 0 0;
+            padding: 8px 14px;
+            cursor: pointer;
+        }
+
+        #map {
+            height: 420px;
+            margin-top: 16px;
+            border: 1px solid #ccc;
+        }
+
+        #log {
+            height: 220px;
+            overflow-y: auto;
+            background: #111;
+            color: #0f0;
+            font-family: monospace;
+            font-size: 12px;
+            padding: 10px;
+            margin-top: 12px;
+        }
+
+        .row {
+            display: flex;
+            gap: 12px;
+        }
+
+        .row>div {
+            flex: 1;
+        }
+
+        .hit {
+            color: #ffd166;
+        }
+
+        .warn {
+            color: #ff9f68;
+        }
+    </style>
+</head>
+
+<body>
+
+    <label>Access token</label>
+    <textarea id="token"></textarea>
+
+    <div class="row">
+        <div>
+            <label>Trip id</label>
+            <input id="tripId" />
+        </div>
+        <div>
+            <label>Tracking base url</label>
+            <input id="hubUrl" value="http://localhost:5015" />
+        </div>
+    </div>
+
+    <button onclick="connect()">1. Connect</button>
+    <button onclick="joinTrip()">2. Join trip</button>
+    <button onclick="joinFleet()">Join school fleet (admin)</button>
+    <button onclick="sendNext()">Send one position (driver)</button>
+    <button onclick="toggleAuto()" id="autoBtn">Start auto-drive</button>
+
+    <div id="map"></div>
+    <div id="log"></div>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/8.0.7/signalr.min.js"></script>
+    <script>
+        let conn = null;
+        let busMarker = null;
+        let trail = null;
+        let autoTimer = null;
+
+        const stopMarkers = {};
+        const trailPoints = [];
+        let drivePoints = [];
+        let driveIndex = 0;
+
+        const map = L.map('map').setView([8.8901, 76.6012], 14);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+            { attribution: '© OpenStreetMap' }).addTo(map);
+
+        const busIcon = L.divIcon({
+            className: '',
+            html: '<div style="font-size:28px;line-height:28px;filter:drop-shadow(0 2px 3px rgba(0,0,0,.5))">🚌</div>',
+            iconSize: [28, 28],
+            iconAnchor: [14, 14],
+        });
+
+        const stopIcon = (n, reached) => L.divIcon({
+            className: '',
+            html: `<div style="width:24px;height:24px;border-radius:50%;
+             background:${reached ? '#22c55e' : '#fff'};border:2px solid #444;
+             display:flex;align-items:center;justify-content:center;
+             font:600 12px system-ui;color:${reached ? '#fff' : '#222'}">${n}</div>`,
+            iconSize: [24, 24],
+            iconAnchor: [12, 12],
+        });
+
+        const token = () => document.getElementById('token').value.trim();
+        const tripId = () => document.getElementById('tripId').value.trim();
+        const baseUrl = () => document.getElementById('hubUrl').value.trim();
+
+        function log(msg, obj, cls) {
+            const el = document.getElementById('log');
+            const time = new Date().toLocaleTimeString();
+            const span = cls ? `<span class="${cls}">${msg}</span>` : msg;
+            el.innerHTML += `[${time}] ${span}` + (obj ? ' ' + JSON.stringify(obj) : '') + '<br>';
+            el.scrollTop = el.scrollHeight;
+        }
+
+        function metres(a, b) {
+            const R = 6371000, toRad = d => d * Math.PI / 180;
+            const dLat = toRad(b[0] - a[0]), dLon = toRad(b[1] - a[1]);
+            const h = Math.sin(dLat / 2) ** 2 +
+                Math.cos(toRad(a[0])) * Math.cos(toRad(b[0])) * Math.sin(dLon / 2) ** 2;
+            return R * 2 * Math.atan2(Math.sqrt(h), Math.sqrt(1 - h));
+        }
+
+        function densify(points, stepMetres) {
+            const out = [];
+            for (let i = 0; i < points.length - 1; i++) {
+                const a = points[i], b = points[i + 1];
+                const steps = Math.max(1, Math.round(metres(a, b) / stepMetres));
+                for (let s = 0; s < steps; s++) {
+                    const t = s / steps;
+                    out.push([a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t]);
+                }
+            }
+            out.push(points[points.length - 1]);
+            return out;
+        }
+
+        function placeBus(ll, label) {
+            if (!busMarker) {
+                busMarker = L.marker(ll, { icon: busIcon, zIndexOffset: 1000 })
+                    .addTo(map).bindPopup(label);
+            } else {
+                busMarker.setLatLng(ll);
+            }
+            trailPoints.push(ll);
+            if (!trail) {
+                trail = L.polyline(trailPoints, { color: '#dc2626', weight: 3, opacity: 0.7 }).addTo(map);
+            } else {
+                trail.setLatLngs(trailPoints);
+            }
+            map.panTo(ll);
+        }
+
+        async function connect() {
+            conn = new signalR.HubConnectionBuilder()
+                .withUrl(baseUrl() + '/hubs/tracking', { accessTokenFactory: () => token() })
+                .withAutomaticReconnect()
+                .build();
+
+            conn.on('PositionUpdated', u => {
+                log('PositionUpdated', u);
+                placeBus([u.latitude, u.longitude], 'Bus ' + u.routeCode);
+            });
+
+            conn.on('StopReached', n => {
+                log('StopReached — ' + n.stopName, n, 'hit');
+                const m = stopMarkers[n.stopId];
+                if (m) m.setIcon(stopIcon(n.sequence, true));
+            });
+
+            conn.on('ApproachingStop', n => {
+                log(`ApproachingStop — bus is ${n.stopsAway} stops from ${n.stopName}`, n, 'warn');
+            });
+
+            conn.on('TripStarted', n => log('TripStarted', n));
+            conn.on('TripEnded', n => log('TripEnded', n));
+            conn.on('RouteDeviation', n => log('RouteDeviation — ' + n.metresOffRoute + 'm off route', n, 'warn'));
+
+            conn.onreconnecting(() => log('reconnecting...'));
+            conn.onreconnected(() => log('reconnected'));
+
+            await conn.start();
+            log('connected to hub');
+        }
+
+        async function joinTrip() {
+            await conn.invoke('JoinTrip', tripId());
+            log('joined trip group');
+            await drawTrip();
+        }
+
+        async function joinFleet() {
+            await conn.invoke('JoinSchoolFleet');
+            log('joined school fleet group');
+        }
+
+        async function drawTrip() {
+            const res = await fetch(baseUrl() + '/api/trips/' + tripId(),
+                { headers: { Authorization: 'Bearer ' + token() } });
+            const body = await res.json();
+            if (!body.success) { log('could not load trip', body.error); return; }
+
+            const trip = body.data;
+            log(`trip loaded: ${trip.routeCode} — ${trip.roster.length} students, ${trip.stops.length} stops`);
+
+            trip.stops.forEach(s => {
+                L.circle([s.latitude, s.longitude], {
+                    radius: 100, color: '#9ca3af', weight: 1, fillOpacity: 0.08
+                }).addTo(map);
+
+                stopMarkers[s.stopId] = L.marker([s.latitude, s.longitude],
+                    { icon: stopIcon(s.sequence, !!s.reachedAt) })
+                    .addTo(map)
+                    .bindPopup(`${s.sequence}. ${s.name} — ${s.pickupTime}`);
+            });
+
+            if (trip.path && trip.path.length > 1) {
+                const pts = trip.path.map(p => [p.latitude, p.longitude]);
+                L.polyline(pts, { color: '#2563eb', weight: 4 }).addTo(map);
+                map.fitBounds(pts);
+                drivePoints = densify(pts, 40);
+                log(`path densified to ${drivePoints.length} points, 40m apart`);
+            }
+
+            if (trip.lastPosition) {
+                placeBus([trip.lastPosition.latitude, trip.lastPosition.longitude], 'Bus ' + trip.routeCode);
+            }
+        }
+
+        async function sendNext() {
+            if (drivePoints.length === 0) { log('load a trip with a path first'); return; }
+            if (driveIndex >= drivePoints.length) { log('reached the end of the route'); stopAuto(); return; }
+
+            const p = drivePoints[driveIndex++];
+            await conn.invoke('SendPosition', tripId(), p[0], p[1], 30, 'Simulated');
+        }
+
+        function toggleAuto() {
+            autoTimer ? stopAuto() : startAuto();
+        }
+
+        function startAuto() {
+            autoTimer = setInterval(sendNext, 1500);
+            document.getElementById('autoBtn').textContent = 'Stop auto-drive';
+            log('auto-drive started — one position every 1.5s');
+        }
+
+        function stopAuto() {
+            clearInterval(autoTimer);
+            autoTimer = null;
+            document.getElementById('autoBtn').textContent = 'Start auto-drive';
+            log('auto-drive stopped');
+        }
+    </script>
+</body>
+
+</html>

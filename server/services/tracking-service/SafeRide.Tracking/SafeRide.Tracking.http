@@ -1,0 +1,6 @@
+@SafeRide.Tracking_HostAddress = http://localhost:5274
+
+GET {{SafeRide.Tracking_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
