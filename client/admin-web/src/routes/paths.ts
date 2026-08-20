@@ -22,5 +22,7 @@ export const ROUTES = {
     // school admin (web)
     schoolFleet: "/school-admin/fleet",
     schoolBuses: "/school-admin/buses",
+    schoolBusDetail: "/school-admin/buses/:id",
     schoolRoutes: "/school-admin/routes",
+    schoolRouteDetail: "/school-admin/routes/:id",
 } as const

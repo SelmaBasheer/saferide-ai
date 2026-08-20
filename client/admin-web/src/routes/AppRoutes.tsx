@@ -18,6 +18,10 @@ import DriverHomePage from "@/pages/driver/DriverHomePage"
 import DriverTripPage from "@/pages/driver/DriverTripPage"
 import ParentHomePage from "@/pages/parent/ParentHomePage"
 import ParentTripPage from "@/pages/parent/ParentTripPage"
+import BusesPage from "@/pages/BusesPage"
+import BusDetailPage from "@/pages/BusDetailPage"
+import RoutesPage from "@/pages/RoutesPage"
+import RouteDetailPage from "@/pages/RouteDetailPage"
 
 export default function AppRoutes() {
     return (
@@ -38,6 +42,10 @@ export default function AppRoutes() {
                 <ProtectedRoute roles={["SchoolAdmin"]}><DriversPage /></ProtectedRoute>} />
             <Route path={ROUTES.schoolStudents} element={
                 <ProtectedRoute roles={["SchoolAdmin"]}><StudentsPage /></ProtectedRoute>} />
+            <Route path={ROUTES.schoolBuses} element={
+                <ProtectedRoute roles={["SchoolAdmin"]}><BusesPage /></ProtectedRoute>} />
+            <Route path={ROUTES.schoolBusDetail} element={
+                <ProtectedRoute roles={["SchoolAdmin"]}><BusDetailPage /></ProtectedRoute>} />
             <Route element={
                 <ProtectedRoute roles={["Driver"]}><MobileLayout /></ProtectedRoute>}>
                 <Route path={ROUTES.driver} element={<DriverHomePage />} />
@@ -47,6 +55,10 @@ export default function AppRoutes() {
                 <Route path={ROUTES.parent} element={<ParentHomePage />} />
                 <Route path={ROUTES.parentTrip} element={<ParentTripPage />} />
             </Route>
+            <Route path={ROUTES.schoolRoutes} element={
+                <ProtectedRoute roles={["SchoolAdmin"]}><RoutesPage /></ProtectedRoute>} />
+            <Route path={ROUTES.schoolRouteDetail} element={
+                <ProtectedRoute roles={["SchoolAdmin"]}><RouteDetailPage /></ProtectedRoute>} />
         </Routes>
     )
 }
