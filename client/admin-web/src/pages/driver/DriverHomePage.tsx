@@ -6,13 +6,20 @@ import { useGetMyTripsQuery, useStartTripMutation } from "@/features/tracking/tr
 export default function DriverHomePage() {
     const navigate = useNavigate()
 
-    const { data: active, isLoading: loadingActive } = useGetMyTripsQuery({
-        status: "Active",
-        page: 1,
-        pageSize: 1,
-    })
+    const {
+        data: active,
+        isLoading: loadingActive,
+        isError: activeFailed,
+        refetch: refetchActive,
+    } = useGetMyTripsQuery({ status: "Active", page: 1, pageSize: 1 })
 
-    const { data: routes, isLoading: loadingRoutes } = useGetRoutesQuery({ page: 1, pageSize: 50 })
+    const {
+        data: routes,
+        isLoading: loadingRoutes,
+        isError: routesFailed,
+        refetch: refetchRoutes,
+    } = useGetRoutesQuery({ page: 1, pageSize: 50 })
+
     const [startTrip, { isLoading: starting }] = useStartTripMutation()
 
     const activeTrip = active?.items?.[0]
@@ -27,6 +34,23 @@ export default function DriverHomePage() {
                 "Could not start the trip."
             alert(message)
         }
+    }
+
+    if (activeFailed || routesFailed) {
+        return (
+            <div className="p-6 text-center">
+                <p className="text-slate-600">Could not reach the server.</p>
+                <button
+                    onClick={() => {
+                        void refetchActive()
+                        void refetchRoutes()
+                    }}
+                    className="mt-3 rounded-lg border border-slate-300 px-4 py-2 text-sm"
+                >
+                    Try again
+                </button>
+            </div>
+        )
     }
 
     if (loadingActive || loadingRoutes) {

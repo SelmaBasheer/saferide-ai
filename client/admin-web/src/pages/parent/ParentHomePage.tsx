@@ -5,7 +5,11 @@ import { useGetMyTripsQuery } from "@/features/tracking/trackingApi"
 
 export default function ParentHomePage() {
     const navigate = useNavigate()
-    const { data, isLoading } = useGetMyTripsQuery({ status: "Active", page: 1, pageSize: 5 })
+    const { data, isLoading, isError, refetch } = useGetMyTripsQuery({
+        status: "Active",
+        page: 1,
+        pageSize: 50,
+    })
 
     const trips = data?.items ?? []
 
@@ -14,6 +18,20 @@ export default function ParentHomePage() {
             navigate(ROUTES.parentTrip.replace(":id", trips[0].id), { replace: true })
         }
     }, [trips, navigate])
+
+    if (isError) {
+        return (
+            <div className="p-6 text-center">
+                <p className="text-slate-600">Could not reach the server.</p>
+                <button
+                    onClick={() => refetch()}
+                    className="mt-3 rounded-lg border border-slate-300 px-4 py-2 text-sm"
+                >
+                    Try again
+                </button>
+            </div>
+        )
+    }
 
     if (isLoading) return <div className="p-6 text-slate-500">Looking for your bus…</div>
 

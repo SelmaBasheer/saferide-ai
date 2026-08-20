@@ -35,7 +35,7 @@ function Recenter({ position }: { position: LatLng | null }) {
 
 export default function ParentTripPage() {
     const { id = "" } = useParams()
-    const { data: trip, isLoading } = useGetTripQuery(id, { skip: !id })
+    const { data: trip, isLoading, isError, refetch } = useGetTripQuery(id, { skip: !id })
 
     const [position, setPosition] = useState<LatLng | null>(null)
     const [lastAt, setLastAt] = useState<number | null>(null)
@@ -44,12 +44,15 @@ export default function ParentTripPage() {
 
     const push = (msg: string) => setAlerts((a) => [msg, ...a].slice(0, 6))
 
-    const { status, joinTrip } = useTrackingHub({
+    const { status, joinTrip, leaveTrip } = useTrackingHub({
         onPosition: (u) => {
             setPosition([u.latitude, u.longitude])
             setLastAt(Date.now())
         },
-        onStopReached: (n) => push(`Bus reached ${n.stopName}`),
+        onStopReached: (n) => {
+            push(`Bus reached ${n.stopName}`)
+            void refetch()
+        },
         onApproachingStop: (n) => push(`🔔 Bus is ${n.stopsAway} stops from ${n.stopName} — get ready`),
         onStudentBoarded: (n) =>
             push(
@@ -57,12 +60,18 @@ export default function ParentTripPage() {
                     ? `✅ ${n.studentName} boarded at ${n.stopName}`
                     : `⚠️ ${n.studentName} was marked absent at ${n.stopName}`
             ),
-        onTripEnded: () => push("Trip finished"),
+        onTripEnded: () => {
+            push("Trip finished")
+            void refetch()
+        },
     })
 
     useEffect(() => {
         if (status === "connected" && id) void joinTrip(id)
-    }, [status, id, joinTrip])
+        return () => {
+            void leaveTrip(id)
+        }
+    }, [status, id, joinTrip, leaveTrip])
 
     useEffect(() => {
         if (trip?.lastPosition) {
@@ -71,7 +80,7 @@ export default function ParentTripPage() {
         }
     }, [trip?.lastPosition])
 
-    // re-render every 10s so the stale-signal check stays current
+    // re-render every 10s so the stale check stays current
     useEffect(() => {
         const t = setInterval(() => setTick((n) => n + 1), 10000)
         return () => clearInterval(t)
@@ -82,10 +91,24 @@ export default function ParentTripPage() {
         [trip?.path]
     )
 
+    if (isError) {
+        return (
+            <div className="p-6 text-center">
+                <p className="text-slate-600">Could not load the bus right now.</p>
+                <button
+                    onClick={() => refetch()}
+                    className="mt-3 rounded-lg border border-slate-300 px-4 py-2 text-sm"
+                >
+                    Try again
+                </button>
+            </div>
+        )
+    }
+
     if (isLoading || !trip) return <div className="p-6 text-slate-500">Loading…</div>
 
     const myStopIds = new Set(trip.roster.map((r) => r.pickupStopId))
-    const myStop = trip.stops.find((s) => myStopIds.has(s.stopId))
+    const myStops = trip.stops.filter((s) => myStopIds.has(s.stopId))
     const stale = lastAt !== null && Date.now() - lastAt > 60000
     const centre: LatLng = position ?? path[0] ?? [8.8901, 76.6012]
 
@@ -100,6 +123,10 @@ export default function ParentTripPage() {
                     <div className="text-right text-xs">
                         {trip.status !== "Active" ? (
                             <span className="text-slate-500">Trip finished</span>
+                        ) : status !== "connected" ? (
+                            <span className="text-amber-600">● connecting…</span>
+                        ) : lastAt === null ? (
+                            <span className="text-slate-500">● waiting for the bus</span>
                         ) : stale ? (
                             <span className="text-amber-600">● signal lost</span>
                         ) : (
@@ -111,7 +138,10 @@ export default function ParentTripPage() {
 
             <div className="flex-1">
                 <MapContainer center={centre} zoom={14} className="h-full min-h-64 w-full">
-                    <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
+                    <TileLayer
+                        url="https://tile.openstreetmap.org/{z}/{x}/{y}.png"
+                        attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+                    />
 
                     {path.length > 1 && (
                         <Polyline positions={path} pathOptions={{ color: "#2563eb", weight: 4 }} />
@@ -148,20 +178,20 @@ export default function ParentTripPage() {
             </div>
 
             <div className="border-t border-slate-200 p-3">
-                {myStop && (
-                    <div className="mb-3 rounded-lg bg-blue-50 p-3">
+                {myStops.map((stop) => (
+                    <div key={stop.stopId} className="mb-3 rounded-lg bg-blue-50 p-3">
                         <div className="text-xs text-blue-700">Your stop</div>
-                        <div className="font-medium">{myStop.name}</div>
+                        <div className="font-medium">{stop.name}</div>
                         <div className="text-sm text-slate-600">
-                            Scheduled {myStop.pickupTime}
-                            {myStop.reachedAt &&
-                                ` · bus arrived ${new Date(myStop.reachedAt).toLocaleTimeString([], {
+                            Scheduled {stop.pickupTime}
+                            {stop.reachedAt &&
+                                ` · bus arrived ${new Date(stop.reachedAt).toLocaleTimeString([], {
                                     hour: "2-digit",
                                     minute: "2-digit",
                                 })}`}
                         </div>
                     </div>
-                )}
+                ))}
 
                 {trip.roster.map((r) => (
                     <div key={r.studentId} className="flex items-center justify-between py-1 text-sm">

@@ -43,7 +43,7 @@ export default function DriverTripPage() {
     const { id = "" } = useParams()
     const navigate = useNavigate()
 
-    const { data: trip, isLoading } = useGetTripQuery(id, { skip: !id })
+    const { data: trip, isLoading, isError, refetch } = useGetTripQuery(id, { skip: !id })
     const [markBoarding] = useMarkBoardingMutation()
     const [endTrip, { isLoading: ending }] = useEndTripMutation()
 
@@ -57,19 +57,23 @@ export default function DriverTripPage() {
 
     useWakeLock(!!isActive && mode !== "idle")
 
-    const { status, joinTrip, sendPosition } = useTrackingHub({
+    const { status, joinTrip, leaveTrip, sendPosition } = useTrackingHub({
         onPosition: (u) => setPosition([u.latitude, u.longitude]),
         onStopReached: (n) => {
             setBanner(`Arrived at ${n.stopName} — mark students, then continue`)
             setArrivedStopId(n.stopId)
             setMode((m) => (m === "simulate" ? "idle" : m))
+            void refetch()
         },
         onTripEnded: () => setBanner("Trip ended"),
     })
 
     useEffect(() => {
         if (status === "connected" && id) void joinTrip(id)
-    }, [status, id, joinTrip])
+        return () => {
+            void leaveTrip(id)
+        }
+    }, [status, id, joinTrip, leaveTrip])
 
     useEffect(() => {
         if (trip?.lastPosition) {
@@ -110,7 +114,7 @@ export default function DriverTripPage() {
         return () => navigator.geolocation.clearWatch(watchId)
     }, [mode, isActive, id, sendPosition])
 
-    // simulated drive — pauses itself when a stop is reached
+    // simulated drive — advances only after a successful send, pauses on arrival
     useEffect(() => {
         if (mode !== "simulate" || !isActive || drivePoints.length === 0) return
 
@@ -120,8 +124,14 @@ export default function DriverTripPage() {
                 setMode("idle")
                 return
             }
-            const p = drivePoints[driveIndex.current++]
+
+            const p = drivePoints[driveIndex.current]
+
             void sendPosition(id, p[0], p[1], 30, "Simulated")
+                ?.then(() => {
+                    driveIndex.current += 1
+                })
+                .catch(() => setBanner("Lost connection — position not sent"))
         }, 1500)
 
         return () => clearInterval(timer)
@@ -149,6 +159,20 @@ export default function DriverTripPage() {
                 "Could not end the trip."
             setBanner(message)
         }
+    }
+
+    if (isError) {
+        return (
+            <div className="p-6 text-center">
+                <p className="text-slate-600">Could not load this trip.</p>
+                <button
+                    onClick={() => refetch()}
+                    className="mt-3 rounded-lg border border-slate-300 px-4 py-2 text-sm"
+                >
+                    Try again
+                </button>
+            </div>
+        )
     }
 
     if (isLoading || !trip) return <div className="p-6 text-slate-500">Loading trip…</div>
@@ -181,7 +205,10 @@ export default function DriverTripPage() {
 
             <div className="h-56 w-full">
                 <MapContainer center={centre} zoom={14} className="h-full w-full">
-                    <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
+                    <TileLayer
+                        url="https://tile.openstreetmap.org/{z}/{x}/{y}.png"
+                        attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+                    />
 
                     {path.length > 1 && (
                         <Polyline positions={path} pathOptions={{ color: "#2563eb", weight: 4 }} />
@@ -313,6 +340,29 @@ export default function DriverTripPage() {
                         </section>
                     )
                 })}
+
+                {(() => {
+                    const stopIds = new Set(trip.stops.map((s) => s.stopId))
+                    const orphans = trip.roster.filter((r) => !stopIds.has(r.pickupStopId))
+                    if (orphans.length === 0) return null
+
+                    return (
+                        <section className="mb-3 rounded-lg bg-red-50 p-2 ring-1 ring-red-200">
+                            <div className="mb-2 text-sm font-medium text-red-800">
+                                Not linked to a stop on this route
+                            </div>
+                            {orphans.map((s) => (
+                                <div key={s.studentId} className="flex items-center gap-2 py-1 pl-2">
+                                    <span className="flex-1 text-sm">{s.name}</span>
+                                    <span className="text-xs text-red-700">{s.boardingStatus}</span>
+                                </div>
+                            ))}
+                            <p className="mt-1 pl-2 text-xs text-red-700">
+                                Ask the school office to reassign their stop.
+                            </p>
+                        </section>
+                    )
+                })()}
             </div>
 
             {isActive && (
