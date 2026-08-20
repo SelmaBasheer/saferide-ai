@@ -13,6 +13,11 @@ import VerifyEmailPage from "@/pages/VerifyEmailPage"
 import SchoolDetailPage from "@/pages/SchoolDetailPage"
 import DriversPage from "@/pages/DriversPage"
 import StudentsPage from "@/pages/StudentsPage"
+import { MobileLayout } from "@/layouts/MobileLayout"
+import DriverHomePage from "@/pages/driver/DriverHomePage"
+import DriverTripPage from "@/pages/driver/DriverTripPage"
+import ParentHomePage from "@/pages/parent/ParentHomePage"
+import ParentTripPage from "@/pages/parent/ParentTripPage"
 
 export default function AppRoutes() {
     return (
@@ -33,6 +38,15 @@ export default function AppRoutes() {
                 <ProtectedRoute roles={["SchoolAdmin"]}><DriversPage /></ProtectedRoute>} />
             <Route path={ROUTES.schoolStudents} element={
                 <ProtectedRoute roles={["SchoolAdmin"]}><StudentsPage /></ProtectedRoute>} />
+            <Route element={
+                <ProtectedRoute roles={["Driver"]}><MobileLayout /></ProtectedRoute>}>
+                <Route path={ROUTES.driver} element={<DriverHomePage />} />
+                <Route path={ROUTES.driverTrip} element={<DriverTripPage />} />            </Route>
+            <Route element={
+                <ProtectedRoute roles={["Parent"]}><MobileLayout /></ProtectedRoute>}>
+                <Route path={ROUTES.parent} element={<ParentHomePage />} />
+                <Route path={ROUTES.parentTrip} element={<ParentTripPage />} />
+            </Route>
         </Routes>
     )
 }

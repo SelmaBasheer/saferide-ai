@@ -104,7 +104,7 @@ public class SecurityConfig {
                 .authorizeHttpRequests(
                         auth -> auth.requestMatchers("/actuator/health", "/swagger-ui/**", "/v3/api-docs/**")
                                 .permitAll()
-                                .requestMatchers(HttpMethod.GET, "/api/routes/*")
+                                .requestMatchers(HttpMethod.GET, "/api/routes", "/api/routes/*")
                                 .hasAnyRole("SchoolAdmin", "Driver")
                                 .requestMatchers("/api/routes/**")
                                 .hasRole("SchoolAdmin")
