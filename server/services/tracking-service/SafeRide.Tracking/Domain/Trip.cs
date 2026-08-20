@@ -106,6 +106,15 @@ public sealed class Trip
             Roster.FirstOrDefault(r => r.StudentId == studentId)
             ?? throw AppException.NotFound("Student is not on this trip.");
 
+        var stop =
+            Route.Stops.FirstOrDefault(s => s.StopId == entry.PickupStopId)
+            ?? throw AppException.Validation("This student's stop is not on this route.");
+
+        if (stop.ReachedAt is null)
+        {
+            throw AppException.Conflict($"The bus has not reached {stop.Name} yet.");
+        }
+
         entry.BoardingStatus = status;
         entry.MarkedAt = DateTime.UtcNow;
         entry.MarkedBy = markedBy;

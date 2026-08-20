@@ -198,5 +198,11 @@ public sealed class IngestPositionHandler(
                     settings.ApproachStopsAhead
                 )
             );
+
+        logger.LogInformation(
+            "Notifying {ParentCount} parents that the bus is approaching {StopName}",
+            parents.Count,
+            ahead.Name
+        );
     }
 }

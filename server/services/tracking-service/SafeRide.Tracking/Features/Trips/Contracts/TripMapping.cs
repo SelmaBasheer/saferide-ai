@@ -4,8 +4,13 @@ namespace SafeRide.Tracking.Features.Trips.Contracts;
 
 public static class TripMapping
 {
-    public static TripResponse ToResponse(this Trip trip) =>
-        new(
+    /// Maps a trip to its response. Pass <paramref name="roster"/> to narrow which
+    /// students are included — a parent must only see their own children.
+    public static TripResponse ToResponse(this Trip trip, IEnumerable<RosterEntry>? roster = null)
+    {
+        var entries = (roster ?? trip.Roster).ToList();
+
+        return new TripResponse(
             trip.Id,
             trip.SchoolId,
             trip.RouteId,
@@ -34,7 +39,7 @@ public static class TripMapping
                 )) ?? [],
             ],
             [
-                .. trip.Roster.Select(r => new TripRosterResponse(
+                .. entries.Select(r => new TripRosterResponse(
                     r.StudentId,
                     r.Name,
                     r.PickupStopId,
@@ -51,8 +56,9 @@ public static class TripMapping
                     trip.LastPosition.SpeedKmh,
                     trip.LastPosition.Source.ToString()
                 ),
-            trip.UnmarkedCount
+            entries.Count(e => e.BoardingStatus == BoardingStatus.Unmarked)
         );
+    }
 
     public static TripSummaryResponse ToSummary(this Trip trip) =>
         new(
