@@ -3,3 +3,4 @@ server/services/notification-service/
 server/services/student-service/
 server/services/bus-service/
 server/services/route-service/
+config/
