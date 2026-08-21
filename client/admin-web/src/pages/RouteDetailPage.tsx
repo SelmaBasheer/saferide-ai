@@ -176,7 +176,7 @@ export default function RouteDetailPage() {
                     </section>
 
                     {route.status === "ACTIVE" ? (
-                        <RouteBuilder key={`${route.id}-${route.stops.length}`} route={route} />
+                        <RouteBuilder key={route.stops.map((s) => s.stopId).join("|")} route={route} />
                     ) : (
                         <section className="mt-6 rounded-lg border bg-white p-6">
                             <h2 className="mb-2 text-sm font-semibold uppercase tracking-wide text-slate-400">

@@ -80,6 +80,14 @@ export default function RouteBuilder({ route }: { route: RouteListItem }) {
             setMessage("Every stop needs a pickup time in HH:mm, for example 07:15.")
             return
         }
+        for (let i = 1; i < stops.length; i++) {
+            if (stops[i].pickupTime <= stops[i - 1].pickupTime) {
+                setMessage(
+                    `Stop ${i + 1} is picked up at ${stops[i].pickupTime}, which is not after stop ${i} at ${stops[i - 1].pickupTime}.`
+                )
+                return
+            }
+        }
         try {
             await replaceStops({ id: route.id, stops }).unwrap()
             setMessage("Stops saved.")
