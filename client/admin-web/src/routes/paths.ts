@@ -25,4 +25,5 @@ export const ROUTES = {
     schoolBusDetail: "/school-admin/buses/:id",
     schoolRoutes: "/school-admin/routes",
     schoolRouteDetail: "/school-admin/routes/:id",
+    schoolStudentDetail: "/school-admin/students/:id",
 } as const

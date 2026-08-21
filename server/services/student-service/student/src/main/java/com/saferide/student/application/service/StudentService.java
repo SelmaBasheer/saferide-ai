@@ -35,15 +35,15 @@ public class StudentService {
 
     @Transactional
     public Student create(
-            UUID schoolId,
-            String firstName,
-            String lastName,
-            String admissionNumber,
-            String grade,
-            String parentFirstName,
-            String parentLastName,
-            String parentEmail,
-            String parentPhone) {
+        UUID schoolId,
+        String firstName,
+        String lastName,
+        String admissionNumber,
+        String grade,
+        String parentFirstName,
+        String parentLastName,
+        String parentEmail,
+        String parentPhone) {
 
         if (!schoolStatus.isApproved(schoolId)) throw new AppException.ForbiddenException(SCHOOL_NOT_APPROVED);
 
@@ -51,29 +51,29 @@ public class StudentService {
             throw new ConflictException(DUPLICATE_ADMISSION);
 
         var student = Student.create(
-                schoolId,
-                firstName,
-                lastName,
-                admissionNumber,
-                grade,
-                parentFirstName,
-                parentLastName,
-                parentEmail,
-                parentPhone);
+            schoolId,
+            firstName,
+            lastName,
+            admissionNumber,
+            grade,
+            parentFirstName,
+            parentLastName,
+            parentEmail,
+            parentPhone);
         repository.save(student);
 
         events.publish(
-                STUDENT_CREATED_KEY,
-                new StudentCreated(
-                        student.getId(),
-                        student.getSchoolId(),
-                        student.getFirstName(),
-                        student.getLastName(),
-                        student.getParentFirstName(),
-                        student.getParentLastName(),
-                        student.getParentEmail(),
-                        student.getParentPhone(),
-                        Instant.now()));
+            STUDENT_CREATED_KEY,
+            new StudentCreated(
+                student.getId(),
+                student.getSchoolId(),
+                student.getFirstName(),
+                student.getLastName(),
+                student.getParentFirstName(),
+                student.getParentLastName(),
+                student.getParentEmail(),
+                student.getParentPhone(),
+                Instant.now()));
 
         return student;
     }
@@ -83,12 +83,16 @@ public class StudentService {
         return repository.findPage(schoolId, search, pageable);
     }
 
+    @Transactional(readOnly = true)
+    public Student getById(UUID schoolId, UUID studentId) {
+        return repository
+            .findByIdAndSchoolId(studentId, schoolId)
+            .orElseThrow(() -> new AppException.NotFoundException(STUDENT_NOT_FOUND));
+    }
+
     @Transactional
     public Student assignRoute(UUID schoolId, UUID studentId, UUID routeId, UUID pickupStopId, UUID dropStopId) {
-        var student = repository
-                .findByIdAndSchoolId(studentId, schoolId)
-                .orElseThrow(() -> new AppException.NotFoundException(STUDENT_NOT_FOUND));
-
+        var student = getById(schoolId, studentId);
         student.assignRoute(routeId, pickupStopId, dropStopId);
         repository.save(student);
         return student;

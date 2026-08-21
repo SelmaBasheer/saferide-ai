@@ -1,4 +1,5 @@
 import { useState } from "react"
+import { Link } from "react-router-dom"
 import { Plus, X } from "lucide-react"
 import DashboardLayout from "@/components/layout/DashboardLayout"
 import { schoolAdminNav } from "@/components/layout/schoolAdminNav"
@@ -6,15 +7,35 @@ import { DataTable, type Column } from "@/components/ui/data-table"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { useDebounce } from "@/lib/useDebounce"
+import { ROUTES } from "@/routes/paths"
 import { useGetStudentsQuery, type StudentListItem } from "@/features/students/studentApi"
 import CreateStudentForm from "@/features/students/CreateStudentForm"
 
 const PAGE_SIZE = 10
 
 const columns: Column<StudentListItem>[] = [
-    { header: "Name", cell: (s) => <span className="font-medium text-slate-800">{s.firstName} {s.lastName}</span> },
+    {
+        header: "Name",
+        cell: (s) => (
+            <Link
+                to={ROUTES.schoolStudentDetail.replace(":id", s.id)}
+                className="font-medium text-sky-700 hover:underline"
+            >
+                {s.firstName} {s.lastName}
+            </Link>
+        ),
+    },
     { header: "Admission No", cell: (s) => s.admissionNumber },
     { header: "Grade", cell: (s) => s.grade },
+    {
+        header: "Route",
+        cell: (s) =>
+            s.routeId && s.pickupStopId ? (
+                <span className="text-slate-700">Assigned</span>
+            ) : (
+                <span className="text-amber-700">Not assigned</span>
+            ),
+    },
     { header: "Parent", cell: (s) => `${s.parentFirstName} ${s.parentLastName}` },
     { header: "Parent email", cell: (s) => s.parentEmail },
     {
