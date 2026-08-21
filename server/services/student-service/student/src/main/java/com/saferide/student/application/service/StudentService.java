@@ -83,12 +83,16 @@ public class StudentService {
         return repository.findPage(schoolId, search, pageable);
     }
 
-    @Transactional
-    public Student assignRoute(UUID schoolId, UUID studentId, UUID routeId, UUID pickupStopId, UUID dropStopId) {
-        var student = repository
+    @Transactional(readOnly = true)
+    public Student getById(UUID schoolId, UUID studentId) {
+        return repository
                 .findByIdAndSchoolId(studentId, schoolId)
                 .orElseThrow(() -> new AppException.NotFoundException(STUDENT_NOT_FOUND));
+    }
 
+    @Transactional
+    public Student assignRoute(UUID schoolId, UUID studentId, UUID routeId, UUID pickupStopId, UUID dropStopId) {
+        var student = getById(schoolId, studentId);
         student.assignRoute(routeId, pickupStopId, dropStopId);
         repository.save(student);
         return student;

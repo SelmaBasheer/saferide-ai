@@ -89,4 +89,9 @@ public class StudentController {
                 .toList();
         return ApiResponse.ok(items);
     }
+
+    @GetMapping("/{id}")
+    public ApiResponse<StudentResponse> get(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID id) {
+        return ApiResponse.ok(mapper.toResponse(service.getById(schoolId(jwt), id)));
+    }
 }
