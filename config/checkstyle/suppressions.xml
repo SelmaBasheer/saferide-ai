@@ -1,0 +1,14 @@
+<?xml version="1.0"?>
+<!DOCTYPE suppressions PUBLIC
+        "-//Checkstyle//DTD SuppressionFilter Configuration 1.2//EN"
+        "https://checkstyle.org/dtds/suppressions_1_2.dtd">
+
+<suppressions>
+    <!--
+      Spring Boot entry points hold only a static main, so Checkstyle reads
+      them as utility classes. A private constructor would break Spring:
+      @SpringBootApplication is also a configuration class, and CGLIB
+      proxying requires a non-private constructor.
+    -->
+    <suppress checks="HideUtilityClassConstructor" files=".*Application\.java"/>
+</suppressions>
