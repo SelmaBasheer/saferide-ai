@@ -30,7 +30,7 @@ const columns: Column<StudentListItem>[] = [
     {
         header: "Route",
         cell: (s) =>
-            s.routeId && s.pickupStopId ? (
+            s.routeId && s.pickupStopId && s.dropStopId ? (
                 <span className="text-slate-700">Assigned</span>
             ) : (
                 <span className="text-amber-700">Not assigned</span>

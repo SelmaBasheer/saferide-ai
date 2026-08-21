@@ -43,9 +43,14 @@ export default function StudentDetailPage() {
     const dropValue = known(dropStopId) ? dropStopId : ""
 
     const assignedRouteIsActive = activeRoutes.some((r) => r.id === student?.routeId)
-    const orphaned = Boolean(
-        selectedRoute && student?.routeId === routeId && student?.pickupStopId && !known(student.pickupStopId),
+    const viewingAssignedRoute = Boolean(student?.routeId) && student?.routeId === routeId
+    const assignedStopsExist = Boolean(
+        student?.pickupStopId &&
+        student?.dropStopId &&
+        known(student.pickupStopId) &&
+        known(student.dropStopId),
     )
+    const orphaned = Boolean(selectedRoute && viewingAssignedRoute && !assignedStopsExist)
 
     const dirty =
         routeId !== (student?.routeId ?? "") ||
@@ -75,8 +80,8 @@ export default function StudentDetailPage() {
         }
     }
 
-    const stopLabel = (stopId: string) => {
-        const stop = stops.find((s) => s.stopId === stopId)
+    const stopLabel = (stopId: string | null) => {
+        const stop = stopId ? stops.find((s) => s.stopId === stopId) : undefined
         return stop ? `${stop.sequence} · ${stop.name} · ${stop.pickupTime}` : "—"
     }
 
@@ -156,16 +161,21 @@ export default function StudentDetailPage() {
                         </h2>
 
                         <p className="mb-4 text-sm">
-                            {student.routeId && student.pickupStopId && assignedRouteIsActive ? (
+                            {viewingAssignedRoute && assignedStopsExist && assignedRouteIsActive ? (
                                 <>
                                     Picks up at{" "}
                                     <span className="font-medium text-slate-800">
                                         {stopLabel(student.pickupStopId)}
                                     </span>
+                                    , drops at{" "}
+                                    <span className="font-medium text-slate-800">
+                                        {stopLabel(student.dropStopId)}
+                                    </span>
                                 </>
                             ) : student.routeId ? (
                                 <span className="text-amber-700">
-                                    Assigned to a route that is no longer active — reassign below.
+                                    This assignment is incomplete — the route or one of its stops is no longer
+                                    available. Reassign below.
                                 </span>
                             ) : (
                                 <span className="text-slate-500">
