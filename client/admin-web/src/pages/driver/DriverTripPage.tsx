@@ -3,7 +3,7 @@ import { useNavigate, useParams } from "react-router-dom"
 import { MapContainer, TileLayer, Marker, Polyline, Circle, useMap } from "react-leaflet"
 import L from "leaflet"
 import "leaflet/dist/leaflet.css"
-
+import ConfirmDialog from "@/components/ui/confirm-dialog"
 import { ROUTES } from "@/routes/paths"
 import { densify, type LatLng } from "@/lib/geo"
 import { useWakeLock } from "@/hooks/useWakeLock"
@@ -50,6 +50,8 @@ export default function DriverTripPage() {
     const [position, setPosition] = useState<LatLng | null>(null)
     const [mode, setMode] = useState<"idle" | "gps" | "simulate">("idle")
     const [banner, setBanner] = useState<string | null>(null)
+    const [confirmEnd, setConfirmEnd] = useState(false)
+
     const [arrivedStopId, setArrivedStopId] = useState<string | null>(null)
 
     const driveIndex = useRef(0)
@@ -149,11 +151,11 @@ export default function DriverTripPage() {
     }
 
     const onEnd = async () => {
-        if (!confirm(`End this trip? ${trip?.unmarkedCount ?? 0} students are still unmarked.`)) return
         try {
             await endTrip(id).unwrap()
             navigate(ROUTES.driver)
         } catch (e) {
+            setConfirmEnd(false)
             const message =
                 (e as { data?: { error?: { message?: string } } })?.data?.error?.message ??
                 "Could not end the trip."
@@ -238,36 +240,29 @@ export default function DriverTripPage() {
             </div>
 
             {isActive && (
-                <div className="flex gap-2 border-b border-slate-200 p-3">
-                    {arrivedStopId && mode === "idle" ? (
-                        <button
-                            onClick={() => {
-                                setArrivedStopId(null)
-                                setBanner(null)
-                                setMode("simulate")
-                            }}
-                            className="flex-1 rounded-lg bg-indigo-600 px-3 py-3 text-sm font-medium text-white"
-                        >
-                            Continue to next stop
-                        </button>
-                    ) : (
-                        <>
-                            <button
-                                onClick={() => setMode(mode === "gps" ? "idle" : "gps")}
-                                className={`flex-1 rounded-lg px-3 py-3 text-sm font-medium ${mode === "gps" ? "bg-emerald-600 text-white" : "border border-slate-300"
-                                    }`}
-                            >
-                                {mode === "gps" ? "Stop GPS" : "Use real GPS"}
-                            </button>
-                            <button
-                                onClick={() => setMode(mode === "simulate" ? "idle" : "simulate")}
-                                className={`flex-1 rounded-lg px-3 py-3 text-sm font-medium ${mode === "simulate" ? "bg-indigo-600 text-white" : "border border-slate-300"
-                                    }`}
-                            >
-                                {mode === "simulate" ? "Pause" : "Simulate drive"}
-                            </button>
-                        </>
-                    )}
+                <div className="border-t border-slate-200 p-3">
+                    <button
+                        onClick={() => setConfirmEnd(true)}
+                        disabled={ending}
+                        className="w-full rounded-lg bg-red-600 py-4 font-semibold text-white disabled:opacity-50"
+                    >
+                        End trip
+                    </button>
+
+                    <ConfirmDialog
+                        open={confirmEnd}
+                        destructive
+                        busy={ending}
+                        title="End this trip?"
+                        description={
+                            trip.unmarkedCount > 0
+                                ? `${trip.unmarkedCount} student${trip.unmarkedCount === 1 ? " is" : "s are"} still unmarked, and will stay unmarked in the trip record.`
+                                : "Every student has been marked. The trip will be closed and cannot be reopened."
+                        }
+                        confirmLabel="End trip"
+                        onConfirm={onEnd}
+                        onCancel={() => setConfirmEnd(false)}
+                    />
                 </div>
             )}
 
@@ -309,8 +304,8 @@ export default function DriverTripPage() {
                                     {s.boardingStatus !== "Unmarked" ? (
                                         <span
                                             className={`text-xs font-medium ${s.boardingStatus === "Boarded"
-                                                    ? "text-emerald-600"
-                                                    : "text-slate-500"
+                                                ? "text-emerald-600"
+                                                : "text-slate-500"
                                                 }`}
                                         >
                                             {s.boardingStatus}
