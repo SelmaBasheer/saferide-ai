@@ -2,7 +2,7 @@ import { useState } from "react"
 import { MapContainer, TileLayer, Marker, Polyline, Circle, useMapEvents } from "react-leaflet"
 import L from "leaflet"
 import "leaflet/dist/leaflet.css"
-import { ArrowDown, ArrowUp, Trash2 } from "lucide-react"
+import { ArrowDown, ArrowUp, GripVertical, Trash2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import {
     useReplacePathMutation,
@@ -11,6 +11,10 @@ import {
     type RouteListItem,
     type StopInput,
 } from "@/features/routes/routeApi"
+
+type LocalStop = StopInput & { key: string }
+
+const TIME_PATTERN = /^([01]\d|2[0-3]):[0-5]\d$/
 
 const stopIcon = (n: number) =>
     L.divIcon({
@@ -34,8 +38,9 @@ export default function RouteBuilder({ route }: { route: RouteListItem }) {
     const [mode, setMode] = useState<"stops" | "path">("stops")
     const [message, setMessage] = useState<string | null>(null)
 
-    const [stops, setStops] = useState<StopInput[]>(
+    const [stops, setStops] = useState<LocalStop[]>(
         route.stops.map((s) => ({
+            key: s.stopId,
             stopId: s.stopId,
             name: s.name,
             latitude: s.latitude,
@@ -46,37 +51,65 @@ export default function RouteBuilder({ route }: { route: RouteListItem }) {
 
     const [points, setPoints] = useState<RouteGeoPoint[]>(route.path ?? [])
 
+    const [dragIndex, setDragIndex] = useState<number | null>(null)
+    const [overIndex, setOverIndex] = useState<number | null>(null)
+    const [handleHeld, setHandleHeld] = useState(false)
+
     const [replaceStops, { isLoading: savingStops }] = useReplaceStopsMutation()
     const [replacePath, { isLoading: savingPath }] = useReplacePathMutation()
 
     const onMapClick = (latitude: number, longitude: number) => {
         if (mode === "stops") {
-            setStops((s) => [...s, { stopId: null, name: "", latitude, longitude, pickupTime: "" }])
+            setStops((s) => [
+                ...s,
+                {
+                    key: crypto.randomUUID(),
+                    stopId: null,
+                    name: "",
+                    latitude,
+                    longitude,
+                    pickupTime: "",
+                },
+            ])
         } else {
             setPoints((p) => [...p, { latitude, longitude }])
         }
     }
 
-    const editStop = (index: number, patch: Partial<StopInput>) =>
+    const editStop = (index: number, patch: Partial<LocalStop>) =>
         setStops((s) => s.map((stop, i) => (i === index ? { ...stop, ...patch } : stop)))
 
-    const moveStop = (index: number, delta: number) =>
+    const moveStop = (from: number, to: number) =>
         setStops((s) => {
+            if (to < 0 || to >= s.length || from === to) return s
             const next = [...s]
-            const target = index + delta
-            if (target < 0 || target >= next.length) return s
-                ;[next[index], next[target]] = [next[target], next[index]]
+            const [moved] = next.splice(from, 1)
+            next.splice(to, 0, moved)
             return next
         })
 
     const removeStop = (index: number) => setStops((s) => s.filter((_, i) => i !== index))
+
+    const resetDrag = () => {
+        setDragIndex(null)
+        setOverIndex(null)
+        setHandleHeld(false)
+    }
+
+    const outOfOrder = (i: number) =>
+        i > 0 &&
+        TIME_PATTERN.test(stops[i].pickupTime) &&
+        TIME_PATTERN.test(stops[i - 1].pickupTime) &&
+        stops[i].pickupTime <= stops[i - 1].pickupTime
+
+    const anyOutOfOrder = stops.some((_, i) => outOfOrder(i))
 
     const onSaveStops = async () => {
         if (stops.some((s) => !s.name.trim())) {
             setMessage("Every stop needs a name.")
             return
         }
-        if (stops.some((s) => !/^([01]\d|2[0-3]):[0-5]\d$/.test(s.pickupTime))) {
+        if (stops.some((s) => !TIME_PATTERN.test(s.pickupTime))) {
             setMessage("Every stop needs a pickup time in HH:mm, for example 07:15.")
             return
         }
@@ -89,7 +122,16 @@ export default function RouteBuilder({ route }: { route: RouteListItem }) {
             }
         }
         try {
-            await replaceStops({ id: route.id, stops }).unwrap()
+            await replaceStops({
+                id: route.id,
+                stops: stops.map((s) => ({
+                    stopId: s.stopId,
+                    name: s.name,
+                    latitude: s.latitude,
+                    longitude: s.longitude,
+                    pickupTime: s.pickupTime,
+                })),
+            }).unwrap()
             setMessage("Stops saved.")
         } catch (e) {
             setMessage(apiErrorMessage(e) ?? "Could not save the stops.")
@@ -141,7 +183,7 @@ export default function RouteBuilder({ route }: { route: RouteListItem }) {
 
             <p className="mb-3 text-sm text-slate-500">
                 {mode === "stops"
-                    ? "Click the map to add a stop, then give it a name and pickup time. Times must increase down the list."
+                    ? "Click the map to add a stop, then give it a name and pickup time. Drag by the handle to reorder — times must still increase down the list."
                     : "Click along the road to trace the route the bus drives. Add points around corners so the line follows the road."}
             </p>
 
@@ -169,9 +211,9 @@ export default function RouteBuilder({ route }: { route: RouteListItem }) {
                         />
                     )}
 
-                    {stops.map((s, i) => (
+                    {stops.map((s) => (
                         <Circle
-                            key={`c-${i}`}
+                            key={`c-${s.key}`}
                             center={[s.latitude, s.longitude]}
                             radius={100}
                             pathOptions={{ color: "#9ca3af", weight: 1, fillOpacity: 0.08 }}
@@ -179,20 +221,63 @@ export default function RouteBuilder({ route }: { route: RouteListItem }) {
                     ))}
 
                     {stops.map((s, i) => (
-                        <Marker key={`m-${i}`} position={[s.latitude, s.longitude]} icon={stopIcon(i + 1)} />
+                        <Marker
+                            key={`m-${s.key}`}
+                            position={[s.latitude, s.longitude]}
+                            icon={stopIcon(i + 1)}
+                        />
                     ))}
                 </MapContainer>
             </div>
 
             {mode === "stops" ? (
                 <>
+                    {anyOutOfOrder && (
+                        <p className="mt-4 rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-800">
+                            Some pickup times are no longer in order after reordering. Fix the highlighted
+                            rows before saving.
+                        </p>
+                    )}
+
                     <div className="mt-4 space-y-2">
                         {stops.length === 0 && (
                             <p className="text-sm text-slate-500">No stops yet — click the map to add one.</p>
                         )}
 
                         {stops.map((s, i) => (
-                            <div key={i} className="flex flex-wrap items-center gap-2 rounded-md border p-2">
+                            <div
+                                key={s.key}
+                                draggable={handleHeld}
+                                onDragStart={(e) => {
+                                    setDragIndex(i)
+                                    e.dataTransfer.effectAllowed = "move"
+                                    e.dataTransfer.setData("text/plain", String(i))
+                                }}
+                                onDragOver={(e) => {
+                                    e.preventDefault()
+                                    e.dataTransfer.dropEffect = "move"
+                                    if (overIndex !== i) setOverIndex(i)
+                                }}
+                                onDrop={(e) => {
+                                    e.preventDefault()
+                                    if (dragIndex !== null) moveStop(dragIndex, i)
+                                    resetDrag()
+                                }}
+                                onDragEnd={resetDrag}
+                                className={`flex flex-wrap items-center gap-2 rounded-md border p-2 transition
+                                    ${dragIndex === i ? "opacity-40" : ""}
+                                    ${overIndex === i && dragIndex !== i ? "border-sky-400 ring-2 ring-sky-200" : ""}
+                                    ${outOfOrder(i) ? "border-amber-300 bg-amber-50" : ""}`}
+                            >
+                                <span
+                                    onPointerDown={() => setHandleHeld(true)}
+                                    onPointerUp={() => setHandleHeld(false)}
+                                    title="Drag to reorder"
+                                    className="cursor-grab touch-none p-1 text-slate-400 active:cursor-grabbing"
+                                >
+                                    <GripVertical className="h-4 w-4" />
+                                </span>
+
                                 <span className="flex h-6 w-6 items-center justify-center rounded-full bg-slate-200 text-xs font-semibold">
                                     {i + 1}
                                 </span>
@@ -208,7 +293,8 @@ export default function RouteBuilder({ route }: { route: RouteListItem }) {
                                     type="time"
                                     value={s.pickupTime}
                                     onChange={(e) => editStop(i, { pickupTime: e.target.value })}
-                                    className="w-32 rounded-md border border-slate-300 px-2 py-1.5 text-sm"
+                                    className={`w-32 rounded-md border px-2 py-1.5 text-sm ${outOfOrder(i) ? "border-amber-400" : "border-slate-300"
+                                        }`}
                                 />
 
                                 <span className="text-xs text-slate-400">
@@ -222,13 +308,27 @@ export default function RouteBuilder({ route }: { route: RouteListItem }) {
                                 )}
 
                                 <div className="ml-auto flex gap-1">
-                                    <button onClick={() => moveStop(i, -1)} className="p-1 text-slate-500">
+                                    <button
+                                        onClick={() => moveStop(i, i - 1)}
+                                        disabled={i === 0}
+                                        title="Move up"
+                                        className="p-1 text-slate-500 disabled:opacity-30"
+                                    >
                                         <ArrowUp className="h-4 w-4" />
                                     </button>
-                                    <button onClick={() => moveStop(i, 1)} className="p-1 text-slate-500">
+                                    <button
+                                        onClick={() => moveStop(i, i + 1)}
+                                        disabled={i === stops.length - 1}
+                                        title="Move down"
+                                        className="p-1 text-slate-500 disabled:opacity-30"
+                                    >
                                         <ArrowDown className="h-4 w-4" />
                                     </button>
-                                    <button onClick={() => removeStop(i)} className="p-1 text-red-500">
+                                    <button
+                                        onClick={() => removeStop(i)}
+                                        title="Remove stop"
+                                        className="p-1 text-red-500"
+                                    >
                                         <Trash2 className="h-4 w-4" />
                                     </button>
                                 </div>
