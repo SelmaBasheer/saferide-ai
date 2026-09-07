@@ -28,6 +28,7 @@ public sealed class ForgotPasswordHandler(
             return Result.Success(); // just issued — silent
 
         var code = otpService.Generate();
+        await otps.DeleteForUserAsync(user.Id, OtpPurpose.PasswordReset, ct);
         await otps.AddAsync(
             OtpCode.Issue(user.Id, otpService.Hash(code), OtpPurpose.PasswordReset),
             ct
@@ -55,7 +56,6 @@ public sealed class ForgotPasswordHandler(
             logger.LogError(ex, "Failed to publish OTP event for {UserId}", user.Id);
         }
 
-        logger.LogInformation("DEV OTP for {UserId}: {Code}", user.Id, code);
         return Result.Success();
     }
 }

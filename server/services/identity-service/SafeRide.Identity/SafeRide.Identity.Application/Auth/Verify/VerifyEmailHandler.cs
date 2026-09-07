@@ -25,7 +25,7 @@ public sealed class VerifyEmailHandler(
                 )
             );
 
-        var user = await users.GetByEmailAsync(cmd.Email, ct);
+        var user = await users.GetByEmailAsync(cmd.Email.Trim().ToLowerInvariant(), ct);
         if (user is null)
             return Result.Failure(AuthErrors.InvalidOtp); // vague on purpose
 
@@ -33,8 +33,21 @@ public sealed class VerifyEmailHandler(
             return Result.Failure(AuthErrors.InvalidOtp);
 
         var otp = await otps.GetLatestAsync(user.Id, OtpPurpose.EmailVerification, ct);
-        if (otp is null || !otp.IsValid || !otpService.Verify(cmd.Otp, otp.CodeHash))
+        if (otp is null)
             return Result.Failure(AuthErrors.InvalidOtp);
+
+        if (otp.AttemptsExhausted)
+            return Result.Failure(AuthErrors.OtpAttemptsExhausted);
+
+        if (!otp.IsValid)
+            return Result.Failure(AuthErrors.InvalidOtp);
+
+        if (!otpService.Verify(cmd.Otp, otp.CodeHash))
+        {
+            otp.RecordFailedAttempt();
+            await unitOfWork.SaveChangesAsync(ct);
+            return Result.Failure(AuthErrors.InvalidOtp);
+        }
 
         otp.Consume();
         user.VerifyEmail();

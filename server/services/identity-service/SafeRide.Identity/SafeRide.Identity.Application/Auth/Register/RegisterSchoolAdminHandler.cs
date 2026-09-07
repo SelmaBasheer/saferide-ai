@@ -55,6 +55,7 @@ public sealed class RegisterSchoolAdminHandler(
         await userRepository.AddAsync(user, ct);
 
         var code = otpService.Generate();
+        await otps.DeleteForUserAsync(user.Id, OtpPurpose.PasswordReset, ct);
         await otps.AddAsync(
             OtpCode.Issue(user.Id, otpService.Hash(code), OtpPurpose.EmailVerification),
             ct

@@ -20,4 +20,21 @@ public sealed class OtpCodeRepository(IdentityDbContext context) : IOtpCodeRepos
             .Where(o => o.UserId == userId && o.Purpose == purpose)
             .OrderByDescending(o => o.CreatedAtUtc)
             .FirstOrDefaultAsync(ct);
+
+    public Task<int> DeleteForUserAsync(
+        Guid userId,
+        OtpPurpose purpose,
+        CancellationToken ct = default
+    ) =>
+        context
+            .OtpCodes.Where(o => o.UserId == userId && o.Purpose == purpose)
+            .ExecuteDeleteAsync(ct);
+
+    public Task<int> DeleteStaleAsync(DateTime cutoffUtc, CancellationToken ct = default) =>
+        context
+            .OtpCodes.Where(o =>
+                o.ExpiresAtUtc < cutoffUtc
+                || (o.ConsumedAtUtc != null && o.ConsumedAtUtc < cutoffUtc)
+            )
+            .ExecuteDeleteAsync(ct);
 }
