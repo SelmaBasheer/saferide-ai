@@ -6,8 +6,10 @@ import "leaflet/dist/leaflet.css"
 
 import { ROUTES } from "@/routes/paths"
 import { densify, type LatLng } from "@/lib/geo"
+import { formatTime } from "@/lib/tripFormat"
 import { useWakeLock } from "@/hooks/useWakeLock"
 import { useTrackingHub } from "@/features/tracking/useTrackingHub"
+import ConfirmDialog from "@/components/ui/confirm-dialog"
 import {
     useEndTripMutation,
     useGetTripQuery,
@@ -51,6 +53,8 @@ export default function DriverTripPage() {
     const [mode, setMode] = useState<"idle" | "gps" | "simulate">("idle")
     const [banner, setBanner] = useState<string | null>(null)
     const [arrivedStopId, setArrivedStopId] = useState<string | null>(null)
+    const [etas, setEtas] = useState<Record<string, string>>({})
+    const [confirmEnd, setConfirmEnd] = useState(false)
 
     const driveIndex = useRef(0)
     const isActive = trip?.status === "Active"
@@ -58,7 +62,12 @@ export default function DriverTripPage() {
     useWakeLock(!!isActive && mode !== "idle")
 
     const { status, joinTrip, leaveTrip, sendPosition } = useTrackingHub({
-        onPosition: (u) => setPosition([u.latitude, u.longitude]),
+        onPosition: (u) => {
+            setPosition([u.latitude, u.longitude])
+            if (u.etas?.length) {
+                setEtas(Object.fromEntries(u.etas.map((e) => [e.stopId, e.etaAt])))
+            }
+        },
         onStopReached: (n) => {
             setBanner(`Arrived at ${n.stopName} — mark students, then continue`)
             setArrivedStopId(n.stopId)
@@ -149,11 +158,11 @@ export default function DriverTripPage() {
     }
 
     const onEnd = async () => {
-        if (!confirm(`End this trip? ${trip?.unmarkedCount ?? 0} students are still unmarked.`)) return
         try {
             await endTrip(id).unwrap()
             navigate(ROUTES.driver)
         } catch (e) {
+            setConfirmEnd(false)
             const message =
                 (e as { data?: { error?: { message?: string } } })?.data?.error?.message ??
                 "Could not end the trip."
@@ -180,7 +189,7 @@ export default function DriverTripPage() {
     const centre: LatLng = position ?? path[0] ?? [8.8901, 76.6012]
 
     return (
-        <div className="flex min-h-dvh flex-col">
+        <div className="flex min-h-0 flex-1 flex-col">
             <header className="flex items-center justify-between border-b border-slate-200 p-3">
                 <div>
                     <div className="font-semibold">{trip.routeCode}</div>
@@ -275,6 +284,7 @@ export default function DriverTripPage() {
                 {trip.stops.map((stop) => {
                     const students = trip.roster.filter((r) => r.pickupStopId === stop.stopId)
                     const isHere = arrivedStopId === stop.stopId
+                    const eta = etas[stop.stopId] ?? stop.etaAt
 
                     return (
                         <section
@@ -295,7 +305,10 @@ export default function DriverTripPage() {
                                         bus is here
                                     </span>
                                 )}
-                                <span className="ml-auto text-xs text-slate-500">{stop.pickupTime}</span>
+                                <span className="ml-auto text-xs text-slate-500">
+                                    {stop.pickupTime}
+                                    {!stop.reachedAt && eta && ` · eta ${formatTime(eta)}`}
+                                </span>
                             </div>
 
                             {students.length === 0 && (
@@ -309,8 +322,8 @@ export default function DriverTripPage() {
                                     {s.boardingStatus !== "Unmarked" ? (
                                         <span
                                             className={`text-xs font-medium ${s.boardingStatus === "Boarded"
-                                                    ? "text-emerald-600"
-                                                    : "text-slate-500"
+                                                ? "text-emerald-600"
+                                                : "text-slate-500"
                                                 }`}
                                         >
                                             {s.boardingStatus}
@@ -368,12 +381,27 @@ export default function DriverTripPage() {
             {isActive && (
                 <div className="border-t border-slate-200 p-3">
                     <button
-                        onClick={onEnd}
+                        onClick={() => setConfirmEnd(true)}
                         disabled={ending}
                         className="w-full rounded-lg bg-red-600 py-4 font-semibold text-white disabled:opacity-50"
                     >
                         End trip
                     </button>
+
+                    <ConfirmDialog
+                        open={confirmEnd}
+                        destructive
+                        busy={ending}
+                        title="End this trip?"
+                        description={
+                            trip.unmarkedCount > 0
+                                ? `${trip.unmarkedCount} student${trip.unmarkedCount === 1 ? " is" : "s are"} still unmarked, and will stay unmarked in the trip record.`
+                                : "Every student has been marked. The trip will be closed and cannot be reopened."
+                        }
+                        confirmLabel="End trip"
+                        onConfirm={onEnd}
+                        onCancel={() => setConfirmEnd(false)}
+                    />
                 </div>
             )}
         </div>

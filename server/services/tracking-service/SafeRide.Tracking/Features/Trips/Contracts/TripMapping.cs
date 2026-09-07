@@ -9,6 +9,7 @@ public static class TripMapping
     public static TripResponse ToResponse(this Trip trip, IEnumerable<RosterEntry>? roster = null)
     {
         var entries = (roster ?? trip.Roster).ToList();
+        var etas = TripEta.ForTrip(trip);
 
         return new TripResponse(
             trip.Id,
@@ -29,7 +30,8 @@ public static class TripMapping
                     s.Location.Latitude(),
                     s.Location.Longitude(),
                     s.PickupTime,
-                    s.ReachedAt
+                    s.ReachedAt,
+                    etas.TryGetValue(s.StopId, out var eta) ? eta : null
                 )),
             ],
             [

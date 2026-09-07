@@ -1,11 +1,11 @@
 import { useEffect } from "react"
 import { useNavigate } from "react-router-dom"
 import { ROUTES } from "@/routes/paths"
-import { useGetMyTripsQuery } from "@/features/tracking/trackingApi"
+import { useGetTripsQuery } from "@/features/tracking/trackingApi"
 
 export default function ParentHomePage() {
     const navigate = useNavigate()
-    const { data, isLoading, isError, refetch } = useGetMyTripsQuery({
+    const { data, isLoading, isError, refetch } = useGetTripsQuery({
         status: "Active",
         page: 1,
         pageSize: 50,

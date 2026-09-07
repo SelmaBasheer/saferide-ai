@@ -13,6 +13,7 @@ import {
 } from "@/features/routes/routeApi"
 import EditRouteForm from "@/features/routes/EditRouteForm"
 import RouteBuilder from "@/features/routes/RouteBuilder"
+import ConfirmDialog from "@/components/ui/confirm-dialog"
 
 function apiErrorMessage(error: unknown): string | undefined {
     return (error as { data?: { error?: { message?: string } } } | undefined)?.data?.error?.message
@@ -23,7 +24,7 @@ export default function RouteDetailPage() {
     const navigate = useNavigate()
 
     const { data: route, isLoading, isError, refetch } = useGetRouteQuery(id, { skip: !id })
-    const { data: buses } = useGetBusesQuery({ page: 1, pageSize: 100 })
+    const { data: buses } = useGetBusesQuery({ page: 1, pageSize: 50 })
 
     const [assignBus, { isLoading: assigning }] = useAssignBusToRouteMutation()
     const [deactivateRoute, { isLoading: deactivating }] = useDeactivateRouteMutation()
@@ -31,6 +32,7 @@ export default function RouteDetailPage() {
     const [selectedBusId, setSelectedBusId] = useState("")
     const [message, setMessage] = useState<string | null>(null)
     const [editing, setEditing] = useState(false)
+    const [confirmOpen, setConfirmOpen] = useState(false)
 
     const activeBuses = (buses?.items ?? []).filter((b) => b.status === "ACTIVE")
     const assignedBus = activeBuses.find((b) => b.id === route?.assignedBusId)
@@ -47,12 +49,11 @@ export default function RouteDetailPage() {
     }
 
     const onDeactivate = async () => {
-        if (!route) return
-        if (!confirm(`Deactivate ${route.code}? It stays in the records.`)) return
         try {
             await deactivateRoute(id).unwrap()
             navigate(ROUTES.schoolRoutes)
         } catch (e) {
+            setConfirmOpen(false)
             setMessage(apiErrorMessage(e) ?? "Could not deactivate the route.")
         }
     }
@@ -197,9 +198,20 @@ export default function RouteDetailPage() {
                                 Deactivating keeps the route in the records. Drivers will no longer be able
                                 to start a trip on it.
                             </p>
-                            <Button variant="destructive" disabled={deactivating} onClick={onDeactivate}>
-                                {deactivating ? "Deactivating…" : "Deactivate route"}
+                            <Button variant="destructive" onClick={() => setConfirmOpen(true)}>
+                                Deactivate route
                             </Button>
+
+                            <ConfirmDialog
+                                open={confirmOpen}
+                                destructive
+                                busy={deactivating}
+                                title={`Deactivate ${route.code}?`}
+                                description="The route stays in the records, but drivers will no longer be able to start a trip on it."
+                                confirmLabel="Deactivate"
+                                onConfirm={onDeactivate}
+                                onCancel={() => setConfirmOpen(false)}
+                            />
                         </section>
                     )}
                 </>

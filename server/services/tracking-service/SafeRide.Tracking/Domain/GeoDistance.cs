@@ -4,6 +4,7 @@ public static class GeoDistance
 {
     private const double EarthRadiusMetres = 6_371_000;
 
+    //haversine calculation
     public static double Metres(double lat1, double lon1, double lat2, double lon2)
     {
         var dLat = ToRadians(lat2 - lat1);

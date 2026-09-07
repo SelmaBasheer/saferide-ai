@@ -1,5 +1,6 @@
 package com.saferide.route.service;
 
+import com.saferide.route.client.RoutingClient;
 import com.saferide.route.constants.MessagingConstants;
 import com.saferide.route.constants.ResponseMessages;
 import com.saferide.route.document.Route;
@@ -37,23 +38,31 @@ public class RouteService {
     private static final double MIN_LNG = 68.0;
     private static final double MAX_LNG = 97.5;
 
+    // Tracking marks a stop reached within 100 m. Two stops closer than that
+    // cannot be told apart — the bus would arrive at both at once.
+    private static final double MIN_STOP_SEPARATION_METRES = 100;
+    private static final double EARTH_RADIUS_METRES = 6_371_000;
+
     private final RouteRepository routeRepository;
     private final SchoolStatusRepository schoolStatusRepository;
     private final MongoTemplate mongo;
     private final RouteMapper routeMapper;
     private final RabbitEventPublisher publisher;
+    private final RoutingClient routingClient;
 
     public RouteService(
             RouteRepository routeRepository,
             SchoolStatusRepository schoolStatusRepository,
             MongoTemplate mongo,
             RouteMapper routeMapper,
-            RabbitEventPublisher publisher) {
+            RabbitEventPublisher publisher,
+            RoutingClient routingClient) {
         this.routeRepository = routeRepository;
         this.schoolStatusRepository = schoolStatusRepository;
         this.mongo = mongo;
         this.routeMapper = routeMapper;
         this.publisher = publisher;
+        this.routingClient = routingClient;
     }
 
     public RouteResponse create(UUID schoolId, CreateRouteRequest request) {
@@ -169,15 +178,43 @@ public class RouteService {
                     stopId, sequence++, input.name().trim(), input.latitude(), input.longitude(), input.pickupTime()));
         }
 
+        requireStopsFarEnoughApart(request.stops());
+
         route.replaceStops(stops);
         return routeMapper.toResponse(routeRepository.save(route));
     }
 
-    private void requireInsideIndia(double latitude, double longitude, String label) {
-        if (latitude < MIN_LAT || latitude > MAX_LAT || longitude < MIN_LNG || longitude > MAX_LNG) {
-            throw new AppException.ValidationException(
-                    label + " is outside India — check that latitude and longitude are not swapped.");
+    public RouteResponse generatePath(UUID schoolId, UUID routeId) {
+        Route route = findOwned(schoolId, routeId);
+
+        List<Stop> stops = route.getStops();
+        if (stops.size() < 2) {
+            throw new AppException.ValidationException(ResponseMessages.PATH_NEEDS_TWO_STOPS);
         }
+
+        for (int i = 0; i < stops.size(); i++) {
+            for (int j = i + 1; j < stops.size(); j++) {
+                double metres = metresBetween(
+                        stops.get(i).getLocation().getY(),
+                                stops.get(i).getLocation().getX(),
+                        stops.get(j).getLocation().getY(),
+                                stops.get(j).getLocation().getX());
+
+                if (metres < MIN_STOP_SEPARATION_METRES) {
+                    throw new AppException.ValidationException(
+                            "Stops '" + stops.get(i).getName() + "' and '"
+                                    + stops.get(j).getName() + "' are only " + Math.round(metres)
+                                    + " m apart. Move one of them before generating a path.");
+                }
+            }
+        }
+
+        List<Point> waypoints = stops.stream()
+                .map(s -> new Point(s.getLocation().getX(), s.getLocation().getY()))
+                .toList();
+
+        route.replacePath(new GeoJsonLineString(routingClient.roadPathThrough(waypoints)));
+        return routeMapper.toResponse(routeRepository.save(route));
     }
 
     public RouteResponse replacePath(UUID schoolId, UUID routeId, ReplacePathRequest request) {
@@ -206,5 +243,40 @@ public class RouteService {
                 new RouteBusAssigned(route.getId(), schoolId, request.busId(), Instant.now()));
 
         return routeMapper.toResponse(saved);
+    }
+
+    private void requireInsideIndia(double latitude, double longitude, String label) {
+        if (latitude < MIN_LAT || latitude > MAX_LAT || longitude < MIN_LNG || longitude > MAX_LNG) {
+            throw new AppException.ValidationException(
+                    label + " is outside India — check that latitude and longitude are not swapped.");
+        }
+    }
+
+    private void requireStopsFarEnoughApart(List<StopInput> inputs) {
+        for (int i = 0; i < inputs.size(); i++) {
+            for (int j = i + 1; j < inputs.size(); j++) {
+                double metres = metresBetween(
+                        inputs.get(i).latitude(),
+                        inputs.get(i).longitude(),
+                        inputs.get(j).latitude(),
+                        inputs.get(j).longitude());
+
+                if (metres < MIN_STOP_SEPARATION_METRES) {
+                    throw new AppException.ValidationException(
+                            "Stops '" + inputs.get(i).name() + "' and '"
+                                    + inputs.get(j).name() + "' are only " + Math.round(metres)
+                                    + " m apart. The bus counts as arrived within " + (int) MIN_STOP_SEPARATION_METRES
+                                    + " m of a stop, so it could not tell them apart.");
+                }
+            }
+        }
+    }
+
+    private static double metresBetween(double lat1, double lon1, double lat2, double lon2) {
+        double dLat = Math.toRadians(lat2 - lat1);
+        double dLon = Math.toRadians(lon2 - lon1);
+        double h = Math.pow(Math.sin(dLat / 2), 2)
+                + Math.pow(Math.sin(dLon / 2), 2) * Math.cos(Math.toRadians(lat1)) * Math.cos(Math.toRadians(lat2));
+        return 2 * EARTH_RADIUS_METRES * Math.asin(Math.sqrt(h));
     }
 }

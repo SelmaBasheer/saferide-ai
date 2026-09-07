@@ -85,6 +85,35 @@ public sealed class StartTripHandler(
                 : null,
         };
 
+        if (tripRoute.Path is not null)
+        {
+            var pathPoints = tripRoute
+                .Path.Coordinates.Positions.Select(p => (p.Latitude, p.Longitude))
+                .ToList();
+
+            var cumulative = PathProgress.Cumulative(pathPoints);
+
+            var minimum = 0d;
+
+            foreach (var stop in tripRoute.Stops)
+            {
+                // Stops are ordered by sequence, so their distance along the path must
+                // increase. Clamping guards against a stop projecting onto an earlier
+                // traversal where the generated path retraces itself.
+                stop.DistanceFromStartMetres = Math.Max(
+                    PathProgress.DistanceAlong(
+                        stop.Location.Latitude(),
+                        stop.Location.Longitude(),
+                        pathPoints,
+                        cumulative
+                    ),
+                    minimum
+                );
+
+                minimum = stop.DistanceFromStartMetres;
+            }
+        }
+
         var entries = roster
             .Select(r => new RosterEntry
             {

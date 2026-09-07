@@ -100,6 +100,12 @@ export const routeApi = baseApi.injectEndpoints({
             transformResponse: (r: ApiResponse<RouteListItem>) => r.data,
             invalidatesTags: ["Routes"],
         }),
+
+        generatePath: builder.mutation<RouteListItem, string>({
+            query: (id) => ({ url: `/routes/${id}/path/generate`, method: "POST" }),
+            transformResponse: (r: ApiResponse<RouteListItem>) => r.data,
+            invalidatesTags: ["Routes"],
+        }),
     }),
 })
 
@@ -111,5 +117,6 @@ export const {
     useDeactivateRouteMutation,
     useUpdateRouteMutation,
     useReplaceStopsMutation,
-    useReplacePathMutation
+    useReplacePathMutation,
+    useGeneratePathMutation
 } = routeApi

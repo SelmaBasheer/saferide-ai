@@ -3,7 +3,7 @@ import { useParams } from "react-router-dom"
 import { MapContainer, TileLayer, Marker, Polyline, Circle, useMap } from "react-leaflet"
 import L from "leaflet"
 import "leaflet/dist/leaflet.css"
-
+import { formatTime } from "@/lib/tripFormat"
 import type { LatLng } from "@/lib/geo"
 import { useTrackingHub } from "@/features/tracking/useTrackingHub"
 import { useGetTripQuery } from "@/features/tracking/trackingApi"
@@ -40,6 +40,7 @@ export default function ParentTripPage() {
     const [position, setPosition] = useState<LatLng | null>(null)
     const [lastAt, setLastAt] = useState<number | null>(null)
     const [alerts, setAlerts] = useState<string[]>([])
+    const [etas, setEtas] = useState<Record<string, string>>({})
     const [, setTick] = useState(0)
 
     const push = (msg: string) => setAlerts((a) => [msg, ...a].slice(0, 6))
@@ -48,6 +49,9 @@ export default function ParentTripPage() {
         onPosition: (u) => {
             setPosition([u.latitude, u.longitude])
             setLastAt(Date.now())
+            if (u.etas?.length) {
+                setEtas(Object.fromEntries(u.etas.map((e) => [e.stopId, e.etaAt])))
+            }
         },
         onStopReached: (n) => {
             push(`Bus reached ${n.stopName}`)
@@ -113,7 +117,7 @@ export default function ParentTripPage() {
     const centre: LatLng = position ?? path[0] ?? [8.8901, 76.6012]
 
     return (
-        <div className="flex min-h-dvh flex-col">
+        <div className="flex min-h-0 flex-1 flex-col">
             <header className="border-b border-slate-200 p-3">
                 <div className="flex items-center justify-between">
                     <div>
@@ -180,16 +184,15 @@ export default function ParentTripPage() {
             <div className="border-t border-slate-200 p-3">
                 {myStops.map((stop) => (
                     <div key={stop.stopId} className="mb-3 rounded-lg bg-blue-50 p-3">
-                        <div className="text-xs text-blue-700">Your stop</div>
-                        <div className="font-medium">{stop.name}</div>
                         <div className="text-sm text-slate-600">
                             Scheduled {stop.pickupTime}
-                            {stop.reachedAt &&
-                                ` · bus arrived ${new Date(stop.reachedAt).toLocaleTimeString([], {
-                                    hour: "2-digit",
-                                    minute: "2-digit",
-                                })}`}
+                            {stop.reachedAt && ` · bus arrived ${formatTime(stop.reachedAt)}`}
                         </div>
+                        {!stop.reachedAt && (etas[stop.stopId] ?? stop.etaAt) && (
+                            <div className="mt-1 text-sm font-medium text-blue-800">
+                                Arriving about {formatTime(etas[stop.stopId] ?? stop.etaAt)}
+                            </div>
+                        )}
                     </div>
                 ))}
 

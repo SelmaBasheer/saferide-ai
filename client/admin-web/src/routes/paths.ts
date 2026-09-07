@@ -14,10 +14,12 @@ export const ROUTES = {
     // driver (mobile)
     driver: "/driver",
     driverTrip: "/driver/trip/:id",
+    driverTrips: "/driver/trips",
 
     // parent (mobile)
     parent: "/parent",
     parentTrip: "/parent/trip/:id",
+    parentTrips: "/parent/trips",
 
     // school admin (web)
     schoolFleet: "/school-admin/fleet",
@@ -26,4 +28,6 @@ export const ROUTES = {
     schoolRoutes: "/school-admin/routes",
     schoolRouteDetail: "/school-admin/routes/:id",
     schoolStudentDetail: "/school-admin/students/:id",
+    schoolTrips: "/school-admin/trips",
+    schoolTripDetail: "/school-admin/trips/:id",
 } as const

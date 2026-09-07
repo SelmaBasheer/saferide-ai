@@ -1,17 +1,19 @@
+import { useState } from "react"
 import { useNavigate } from "react-router-dom"
 import { ROUTES } from "@/routes/paths"
 import { useGetRoutesQuery } from "@/features/routes/routeApi"
-import { useGetMyTripsQuery, useStartTripMutation } from "@/features/tracking/trackingApi"
+import { useGetTripsQuery, useStartTripMutation } from "@/features/tracking/trackingApi"
 
 export default function DriverHomePage() {
     const navigate = useNavigate()
+    const [message, setMessage] = useState<string | null>(null)
 
     const {
         data: active,
         isLoading: loadingActive,
         isError: activeFailed,
         refetch: refetchActive,
-    } = useGetMyTripsQuery({ status: "Active", page: 1, pageSize: 1 })
+    } = useGetTripsQuery({ status: "Active", page: 1, pageSize: 1 })
 
     const {
         data: routes,
@@ -25,14 +27,15 @@ export default function DriverHomePage() {
     const activeTrip = active?.items?.[0]
 
     const onStart = async (routeId: string) => {
+        setMessage(null)
         try {
             const trip = await startTrip({ routeId }).unwrap()
             navigate(ROUTES.driverTrip.replace(":id", trip.id))
         } catch (e) {
-            const message =
+            setMessage(
                 (e as { data?: { error?: { message?: string } } })?.data?.error?.message ??
                 "Could not start the trip."
-            alert(message)
+            )
         }
     }
 
@@ -60,6 +63,15 @@ export default function DriverHomePage() {
     return (
         <div className="flex flex-col gap-4 p-4">
             <h1 className="text-xl font-semibold">Today's trip</h1>
+            {message && (
+                <div
+                    role="alert"
+                    onClick={() => setMessage(null)}
+                    className="cursor-pointer rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-800"
+                >
+                    {message}
+                </div>
+            )}
 
             {activeTrip && (
                 <button

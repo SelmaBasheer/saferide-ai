@@ -67,6 +67,23 @@ export interface TrackingHandlers {
     onRouteDeviation?: (n: RouteDeviationNotification) => void
 }
 
+export interface StopEta {
+    stopId: string
+    etaAt: string
+}
+
+export interface PositionUpdate {
+    tripId: string
+    busId: string
+    routeCode: string
+    latitude: number
+    longitude: number
+    speedKmh: number | null
+    recordedAt: string
+    source: string
+    etas: StopEta[]
+}
+
 export type HubStatus = "idle" | "connecting" | "connected" | "reconnecting" | "disconnected"
 
 export function useTrackingHub(handlers: TrackingHandlers) {
