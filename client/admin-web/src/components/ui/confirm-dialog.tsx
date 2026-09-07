@@ -1,5 +1,8 @@
-import { useEffect } from "react"
+import { useEffect, useRef } from "react"
 import { Button } from "@/components/ui/button"
+
+const FOCUSABLE =
+    'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
 
 export default function ConfirmDialog({
     open,
@@ -22,11 +25,42 @@ export default function ConfirmDialog({
     onConfirm: () => void
     onCancel: () => void
 }) {
+    const dialogRef = useRef<HTMLDivElement>(null)
+
+    // Remember what had focus before the dialog opened, and give it back after.
+    // Keyed on `open` alone so a busy-state change doesn't yank focus mid-request.
     useEffect(() => {
         if (!open) return
+        const previous = document.activeElement as HTMLElement | null
+        return () => previous?.focus()
+    }, [open])
+
+    useEffect(() => {
+        if (!open) return
+
         const onKey = (e: KeyboardEvent) => {
-            if (e.key === "Escape" && !busy) onCancel()
+            if (e.key === "Escape" && !busy) {
+                onCancel()
+                return
+            }
+
+            if (e.key !== "Tab") return
+
+            const items = Array.from(dialogRef.current?.querySelectorAll<HTMLElement>(FOCUSABLE) ?? [])
+            if (items.length === 0) return
+
+            const first = items[0]
+            const last = items[items.length - 1]
+
+            if (e.shiftKey && document.activeElement === first) {
+                e.preventDefault()
+                last.focus()
+            } else if (!e.shiftKey && document.activeElement === last) {
+                e.preventDefault()
+                first.focus()
+            }
         }
+
         document.addEventListener("keydown", onKey)
         return () => document.removeEventListener("keydown", onKey)
     }, [open, busy, onCancel])
@@ -40,6 +74,7 @@ export default function ConfirmDialog({
                 onClick={busy ? undefined : onCancel}
             />
             <div
+                ref={dialogRef}
                 role="dialog"
                 aria-modal="true"
                 aria-labelledby="confirm-dialog-title"

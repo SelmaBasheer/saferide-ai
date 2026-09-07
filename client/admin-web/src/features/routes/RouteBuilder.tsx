@@ -134,6 +134,8 @@ export default function RouteBuilder({ route }: { route: RouteListItem }) {
         [route.stops, stops]
     )
 
+    const pathBusy = generating || savingPath
+
     const onSaveStops = async () => {
         if (stops.some((s) => !s.name.trim())) {
             setMessage("Every stop needs a name.")
@@ -413,13 +415,13 @@ export default function RouteBuilder({ route }: { route: RouteListItem }) {
                     <div className="mt-3 flex flex-wrap gap-2">
                         <Button
                             className="bg-sky-700 hover:bg-sky-800"
-                            disabled={generating || stopsDirty || stops.length < 2}
+                            disabled={pathBusy || stopsDirty || stops.length < 2}
                             onClick={onGenerate}
                         >
                             <Wand2 className="mr-1 h-4 w-4" />
                             {generating ? "Generating…" : "Generate path from stops"}
                         </Button>
-                        <Button variant="outline" disabled={savingPath} onClick={onSavePath}>
+                        <Button variant="outline" disabled={pathBusy} onClick={onSavePath}>
                             {savingPath ? "Saving…" : "Save drawn path"}
                         </Button>
                         <Button variant="outline" onClick={() => setPoints((p) => p.slice(0, -1))}>

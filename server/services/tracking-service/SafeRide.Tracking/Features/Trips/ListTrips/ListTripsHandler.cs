@@ -45,7 +45,7 @@ public sealed class ListTripsHandler(IMongoCollection<Trip> trips)
             filter &= builder.Gte(t => t.StartedAt, fromUtc);
         }
 
-        if (to is not null)
+        if (to is not null && to.Value < DateOnly.MaxValue)
         {
             var toUtc = to.Value.AddDays(1).ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc);
             filter &= builder.Lt(t => t.StartedAt, toUtc);

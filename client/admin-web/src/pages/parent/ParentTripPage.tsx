@@ -192,14 +192,7 @@ export default function ParentTripPage() {
                             <div className="mt-1 text-sm font-medium text-blue-800">
                                 Arriving about {formatTime(etas[stop.stopId] ?? stop.etaAt)}
                             </div>
-                        )}                        <div className="text-sm text-slate-600">
-                            Scheduled {stop.pickupTime}
-                            {stop.reachedAt &&
-                                ` · bus arrived ${new Date(stop.reachedAt).toLocaleTimeString([], {
-                                    hour: "2-digit",
-                                    minute: "2-digit",
-                                })}`}
-                        </div>
+                        )}
                     </div>
                 ))}
 

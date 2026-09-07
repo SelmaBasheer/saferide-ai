@@ -192,6 +192,23 @@ public class RouteService {
             throw new AppException.ValidationException(ResponseMessages.PATH_NEEDS_TWO_STOPS);
         }
 
+        for (int i = 0; i < stops.size(); i++) {
+            for (int j = i + 1; j < stops.size(); j++) {
+                double metres = metresBetween(
+                        stops.get(i).getLocation().getY(),
+                                stops.get(i).getLocation().getX(),
+                        stops.get(j).getLocation().getY(),
+                                stops.get(j).getLocation().getX());
+
+                if (metres < MIN_STOP_SEPARATION_METRES) {
+                    throw new AppException.ValidationException(
+                            "Stops '" + stops.get(i).getName() + "' and '"
+                                    + stops.get(j).getName() + "' are only " + Math.round(metres)
+                                    + " m apart. Move one of them before generating a path.");
+                }
+            }
+        }
+
         List<Point> waypoints = stops.stream()
                 .map(s -> new Point(s.getLocation().getX(), s.getLocation().getY()))
                 .toList();

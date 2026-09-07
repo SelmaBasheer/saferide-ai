@@ -3,17 +3,18 @@ import { useNavigate, useParams } from "react-router-dom"
 import { MapContainer, TileLayer, Marker, Polyline, Circle, useMap } from "react-leaflet"
 import L from "leaflet"
 import "leaflet/dist/leaflet.css"
-import ConfirmDialog from "@/components/ui/confirm-dialog"
+
 import { ROUTES } from "@/routes/paths"
 import { densify, type LatLng } from "@/lib/geo"
+import { formatTime } from "@/lib/tripFormat"
 import { useWakeLock } from "@/hooks/useWakeLock"
 import { useTrackingHub } from "@/features/tracking/useTrackingHub"
+import ConfirmDialog from "@/components/ui/confirm-dialog"
 import {
     useEndTripMutation,
     useGetTripQuery,
     useMarkBoardingMutation,
 } from "@/features/tracking/trackingApi"
-import { formatTime } from "@/lib/tripFormat"
 
 const busIcon = L.divIcon({
     className: "",
@@ -51,9 +52,9 @@ export default function DriverTripPage() {
     const [position, setPosition] = useState<LatLng | null>(null)
     const [mode, setMode] = useState<"idle" | "gps" | "simulate">("idle")
     const [banner, setBanner] = useState<string | null>(null)
-    const [confirmEnd, setConfirmEnd] = useState(false)
-    const [etas, setEtas] = useState<Record<string, string>>({})
     const [arrivedStopId, setArrivedStopId] = useState<string | null>(null)
+    const [etas, setEtas] = useState<Record<string, string>>({})
+    const [confirmEnd, setConfirmEnd] = useState(false)
 
     const driveIndex = useRef(0)
     const isActive = trip?.status === "Active"
@@ -66,7 +67,8 @@ export default function DriverTripPage() {
             if (u.etas?.length) {
                 setEtas(Object.fromEntries(u.etas.map((e) => [e.stopId, e.etaAt])))
             }
-        }, onStopReached: (n) => {
+        },
+        onStopReached: (n) => {
             setBanner(`Arrived at ${n.stopName} — mark students, then continue`)
             setArrivedStopId(n.stopId)
             setMode((m) => (m === "simulate" ? "idle" : m))
@@ -245,29 +247,36 @@ export default function DriverTripPage() {
             </div>
 
             {isActive && (
-                <div className="border-t border-slate-200 p-3">
-                    <button
-                        onClick={() => setConfirmEnd(true)}
-                        disabled={ending}
-                        className="w-full rounded-lg bg-red-600 py-4 font-semibold text-white disabled:opacity-50"
-                    >
-                        End trip
-                    </button>
-
-                    <ConfirmDialog
-                        open={confirmEnd}
-                        destructive
-                        busy={ending}
-                        title="End this trip?"
-                        description={
-                            trip.unmarkedCount > 0
-                                ? `${trip.unmarkedCount} student${trip.unmarkedCount === 1 ? " is" : "s are"} still unmarked, and will stay unmarked in the trip record.`
-                                : "Every student has been marked. The trip will be closed and cannot be reopened."
-                        }
-                        confirmLabel="End trip"
-                        onConfirm={onEnd}
-                        onCancel={() => setConfirmEnd(false)}
-                    />
+                <div className="flex gap-2 border-b border-slate-200 p-3">
+                    {arrivedStopId && mode === "idle" ? (
+                        <button
+                            onClick={() => {
+                                setArrivedStopId(null)
+                                setBanner(null)
+                                setMode("simulate")
+                            }}
+                            className="flex-1 rounded-lg bg-indigo-600 px-3 py-3 text-sm font-medium text-white"
+                        >
+                            Continue to next stop
+                        </button>
+                    ) : (
+                        <>
+                            <button
+                                onClick={() => setMode(mode === "gps" ? "idle" : "gps")}
+                                className={`flex-1 rounded-lg px-3 py-3 text-sm font-medium ${mode === "gps" ? "bg-emerald-600 text-white" : "border border-slate-300"
+                                    }`}
+                            >
+                                {mode === "gps" ? "Stop GPS" : "Use real GPS"}
+                            </button>
+                            <button
+                                onClick={() => setMode(mode === "simulate" ? "idle" : "simulate")}
+                                className={`flex-1 rounded-lg px-3 py-3 text-sm font-medium ${mode === "simulate" ? "bg-indigo-600 text-white" : "border border-slate-300"
+                                    }`}
+                            >
+                                {mode === "simulate" ? "Pause" : "Simulate drive"}
+                            </button>
+                        </>
+                    )}
                 </div>
             )}
 
@@ -275,6 +284,7 @@ export default function DriverTripPage() {
                 {trip.stops.map((stop) => {
                     const students = trip.roster.filter((r) => r.pickupStopId === stop.stopId)
                     const isHere = arrivedStopId === stop.stopId
+                    const eta = etas[stop.stopId] ?? stop.etaAt
 
                     return (
                         <section
@@ -297,9 +307,7 @@ export default function DriverTripPage() {
                                 )}
                                 <span className="ml-auto text-xs text-slate-500">
                                     {stop.pickupTime}
-                                    {!stop.reachedAt &&
-                                        (etas[stop.stopId] ?? stop.etaAt) &&
-                                        ` · eta ${formatTime(etas[stop.stopId] ?? stop.etaAt)}`}
+                                    {!stop.reachedAt && eta && ` · eta ${formatTime(eta)}`}
                                 </span>
                             </div>
 
@@ -373,12 +381,27 @@ export default function DriverTripPage() {
             {isActive && (
                 <div className="border-t border-slate-200 p-3">
                     <button
-                        onClick={onEnd}
+                        onClick={() => setConfirmEnd(true)}
                         disabled={ending}
                         className="w-full rounded-lg bg-red-600 py-4 font-semibold text-white disabled:opacity-50"
                     >
                         End trip
                     </button>
+
+                    <ConfirmDialog
+                        open={confirmEnd}
+                        destructive
+                        busy={ending}
+                        title="End this trip?"
+                        description={
+                            trip.unmarkedCount > 0
+                                ? `${trip.unmarkedCount} student${trip.unmarkedCount === 1 ? " is" : "s are"} still unmarked, and will stay unmarked in the trip record.`
+                                : "Every student has been marked. The trip will be closed and cannot be reopened."
+                        }
+                        confirmLabel="End trip"
+                        onConfirm={onEnd}
+                        onCancel={() => setConfirmEnd(false)}
+                    />
                 </div>
             )}
         </div>
