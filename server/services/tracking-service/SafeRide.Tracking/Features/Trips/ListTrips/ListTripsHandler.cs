@@ -13,6 +13,8 @@ public sealed class ListTripsHandler(IMongoCollection<Trip> trips)
 
     public async Task<PagedResult<TripSummaryResponse>> HandleAsync(
         string? status,
+        DateOnly? from,
+        DateOnly? to,
         int page,
         int pageSize,
         ClaimsPrincipal user,
@@ -32,6 +34,21 @@ public sealed class ListTripsHandler(IMongoCollection<Trip> trips)
         )
         {
             filter &= builder.Eq(t => t.Status, parsed);
+        }
+
+        // Dates are treated as UTC days. School runs fall between roughly
+        // 00:30 and 12:30 UTC in India, so a UTC day and a local day always
+        // agree for real trips.
+        if (from is not null)
+        {
+            var fromUtc = from.Value.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc);
+            filter &= builder.Gte(t => t.StartedAt, fromUtc);
+        }
+
+        if (to is not null)
+        {
+            var toUtc = to.Value.AddDays(1).ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc);
+            filter &= builder.Lt(t => t.StartedAt, toUtc);
         }
 
         if (user.IsInRole("Driver"))

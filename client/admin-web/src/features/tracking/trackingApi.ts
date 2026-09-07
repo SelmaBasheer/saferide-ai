@@ -76,10 +76,23 @@ export interface MarkBoardingArgs {
     status: Exclude<BoardingStatus, "Unmarked">
 }
 
-export interface MyTripsArgs {
+export interface TripsQueryArgs {
     status?: string
+    from?: string
+    to?: string
     page: number
     pageSize: number
+}
+
+export interface TripStop {
+    stopId: string
+    sequence: number
+    name: string
+    latitude: number
+    longitude: number
+    pickupTime: string
+    reachedAt: string | null
+    etaAt: string | null
 }
 
 export const trackingApi = baseApi.injectEndpoints({
@@ -90,10 +103,16 @@ export const trackingApi = baseApi.injectEndpoints({
             providesTags: ["Trips"],
         }),
 
-        getMyTrips: builder.query<PagedResult<TripSummary>, MyTripsArgs>({
-            query: ({ status, page, pageSize }) => ({
+        getTrips: builder.query<PagedResult<TripSummary>, TripsQueryArgs>({
+            query: ({ status, from, to, page, pageSize }) => ({
                 url: "/trips",
-                params: { status: status || undefined, page, pageSize },
+                params: {
+                    status: status || undefined,
+                    from: from || undefined,
+                    to: to || undefined,
+                    page,
+                    pageSize,
+                },
             }),
             transformResponse: (r: ApiResponse<PagedResult<TripSummary>>) => r.data,
             providesTags: ["Trips"],
@@ -131,7 +150,7 @@ export const trackingApi = baseApi.injectEndpoints({
 
 export const {
     useGetTripQuery,
-    useGetMyTripsQuery,
+    useGetTripsQuery,
     useGetActiveTripsQuery,
     useStartTripMutation,
     useEndTripMutation,

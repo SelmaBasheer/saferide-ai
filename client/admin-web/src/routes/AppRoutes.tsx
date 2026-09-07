@@ -23,6 +23,9 @@ import BusesPage from "@/pages/BusesPage"
 import BusDetailPage from "@/pages/BusDetailPage"
 import RoutesPage from "@/pages/RoutesPage"
 import RouteDetailPage from "@/pages/RouteDetailPage"
+import TripsPage from "@/pages/TripsPage"
+import TripDetailPage from "@/pages/TripDetailPage"
+import MobileTripsPage from "@/pages/MobileTripsPage"
 
 export default function AppRoutes() {
     return (
@@ -50,19 +53,25 @@ export default function AppRoutes() {
             <Route path={ROUTES.schoolBusDetail} element={
                 <ProtectedRoute roles={["SchoolAdmin"]}><BusDetailPage /></ProtectedRoute>} />
             <Route element={
-                <ProtectedRoute roles={["Driver"]}><MobileLayout /></ProtectedRoute>}>
+                <ProtectedRoute roles={["Driver"]}><MobileLayout tripsPath={ROUTES.driverTrips} /></ProtectedRoute>}>
                 <Route path={ROUTES.driver} element={<DriverHomePage />} />
                 <Route path={ROUTES.driverTrip} element={<DriverTripPage />} />
+                <Route path={ROUTES.driverTrips} element={<MobileTripsPage title="Past trips" homePath={ROUTES.driver} detailPath={ROUTES.driverTrip} />} />
             </Route>
             <Route element={
-                <ProtectedRoute roles={["Parent"]}><MobileLayout /></ProtectedRoute>}>
+                <ProtectedRoute roles={["Parent"]}><MobileLayout tripsPath={ROUTES.parentTrips} /></ProtectedRoute>}>
                 <Route path={ROUTES.parent} element={<ParentHomePage />} />
                 <Route path={ROUTES.parentTrip} element={<ParentTripPage />} />
+                <Route path={ROUTES.parentTrips} element={<MobileTripsPage title="Past trips" homePath={ROUTES.parent} detailPath={ROUTES.parentTrip} />} />
             </Route>
             <Route path={ROUTES.schoolRoutes} element={
                 <ProtectedRoute roles={["SchoolAdmin"]}><RoutesPage /></ProtectedRoute>} />
             <Route path={ROUTES.schoolRouteDetail} element={
                 <ProtectedRoute roles={["SchoolAdmin"]}><RouteDetailPage /></ProtectedRoute>} />
+            <Route path={ROUTES.schoolTrips} element={
+                <ProtectedRoute roles={["SchoolAdmin"]}><TripsPage /></ProtectedRoute>} />
+            <Route path={ROUTES.schoolTripDetail} element={
+                <ProtectedRoute roles={["SchoolAdmin"]}><TripDetailPage /></ProtectedRoute>} />
         </Routes>
     )
 }

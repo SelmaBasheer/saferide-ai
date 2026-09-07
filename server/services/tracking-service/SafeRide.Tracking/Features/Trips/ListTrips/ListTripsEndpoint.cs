@@ -12,6 +12,8 @@ public static class ListTripsEndpoint
                 "/api/trips",
                 async (
                     string? status,
+                    DateOnly? from,
+                    DateOnly? to,
                     int? page,
                     int? pageSize,
                     ClaimsPrincipal user,
@@ -21,6 +23,8 @@ public static class ListTripsEndpoint
                 {
                     var result = await handler.HandleAsync(
                         status,
+                        from,
+                        to,
                         page ?? 1,
                         pageSize ?? 10,
                         user,

@@ -2,7 +2,7 @@ import { useState } from "react"
 import { useNavigate } from "react-router-dom"
 import { ROUTES } from "@/routes/paths"
 import { useGetRoutesQuery } from "@/features/routes/routeApi"
-import { useGetMyTripsQuery, useStartTripMutation } from "@/features/tracking/trackingApi"
+import { useGetTripsQuery, useStartTripMutation } from "@/features/tracking/trackingApi"
 
 export default function DriverHomePage() {
     const navigate = useNavigate()
@@ -13,7 +13,7 @@ export default function DriverHomePage() {
         isLoading: loadingActive,
         isError: activeFailed,
         refetch: refetchActive,
-    } = useGetMyTripsQuery({ status: "Active", page: 1, pageSize: 1 })
+    } = useGetTripsQuery({ status: "Active", page: 1, pageSize: 1 })
 
     const {
         data: routes,
@@ -63,7 +63,6 @@ export default function DriverHomePage() {
     return (
         <div className="flex flex-col gap-4 p-4">
             <h1 className="text-xl font-semibold">Today's trip</h1>
-
             {message && (
                 <div
                     role="alert"
