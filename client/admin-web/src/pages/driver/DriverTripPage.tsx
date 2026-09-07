@@ -13,6 +13,7 @@ import {
     useGetTripQuery,
     useMarkBoardingMutation,
 } from "@/features/tracking/trackingApi"
+import { formatTime } from "@/lib/tripFormat"
 
 const busIcon = L.divIcon({
     className: "",
@@ -51,7 +52,7 @@ export default function DriverTripPage() {
     const [mode, setMode] = useState<"idle" | "gps" | "simulate">("idle")
     const [banner, setBanner] = useState<string | null>(null)
     const [confirmEnd, setConfirmEnd] = useState(false)
-
+    const [etas, setEtas] = useState<Record<string, string>>({})
     const [arrivedStopId, setArrivedStopId] = useState<string | null>(null)
 
     const driveIndex = useRef(0)
@@ -60,8 +61,12 @@ export default function DriverTripPage() {
     useWakeLock(!!isActive && mode !== "idle")
 
     const { status, joinTrip, leaveTrip, sendPosition } = useTrackingHub({
-        onPosition: (u) => setPosition([u.latitude, u.longitude]),
-        onStopReached: (n) => {
+        onPosition: (u) => {
+            setPosition([u.latitude, u.longitude])
+            if (u.etas?.length) {
+                setEtas(Object.fromEntries(u.etas.map((e) => [e.stopId, e.etaAt])))
+            }
+        }, onStopReached: (n) => {
             setBanner(`Arrived at ${n.stopName} — mark students, then continue`)
             setArrivedStopId(n.stopId)
             setMode((m) => (m === "simulate" ? "idle" : m))
@@ -182,7 +187,7 @@ export default function DriverTripPage() {
     const centre: LatLng = position ?? path[0] ?? [8.8901, 76.6012]
 
     return (
-        <div className="flex min-h-dvh flex-col">
+        <div className="flex min-h-0 flex-1 flex-col">
             <header className="flex items-center justify-between border-b border-slate-200 p-3">
                 <div>
                     <div className="font-semibold">{trip.routeCode}</div>
@@ -290,7 +295,12 @@ export default function DriverTripPage() {
                                         bus is here
                                     </span>
                                 )}
-                                <span className="ml-auto text-xs text-slate-500">{stop.pickupTime}</span>
+                                <span className="ml-auto text-xs text-slate-500">
+                                    {stop.pickupTime}
+                                    {!stop.reachedAt &&
+                                        (etas[stop.stopId] ?? stop.etaAt) &&
+                                        ` · eta ${formatTime(etas[stop.stopId] ?? stop.etaAt)}`}
+                                </span>
                             </div>
 
                             {students.length === 0 && (

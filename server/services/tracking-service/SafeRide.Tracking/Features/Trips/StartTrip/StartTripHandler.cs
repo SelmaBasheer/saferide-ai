@@ -85,6 +85,25 @@ public sealed class StartTripHandler(
                 : null,
         };
 
+        if (tripRoute.Path is not null)
+        {
+            var pathPoints = tripRoute
+                .Path.Coordinates.Positions.Select(p => (p.Latitude, p.Longitude))
+                .ToList();
+
+            var cumulative = PathProgress.Cumulative(pathPoints);
+
+            foreach (var stop in tripRoute.Stops)
+            {
+                stop.DistanceFromStartMetres = PathProgress.DistanceAlong(
+                    stop.Location.Latitude(),
+                    stop.Location.Longitude(),
+                    pathPoints,
+                    cumulative
+                );
+            }
+        }
+
         var entries = roster
             .Select(r => new RosterEntry
             {

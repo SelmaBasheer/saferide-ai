@@ -9,7 +9,8 @@ public sealed record TripStopResponse(
     double Latitude,
     double Longitude,
     string PickupTime,
-    DateTime? ReachedAt
+    DateTime? ReachedAt,
+    DateTime? EtaAt
 );
 
 public sealed record TripRosterResponse(

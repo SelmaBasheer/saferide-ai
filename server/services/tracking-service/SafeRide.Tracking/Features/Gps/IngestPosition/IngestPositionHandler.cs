@@ -6,7 +6,6 @@ using SafeRide.Tracking.Common;
 using SafeRide.Tracking.Domain;
 using SafeRide.Tracking.Hubs;
 using SafeRide.Tracking.Hubs.Contracts;
-using Serilog.Core;
 
 namespace SafeRide.Tracking.Features.Gps.IngestPosition;
 
@@ -62,6 +61,8 @@ public sealed class IngestPositionHandler(
             cancellationToken: ct
         );
 
+        var etas = TripEta.ForTrip(trip);
+
         var payload = new PositionUpdate(
             trip.Id,
             trip.BusId,
@@ -70,7 +71,8 @@ public sealed class IngestPositionHandler(
             input.Longitude,
             input.SpeedKmh,
             trip.LastPosition.RecordedAt,
-            trip.LastPosition.Source.ToString()
+            trip.LastPosition.Source.ToString(),
+            [.. etas.Select(e => new StopEta(e.Key, e.Value))]
         );
 
         await hub
@@ -135,15 +137,6 @@ public sealed class IngestPositionHandler(
         {
             return; // another position post won the race
         }
-
-        await trips.UpdateOneAsync(
-            stopFilter,
-            Builders<Trip>.Update.Set(
-                t => t.Route.Stops.FirstMatchingElement().ReachedAt,
-                stop.ReachedAt
-            ),
-            cancellationToken: ct
-        );
 
         logger.LogInformation(
             "Trip {TripId} reached stop {Sequence} — {StopName}",

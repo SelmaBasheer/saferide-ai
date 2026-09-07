@@ -10,4 +10,5 @@ public sealed class TripStop
     public GeoJsonPoint<GeoJson2DGeographicCoordinates> Location { get; init; } = default!;
     public string PickupTime { get; init; } = string.Empty;
     public DateTime? ReachedAt { get; set; }
+    public double DistanceFromStartMetres { get; set; }
 }

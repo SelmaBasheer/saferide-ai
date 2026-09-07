@@ -8,7 +8,8 @@ public sealed record PositionUpdate(
     double Longitude,
     double? SpeedKmh,
     DateTime RecordedAt,
-    string Source
+    string Source,
+    List<StopEta> Etas
 );
 
 public sealed record TripLifecycleNotification(
@@ -54,3 +55,5 @@ public sealed record RouteDeviationNotification(
     double MetresOffRoute,
     DateTime At
 );
+
+public sealed record StopEta(Guid StopId, DateTime EtaAt);
