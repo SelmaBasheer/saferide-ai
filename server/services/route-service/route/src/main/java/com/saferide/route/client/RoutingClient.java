@@ -22,17 +22,15 @@ public class RoutingClient {
     private final RestClient client;
 
     public RoutingClient(
-        @Value("${saferide.routing.base-url}") String baseUrl,
-        @Value("${saferide.routing.timeout-seconds:10}") int timeoutSeconds) {
+            @Value("${saferide.routing.base-url}") String baseUrl,
+            @Value("${saferide.routing.timeout-seconds:10}") int timeoutSeconds) {
 
         SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory();
         factory.setConnectTimeout((int) Duration.ofSeconds(timeoutSeconds).toMillis());
         factory.setReadTimeout((int) Duration.ofSeconds(timeoutSeconds).toMillis());
 
-        this.client = RestClient.builder()
-            .baseUrl(baseUrl)
-            .requestFactory(factory)
-            .build();
+        this.client =
+                RestClient.builder().baseUrl(baseUrl).requestFactory(factory).build();
     }
 
     /**
@@ -41,7 +39,7 @@ public class RoutingClient {
      */
     public List<Point> roadPathThrough(List<Point> waypoints) {
         String coordinates =
-            waypoints.stream().map(p -> p.getX() + "," + p.getY()).collect(Collectors.joining(";"));
+                waypoints.stream().map(p -> p.getX() + "," + p.getY()).collect(Collectors.joining(";"));
 
         String uri = "/route/v1/driving/" + coordinates + "?overview=full&geometries=geojson";
 
@@ -54,9 +52,9 @@ public class RoutingClient {
         }
 
         if (response == null
-            || !"Ok".equalsIgnoreCase(response.code())
-            || response.routes() == null
-            || response.routes().isEmpty()) {
+                || !"Ok".equalsIgnoreCase(response.code())
+                || response.routes() == null
+                || response.routes().isEmpty()) {
             throw new AppException.ValidationException(ResponseMessages.NO_ROAD_ROUTE);
         }
 
@@ -69,5 +67,6 @@ public class RoutingClient {
                 points.add(point);
             }
         }
-        return points;    }
+        return points;
+    }
 }

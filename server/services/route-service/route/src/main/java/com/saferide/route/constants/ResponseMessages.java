@@ -20,9 +20,9 @@ public final class ResponseMessages {
     public static final String PATH_GENERATED = "Path generated from the stops.";
     public static final String PATH_NEEDS_TWO_STOPS = "Add at least two stops before generating a path.";
     public static final String ROUTING_UNAVAILABLE =
-        "The routing service is not responding. Try again, or draw the path by hand.";
+            "The routing service is not responding. Try again, or draw the path by hand.";
     public static final String NO_ROAD_ROUTE =
-        "No road route could be found between these stops. Check that each stop is on a road.";
+            "No road route could be found between these stops. Check that each stop is on a road.";
 
     private ResponseMessages() {}
 }

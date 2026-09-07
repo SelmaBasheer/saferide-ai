@@ -51,12 +51,12 @@ public class RouteService {
     private final RoutingClient routingClient;
 
     public RouteService(
-        RouteRepository routeRepository,
-        SchoolStatusRepository schoolStatusRepository,
-        MongoTemplate mongo,
-        RouteMapper routeMapper,
-        RabbitEventPublisher publisher,
-        RoutingClient routingClient) {
+            RouteRepository routeRepository,
+            SchoolStatusRepository schoolStatusRepository,
+            MongoTemplate mongo,
+            RouteMapper routeMapper,
+            RabbitEventPublisher publisher,
+            RoutingClient routingClient) {
         this.routeRepository = routeRepository;
         this.schoolStatusRepository = schoolStatusRepository;
         this.mongo = mongo;
@@ -76,14 +76,14 @@ public class RouteService {
         Route route = routeRepository.save(new Route(schoolId, code, request.name()));
 
         publisher.publish(
-            MessagingConstants.ROUTE_CREATED,
-            new RouteCreated(route.getId(), route.getSchoolId(), route.getCode(), route.getName(), Instant.now()));
+                MessagingConstants.ROUTE_CREATED,
+                new RouteCreated(route.getId(), route.getSchoolId(), route.getCode(), route.getName(), Instant.now()));
 
         return routeMapper.toResponse(route);
     }
 
     public PagedResult<RouteResponse> list(
-        UUID schoolId, String search, boolean includeInactive, int page, int pageSize) {
+            UUID schoolId, String search, boolean includeInactive, int page, int pageSize) {
 
         int safePage = Math.max(page, 1);
         int safeSize = Math.clamp(pageSize, 1, MAX_PAGE_SIZE);
@@ -95,20 +95,20 @@ public class RouteService {
         if (search != null && !search.isBlank()) {
             String quoted = Pattern.quote(search.trim());
             criteria = criteria.orOperator(
-                Criteria.where("code").regex(quoted, "i"),
-                Criteria.where("name").regex(quoted, "i"));
+                    Criteria.where("code").regex(quoted, "i"),
+                    Criteria.where("name").regex(quoted, "i"));
         }
 
         Query query = new Query(criteria);
         long total = mongo.count(query, Route.class);
 
         query.with(Sort.by(Sort.Direction.ASC, "code"))
-            .skip((long) (safePage - 1) * safeSize)
-            .limit(safeSize);
+                .skip((long) (safePage - 1) * safeSize)
+                .limit(safeSize);
 
         List<RouteResponse> items = mongo.find(query, Route.class).stream()
-            .map(routeMapper::toResponse)
-            .toList();
+                .map(routeMapper::toResponse)
+                .toList();
 
         return new PagedResult<>(items, total, safePage, safeSize);
     }
@@ -139,8 +139,8 @@ public class RouteService {
 
     Route findOwned(UUID schoolId, UUID id) {
         return routeRepository
-            .findByIdAndSchoolId(id, schoolId)
-            .orElseThrow(() -> new AppException.NotFoundException(ResponseMessages.ROUTE_NOT_FOUND));
+                .findByIdAndSchoolId(id, schoolId)
+                .orElseThrow(() -> new AppException.NotFoundException(ResponseMessages.ROUTE_NOT_FOUND));
     }
 
     private void requireApprovedSchool(UUID schoolId) {
@@ -163,19 +163,19 @@ public class RouteService {
             requireInsideIndia(input.latitude(), input.longitude(), "Stop '" + input.name() + "'");
             if (previousTime != null && input.pickupTime().compareTo(previousTime) <= 0) {
                 throw new AppException.ValidationException("Stop '" + input.name() + "' is scheduled at "
-                    + input.pickupTime() + ", which is not after the previous stop at " + previousTime + ".");
+                        + input.pickupTime() + ", which is not after the previous stop at " + previousTime + ".");
             }
             previousTime = input.pickupTime();
             UUID stopId = (input.stopId() != null && existingIds.contains(input.stopId()))
-                ? input.stopId()
-                : UUID.randomUUID();
+                    ? input.stopId()
+                    : UUID.randomUUID();
 
             if (!seen.add(stopId)) {
                 throw new AppException.ConflictException(ResponseMessages.DUPLICATE_STOP_ID);
             }
 
             stops.add(new Stop(
-                stopId, sequence++, input.name().trim(), input.latitude(), input.longitude(), input.pickupTime()));
+                    stopId, sequence++, input.name().trim(), input.latitude(), input.longitude(), input.pickupTime()));
         }
 
         requireStopsFarEnoughApart(request.stops());
@@ -193,8 +193,8 @@ public class RouteService {
         }
 
         List<Point> waypoints = stops.stream()
-            .map(s -> new Point(s.getLocation().getX(), s.getLocation().getY()))
-            .toList();
+                .map(s -> new Point(s.getLocation().getX(), s.getLocation().getY()))
+                .toList();
 
         route.replacePath(new GeoJsonLineString(routingClient.roadPathThrough(waypoints)));
         return routeMapper.toResponse(routeRepository.save(route));
@@ -222,8 +222,8 @@ public class RouteService {
         Route saved = routeRepository.save(route);
 
         publisher.publish(
-            MessagingConstants.ROUTE_BUS_ASSIGNED,
-            new RouteBusAssigned(route.getId(), schoolId, request.busId(), Instant.now()));
+                MessagingConstants.ROUTE_BUS_ASSIGNED,
+                new RouteBusAssigned(route.getId(), schoolId, request.busId(), Instant.now()));
 
         return routeMapper.toResponse(saved);
     }
@@ -231,7 +231,7 @@ public class RouteService {
     private void requireInsideIndia(double latitude, double longitude, String label) {
         if (latitude < MIN_LAT || latitude > MAX_LAT || longitude < MIN_LNG || longitude > MAX_LNG) {
             throw new AppException.ValidationException(
-                label + " is outside India — check that latitude and longitude are not swapped.");
+                    label + " is outside India — check that latitude and longitude are not swapped.");
         }
     }
 
@@ -239,16 +239,17 @@ public class RouteService {
         for (int i = 0; i < inputs.size(); i++) {
             for (int j = i + 1; j < inputs.size(); j++) {
                 double metres = metresBetween(
-                    inputs.get(i).latitude(),
-                    inputs.get(i).longitude(),
-                    inputs.get(j).latitude(),
-                    inputs.get(j).longitude());
+                        inputs.get(i).latitude(),
+                        inputs.get(i).longitude(),
+                        inputs.get(j).latitude(),
+                        inputs.get(j).longitude());
 
                 if (metres < MIN_STOP_SEPARATION_METRES) {
-                    throw new AppException.ValidationException("Stops '" + inputs.get(i).name() + "' and '"
-                        + inputs.get(j).name() + "' are only " + Math.round(metres)
-                        + " m apart. The bus counts as arrived within " + (int) MIN_STOP_SEPARATION_METRES
-                        + " m of a stop, so it could not tell them apart.");
+                    throw new AppException.ValidationException(
+                            "Stops '" + inputs.get(i).name() + "' and '"
+                                    + inputs.get(j).name() + "' are only " + Math.round(metres)
+                                    + " m apart. The bus counts as arrived within " + (int) MIN_STOP_SEPARATION_METRES
+                                    + " m of a stop, so it could not tell them apart.");
                 }
             }
         }
@@ -258,9 +259,7 @@ public class RouteService {
         double dLat = Math.toRadians(lat2 - lat1);
         double dLon = Math.toRadians(lon2 - lon1);
         double h = Math.pow(Math.sin(dLat / 2), 2)
-            + Math.pow(Math.sin(dLon / 2), 2)
-            * Math.cos(Math.toRadians(lat1))
-            * Math.cos(Math.toRadians(lat2));
+                + Math.pow(Math.sin(dLon / 2), 2) * Math.cos(Math.toRadians(lat1)) * Math.cos(Math.toRadians(lat2));
         return 2 * EARTH_RADIUS_METRES * Math.asin(Math.sqrt(h));
     }
 }
