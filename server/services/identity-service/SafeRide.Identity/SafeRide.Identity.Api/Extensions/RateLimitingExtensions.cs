@@ -15,6 +15,11 @@ public static class RateLimitingExtensions
             // per-IP: 5 attempts / minute for the OTP guess endpoint
             options.AddPolicy("otp-verify", ByIp(permitLimit: 5));
 
+            // Generous floor so no endpoint is unlimited. Stacks with the named
+            // policies rather than replacing them — a reset-password request
+            // consumes from both buckets.
+            options.GlobalLimiter = PartitionedRateLimiter.Create(ByIp(permitLimit: 120));
+
             // uniform 429 — same for everyone, reveals nothing
             options.OnRejected = async (context, token) =>
             {

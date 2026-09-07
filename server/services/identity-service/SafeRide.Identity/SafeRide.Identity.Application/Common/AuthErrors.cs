@@ -24,4 +24,9 @@ public static class AuthErrors
 
     // Same message for both OTP failure cases (also better for security).
     public static readonly Error InvalidOtp = new(ErrorCodes.OtpInvalid, "Invalid or expired OTP.");
+
+    public static readonly Error OtpAttemptsExhausted = new(
+        "Auth.OtpAttemptsExhausted",
+        "Too many incorrect attempts. Please request a new code."
+    );
 }

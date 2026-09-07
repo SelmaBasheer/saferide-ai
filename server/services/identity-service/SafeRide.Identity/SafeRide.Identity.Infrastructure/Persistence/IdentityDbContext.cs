@@ -41,6 +41,7 @@ public sealed class IdentityDbContext(DbContextOptions<IdentityDbContext> option
             e.HasKey(o => o.Id);
             e.Property(o => o.CodeHash).IsRequired();
             e.HasIndex(o => new { o.UserId, o.Purpose });
+            e.HasIndex(o => o.ExpiresAtUtc);
         });
     }
 }

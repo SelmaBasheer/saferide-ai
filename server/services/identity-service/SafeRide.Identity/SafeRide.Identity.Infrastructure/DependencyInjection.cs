@@ -3,6 +3,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using SafeRide.Identity.Application.Abstractions;
 using SafeRide.Identity.Domain.Repositories;
+using SafeRide.Identity.Infrastructure.BackgroundServices;
 using SafeRide.Identity.Infrastructure.Messaging;
 using SafeRide.Identity.Infrastructure.Persistence;
 using SafeRide.Identity.Infrastructure.Persistence.Repositories;
@@ -42,6 +43,7 @@ public static class DependencyInjection
         services.AddScoped<IOtpCodeRepository, OtpCodeRepository>();
 
         services.AddHostedService<InvitationEventsConsumer>();
+        services.AddHostedService<OtpCleanupService>();
 
         return services;
     }

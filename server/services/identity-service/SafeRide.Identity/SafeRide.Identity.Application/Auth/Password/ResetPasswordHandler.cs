@@ -31,8 +31,23 @@ public sealed class ResetPasswordHandler(
             return Result.Failure(AuthErrors.InvalidOtp);
 
         var otp = await otps.GetLatestAsync(user.Id, OtpPurpose.PasswordReset, ct);
-        if (otp is null || !otp.IsValid || !otpService.Verify(cmd.Otp, otp.CodeHash))
+        if (otp is null)
             return Result.Failure(AuthErrors.InvalidOtp);
+
+        // Tell the user they've run out of guesses — they already know they made
+        // them, so this reveals nothing, and retyping a dead code can never work.
+        if (otp.AttemptsExhausted)
+            return Result.Failure(AuthErrors.OtpAttemptsExhausted);
+
+        if (!otp.IsValid)
+            return Result.Failure(AuthErrors.InvalidOtp);
+
+        if (!otpService.Verify(cmd.Otp, otp.CodeHash))
+        {
+            otp.RecordFailedAttempt();
+            await uow.SaveChangesAsync(ct);
+            return Result.Failure(AuthErrors.InvalidOtp);
+        }
 
         user.ResetPassword(passwordHasher.HashPassword(cmd.NewPassword));
         otp.Consume();
