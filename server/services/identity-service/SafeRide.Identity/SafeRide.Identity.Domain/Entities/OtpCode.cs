@@ -7,7 +7,7 @@ public class OtpCode
     // A six-digit code has a million possibilities. Capping guesses per code is
     // the only limit an attacker cannot evade — rate limits partition by IP, and
     // IPs can be rotated.
-    private const int MaxAttempts = 5;
+    public const int MaxAttempts = 5;
 
     public Guid Id { get; private set; }
     public Guid UserId { get; private set; }

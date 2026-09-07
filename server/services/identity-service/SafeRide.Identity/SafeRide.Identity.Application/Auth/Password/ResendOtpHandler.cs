@@ -38,7 +38,7 @@ public sealed class ResendOtpHandler(
             return Result.Success(); // silent — same as unknown email
 
         var code = otpService.Generate();
-        await otps.DeleteForUserAsync(user.Id, OtpPurpose.PasswordReset, ct);
+        await otps.DeleteForUserAsync(user.Id, purpose, ct);
         await otps.AddAsync(OtpCode.Issue(user.Id, otpService.Hash(code), purpose), ct);
         await uow.SaveChangesAsync(ct);
 
