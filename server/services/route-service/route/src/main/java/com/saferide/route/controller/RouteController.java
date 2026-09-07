@@ -82,6 +82,11 @@ public class RouteController {
         return ApiResponse.ok(routeService.assignBus(schoolId(jwt), id, request), ResponseMessages.BUS_ASSIGNED);
     }
 
+    @PostMapping("/{id}/path/generate")
+    public ApiResponse<RouteResponse> generatePath(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID id) {
+        return ApiResponse.ok(routeService.generatePath(schoolId(jwt), id), ResponseMessages.PATH_GENERATED);
+    }
+
     private static UUID schoolId(Jwt jwt) {
         var claim = jwt.getClaimAsString("schoolId");
         if (claim == null) {

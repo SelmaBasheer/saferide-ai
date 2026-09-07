@@ -36,4 +36,10 @@ public class AppException extends RuntimeException {
             super("Validation.Error", message, 400);
         }
     }
+
+    public static class UpstreamException extends AppException {
+        public UpstreamException(String message) {
+            super("Upstream.Unavailable", message, 502);
+        }
+    }
 }

@@ -1,10 +1,11 @@
-import { useState } from "react"
+import { useMemo, useState } from "react"
 import { MapContainer, TileLayer, Marker, Polyline, Circle, useMapEvents } from "react-leaflet"
 import L from "leaflet"
 import "leaflet/dist/leaflet.css"
-import { ArrowDown, ArrowUp, GripVertical, Trash2 } from "lucide-react"
+import { ArrowDown, ArrowUp, GripVertical, Trash2, Wand2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import {
+    useGeneratePathMutation,
     useReplacePathMutation,
     useReplaceStopsMutation,
     type RouteGeoPoint,
@@ -15,6 +16,23 @@ import {
 type LocalStop = StopInput & { key: string }
 
 const TIME_PATTERN = /^([01]\d|2[0-3]):[0-5]\d$/
+
+// Tracking marks a stop reached within 100 m, so two stops closer than that
+// cannot be told apart — the bus would arrive at both at once.
+const MIN_STOP_SEPARATION_METRES = 100
+
+function metresBetween(a: StopInput, b: StopInput) {
+    const R = 6_371_000
+    const dLat = ((b.latitude - a.latitude) * Math.PI) / 180
+    const dLng = ((b.longitude - a.longitude) * Math.PI) / 180
+    const lat1 = (a.latitude * Math.PI) / 180
+    const lat2 = (b.latitude * Math.PI) / 180
+    const h = Math.sin(dLat / 2) ** 2 + Math.sin(dLng / 2) ** 2 * Math.cos(lat1) * Math.cos(lat2)
+    return 2 * R * Math.asin(Math.sqrt(h))
+}
+
+const stopKey = (s: { stopId: string | null; name: string; latitude: number; longitude: number; pickupTime: string }) =>
+    `${s.stopId}|${s.name}|${s.latitude}|${s.longitude}|${s.pickupTime}`
 
 const stopIcon = (n: number) =>
     L.divIcon({
@@ -57,19 +75,13 @@ export default function RouteBuilder({ route }: { route: RouteListItem }) {
 
     const [replaceStops, { isLoading: savingStops }] = useReplaceStopsMutation()
     const [replacePath, { isLoading: savingPath }] = useReplacePathMutation()
+    const [generatePath, { isLoading: generating }] = useGeneratePathMutation()
 
     const onMapClick = (latitude: number, longitude: number) => {
         if (mode === "stops") {
             setStops((s) => [
                 ...s,
-                {
-                    key: crypto.randomUUID(),
-                    stopId: null,
-                    name: "",
-                    latitude,
-                    longitude,
-                    pickupTime: "",
-                },
+                { key: crypto.randomUUID(), stopId: null, name: "", latitude, longitude, pickupTime: "" },
             ])
         } else {
             setPoints((p) => [...p, { latitude, longitude }])
@@ -104,6 +116,24 @@ export default function RouteBuilder({ route }: { route: RouteListItem }) {
 
     const anyOutOfOrder = stops.some((_, i) => outOfOrder(i))
 
+    const tooClose = useMemo(() => {
+        const flagged = new Set<number>()
+        for (let i = 0; i < stops.length; i++) {
+            for (let j = i + 1; j < stops.length; j++) {
+                if (metresBetween(stops[i], stops[j]) < MIN_STOP_SEPARATION_METRES) {
+                    flagged.add(i)
+                    flagged.add(j)
+                }
+            }
+        }
+        return flagged
+    }, [stops])
+
+    const stopsDirty = useMemo(
+        () => route.stops.map(stopKey).join(";") !== stops.map(stopKey).join(";"),
+        [route.stops, stops]
+    )
+
     const onSaveStops = async () => {
         if (stops.some((s) => !s.name.trim())) {
             setMessage("Every stop needs a name.")
@@ -121,6 +151,17 @@ export default function RouteBuilder({ route }: { route: RouteListItem }) {
                 return
             }
         }
+        for (let i = 0; i < stops.length; i++) {
+            for (let j = i + 1; j < stops.length; j++) {
+                const metres = metresBetween(stops[i], stops[j])
+                if (metres < MIN_STOP_SEPARATION_METRES) {
+                    setMessage(
+                        `Stops ${i + 1} and ${j + 1} are only ${Math.round(metres)} m apart. The bus counts as arrived within ${MIN_STOP_SEPARATION_METRES} m of a stop, so it could not tell them apart. Move one of them.`
+                    )
+                    return
+                }
+            }
+        }
         try {
             await replaceStops({
                 id: route.id,
@@ -135,6 +176,17 @@ export default function RouteBuilder({ route }: { route: RouteListItem }) {
             setMessage("Stops saved.")
         } catch (e) {
             setMessage(apiErrorMessage(e) ?? "Could not save the stops.")
+        }
+    }
+
+    const onGenerate = async () => {
+        setMessage(null)
+        try {
+            const updated = await generatePath(route.id).unwrap()
+            setPoints(updated.path ?? [])
+            setMessage(`Path generated — ${updated.path?.length ?? 0} points following the road.`)
+        } catch (e) {
+            setMessage(apiErrorMessage(e) ?? "Could not generate the path.")
         }
     }
 
@@ -176,7 +228,7 @@ export default function RouteBuilder({ route }: { route: RouteListItem }) {
                         className={`rounded-md px-3 py-1.5 text-sm ${mode === "path" ? "bg-sky-700 text-white" : "border border-slate-300"
                             }`}
                     >
-                        Draw path
+                        Path
                     </button>
                 </div>
             </div>
@@ -184,7 +236,7 @@ export default function RouteBuilder({ route }: { route: RouteListItem }) {
             <p className="mb-3 text-sm text-slate-500">
                 {mode === "stops"
                     ? "Click the map to add a stop, then give it a name and pickup time. Drag by the handle to reorder — times must still increase down the list."
-                    : "Click along the road to trace the route the bus drives. Add points around corners so the line follows the road."}
+                    : "Generate the path from your stops so it follows real roads. Drawing by hand is a fallback for roads the map doesn't know."}
             </p>
 
             {message && (
@@ -239,6 +291,13 @@ export default function RouteBuilder({ route }: { route: RouteListItem }) {
                         </p>
                     )}
 
+                    {tooClose.size > 0 && (
+                        <p className="mt-4 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-800">
+                            Two stops are within {MIN_STOP_SEPARATION_METRES} m of each other. The bus counts
+                            as arrived within that distance, so it could not tell them apart.
+                        </p>
+                    )}
+
                     <div className="mt-4 space-y-2">
                         {stops.length === 0 && (
                             <p className="text-sm text-slate-500">No stops yet — click the map to add one.</p>
@@ -267,7 +326,8 @@ export default function RouteBuilder({ route }: { route: RouteListItem }) {
                                 className={`flex flex-wrap items-center gap-2 rounded-md border p-2 transition
                                     ${dragIndex === i ? "opacity-40" : ""}
                                     ${overIndex === i && dragIndex !== i ? "border-sky-400 ring-2 ring-sky-200" : ""}
-                                    ${outOfOrder(i) ? "border-amber-300 bg-amber-50" : ""}`}
+                                    ${outOfOrder(i) ? "border-amber-300 bg-amber-50" : ""}
+                                    ${tooClose.has(i) ? "border-red-300 bg-red-50" : ""}`}
                             >
                                 <span
                                     onPointerDown={() => setHandleHeld(true)}
@@ -347,16 +407,20 @@ export default function RouteBuilder({ route }: { route: RouteListItem }) {
             ) : (
                 <>
                     <p className="mt-4 text-sm text-slate-600">
-                        {points.length} point{points.length === 1 ? "" : "s"} drawn.
+                        {points.length} point{points.length === 1 ? "" : "s"} on the path.
                     </p>
 
-                    <div className="mt-3 flex gap-2">
+                    <div className="mt-3 flex flex-wrap gap-2">
                         <Button
                             className="bg-sky-700 hover:bg-sky-800"
-                            disabled={savingPath}
-                            onClick={onSavePath}
+                            disabled={generating || stopsDirty || stops.length < 2}
+                            onClick={onGenerate}
                         >
-                            {savingPath ? "Saving…" : "Save path"}
+                            <Wand2 className="mr-1 h-4 w-4" />
+                            {generating ? "Generating…" : "Generate path from stops"}
+                        </Button>
+                        <Button variant="outline" disabled={savingPath} onClick={onSavePath}>
+                            {savingPath ? "Saving…" : "Save drawn path"}
                         </Button>
                         <Button variant="outline" onClick={() => setPoints((p) => p.slice(0, -1))}>
                             Undo last point
@@ -365,6 +429,19 @@ export default function RouteBuilder({ route }: { route: RouteListItem }) {
                             Clear
                         </Button>
                     </div>
+
+                    {stopsDirty && (
+                        <p className="mt-3 text-sm text-amber-700">
+                            Save your stop changes first — generation uses the stops stored on the server, not
+                            the ones on screen.
+                        </p>
+                    )}
+
+                    {!stopsDirty && stops.length < 2 && (
+                        <p className="mt-3 text-sm text-slate-500">
+                            Add at least two stops before generating a path.
+                        </p>
+                    )}
                 </>
             )}
         </section>
