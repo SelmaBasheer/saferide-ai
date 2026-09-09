@@ -13,7 +13,19 @@ var keyVaultUri = builder.Configuration["KeyVault:Uri"];
 
 if (!string.IsNullOrWhiteSpace(keyVaultUri))
 {
-    builder.Configuration.AddAzureKeyVault(new Uri(keyVaultUri), new DefaultAzureCredential());
+    try
+    {
+        builder.Configuration.AddAzureKeyVault(new Uri(keyVaultUri), new DefaultAzureCredential());
+    }
+    catch (Exception ex)
+    {
+        // A developer without Azure access should still be able to run the gateway
+        // with JwtSettings__Secret in the environment. A genuinely missing secret
+        // is still caught below, so this cannot hide a real misconfiguration.
+        Console.Error.WriteLine(
+            $"Key Vault unavailable, falling back to environment: {ex.Message}"
+        );
+    }
 }
 
 var jwt = builder.Configuration.GetSection("JwtSettings");
