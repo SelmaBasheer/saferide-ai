@@ -23,6 +23,7 @@ builder.Services.AddOpenTelemetryTracing();
 builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
 builder.Services.AddProblemDetails(); // safe fallback;
 builder.Services.AddAutoMapper();
+builder.Services.AddRealClientIp(builder.Configuration);
 builder.Services.AddApiRateLimiting();
 
 var app = builder.Build();
@@ -46,6 +47,7 @@ app.UseExceptionHandler();
 app.UseSerilogRequestLogging();
 app.UseAuthentication();
 app.UseAuthorization();
+app.UseForwardedHeaders();
 app.UseRateLimiter();
 app.MapControllers();
 app.Run();

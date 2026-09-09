@@ -8,6 +8,34 @@ x-common: &common
     options: { max-size: "10m", max-file: "3" }
 
 services:
+  gateway:
+    <<: *common
+    build: ./server/services/gateway-service/SafeRide.Gateway
+    image: saferide/gateway:local
+    container_name: saferide-gateway
+    ports:
+      - "5000:8080"
+    environment:
+      JwtSettings__Secret: ${JWT_SECRET}
+      # No Azure CLI inside the container, so skip Key Vault entirely here —
+      # otherwise every start waits ~10s for a credential that cannot exist.
+      # On the host, dotnet run still reads Key Vault via az login.
+      KeyVault__Uri: ""
+      # Containerised services are reachable by name on saferide-net.
+      ReverseProxy__Clusters__identity__Destinations__d1__Address: http://identity-service:8080/
+      ReverseProxy__Clusters__school__Destinations__d1__Address: http://school-service:8080/
+      # These still run on the host, so they need the host gateway address.
+      ReverseProxy__Clusters__driver__Destinations__d1__Address: http://host.docker.internal:5007/
+      ReverseProxy__Clusters__student__Destinations__d1__Address: http://host.docker.internal:5009/
+      ReverseProxy__Clusters__bus__Destinations__d1__Address: http://host.docker.internal:5011/
+      ReverseProxy__Clusters__route__Destinations__d1__Address: http://host.docker.internal:5013/
+      ReverseProxy__Clusters__tracking__Destinations__d1__Address: http://host.docker.internal:5015/
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    depends_on:
+      - identity-service
+      - school-service
+
   postgres:
     <<: *common
     image: postgres:17-alpine
@@ -64,9 +92,9 @@ services:
       start_period: 20s
 
   mongodb:
+    <<: *common
     image: mongo:8
     container_name: saferide-mongodb
-    restart: unless-stopped
     ports:
       - "27018:27017"
     environment:
