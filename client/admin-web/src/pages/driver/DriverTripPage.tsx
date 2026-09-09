@@ -51,6 +51,7 @@ export default function DriverTripPage() {
 
     const [position, setPosition] = useState<LatLng | null>(null)
     const [mode, setMode] = useState<"idle" | "gps" | "simulate">("idle")
+    const [speed, setSpeed] = useState(1)
     const [banner, setBanner] = useState<string | null>(null)
     const [arrivedStopId, setArrivedStopId] = useState<string | null>(null)
     const [etas, setEtas] = useState<Record<string, string>>({})
@@ -95,6 +96,9 @@ export default function DriverTripPage() {
         [trip?.path]
     )
 
+    // 40 m spacing is deliberate: the geofence is 100 m, so the bus always
+    // registers at least two points inside a stop's circle. Wider spacing lets
+    // it jump past a stop without ever being close enough to arrive.
     const drivePoints = useMemo(() => densify(path, 40), [path])
 
     // real GPS
@@ -141,10 +145,10 @@ export default function DriverTripPage() {
                     driveIndex.current += 1
                 })
                 .catch(() => setBanner("Lost connection — position not sent"))
-        }, 1500)
+        }, 1500 / speed)
 
         return () => clearInterval(timer)
-    }, [mode, isActive, drivePoints, id, sendPosition])
+    }, [mode, isActive, drivePoints, id, sendPosition, speed])
 
     const onMark = async (studentId: string, boardingStatus: "Boarded" | "Absent") => {
         try {
@@ -275,6 +279,23 @@ export default function DriverTripPage() {
                             >
                                 {mode === "simulate" ? "Pause" : "Simulate drive"}
                             </button>
+
+                            {mode === "simulate" && (
+                                <div className="flex gap-1">
+                                    {[1, 2, 4].map((x) => (
+                                        <button
+                                            key={x}
+                                            onClick={() => setSpeed(x)}
+                                            className={`rounded-lg px-3 py-3 text-sm font-medium ${speed === x
+                                                ? "bg-slate-800 text-white"
+                                                : "border border-slate-300"
+                                                }`}
+                                        >
+                                            {x}×
+                                        </button>
+                                    ))}
+                                </div>
+                            )}
                         </>
                     )}
                 </div>
