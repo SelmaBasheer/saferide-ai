@@ -30,6 +30,7 @@ services:
       ReverseProxy__Clusters__bus__Destinations__d1__Address: http://host.docker.internal:5011/
       ReverseProxy__Clusters__route__Destinations__d1__Address: http://host.docker.internal:5013/
       ReverseProxy__Clusters__tracking__Destinations__d1__Address: http://host.docker.internal:5015/
+      ReverseProxy__Clusters__ai__Destinations__d1__Address: http://host.docker.internal:5017/
     extra_hosts:
       - "host.docker.internal:host-gateway"
     depends_on:
