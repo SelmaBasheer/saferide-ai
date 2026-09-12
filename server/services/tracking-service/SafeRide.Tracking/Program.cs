@@ -12,6 +12,7 @@ using SafeRide.Tracking.Jobs;
 using SafeRide.Tracking.Middleware;
 using SafeRide.Tracking.Startup;
 using Serilog;
+using Serilog.Events;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -33,7 +34,14 @@ var app = builder.Build();
 
 // ---------- Pipeline: order is load-bearing, kept visible on purpose ----------
 app.UseExceptionHandler();
-app.UseSerilogRequestLogging();
+app.UseSerilogRequestLogging(options =>
+{
+    // The dashboard polls every two seconds. Logging that drowns everything else.
+    options.GetLevel = (httpContext, _, ex) =>
+        ex is not null ? LogEventLevel.Error
+        : httpContext.Request.Path.StartsWithSegments("/hangfire") ? LogEventLevel.Verbose
+        : LogEventLevel.Information;
+});
 
 if (app.Environment.IsDevelopment())
 {

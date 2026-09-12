@@ -5,12 +5,14 @@ using SafeRide.Tracking.Common;
 using SafeRide.Tracking.Domain;
 using SafeRide.Tracking.Hubs;
 using SafeRide.Tracking.Hubs.Contracts;
+using SafeRide.Tracking.Infrastructure.Messaging;
 
 namespace SafeRide.Tracking.Jobs;
 
 public sealed class DeviationCheckJob(
     IMongoCollection<Trip> trips,
     IHubContext<TrackingHub, ITrackingClient> hub,
+    IEventPublisher events,
     IOptions<TrackingOptions> options,
     ILogger<DeviationCheckJob> logger
 )
@@ -91,6 +93,36 @@ public sealed class DeviationCheckJob(
                     DateTime.UtcNow
                 )
             );
+
+        try
+        {
+            await events.PublishAsync(
+                MessagingConstants.RouteDeviationDetected,
+                new RouteDeviationDetected(
+                    trip.Id,
+                    trip.SchoolId,
+                    trip.BusId,
+                    trip.DriverId,
+                    trip.Route.Code,
+                    trip.Route.Name,
+                    lat,
+                    lon,
+                    Math.Round(offRoute),
+                    trip.LastPosition.SpeedKmh,
+                    trip.Route.Stops.Count,
+                    trip.Route.Stops.Count(s => s.ReachedAt is not null),
+                    trip.StartedAt,
+                    DateTime.UtcNow
+                ),
+                ct
+            );
+        }
+        catch (Exception ex)
+        {
+            // The live alert has already reached the school admin. AI classification
+            // is an enhancement — a broker outage must not cost us the alert itself.
+            logger.LogError(ex, "Failed to publish deviation event for trip {TripId}", trip.Id);
+        }
 
         trip.MarkDeviationAlerted();
 

@@ -32,3 +32,20 @@ public sealed record StudentBoardedEvent(
     string Status,
     DateTime OccurredAtUtc
 );
+
+public sealed record RouteDeviationDetected(
+    Guid TripId,
+    Guid SchoolId,
+    Guid BusId,
+    Guid DriverId,
+    string RouteCode,
+    string RouteName,
+    double Latitude,
+    double Longitude,
+    double MetresOffRoute,
+    double? SpeedKmh,
+    int StopsTotal,
+    int StopsReached,
+    DateTime TripStartedAt,
+    DateTime OccurredAtUtc
+);

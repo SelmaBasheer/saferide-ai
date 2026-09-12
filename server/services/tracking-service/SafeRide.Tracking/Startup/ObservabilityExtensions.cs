@@ -30,7 +30,10 @@ public static class ObservabilityExtensions
             .Services.AddOpenTelemetry()
             .ConfigureResource(r => r.AddService(serviceName))
             .WithTracing(t =>
-                t.AddAspNetCoreInstrumentation(o => o.RecordException = true)
+                t.AddAspNetCoreInstrumentation(options =>
+                        options.Filter = context =>
+                            !context.Request.Path.StartsWithSegments("/hangfire")
+                    )
                     .AddHttpClientInstrumentation()
                     .AddConsoleExporter()
             );
