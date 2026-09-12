@@ -105,6 +105,12 @@ export function useTrackingHub(handlers: TrackingHandlers) {
             .withAutomaticReconnect()
             .build()
 
+        // Development only: lets to drive a single position from the browser
+        // console for testing geofence and deviation without the simulator.
+        if (import.meta.env.DEV) {
+            (window as unknown as { hub?: typeof connection }).hub = connection
+        }
+
         connection.on("PositionUpdated", (u: PositionUpdate) => handlersRef.current.onPosition?.(u))
         connection.on("StopReached", (n: StopReachedNotification) => handlersRef.current.onStopReached?.(n))
         connection.on("ApproachingStop", (n: ApproachingStopNotification) => handlersRef.current.onApproachingStop?.(n))

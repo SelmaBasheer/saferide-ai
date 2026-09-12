@@ -26,6 +26,7 @@ import RouteDetailPage from "@/pages/RouteDetailPage"
 import TripsPage from "@/pages/TripsPage"
 import TripDetailPage from "@/pages/TripDetailPage"
 import MobileTripsPage from "@/pages/MobileTripsPage"
+import AlertsPage from "@/pages/AlertsPage"
 
 export default function AppRoutes() {
     return (
@@ -72,6 +73,8 @@ export default function AppRoutes() {
                 <ProtectedRoute roles={["SchoolAdmin"]}><TripsPage /></ProtectedRoute>} />
             <Route path={ROUTES.schoolTripDetail} element={
                 <ProtectedRoute roles={["SchoolAdmin"]}><TripDetailPage /></ProtectedRoute>} />
+            <Route path={ROUTES.schoolAlerts} element={
+                <ProtectedRoute roles={["SchoolAdmin"]}><AlertsPage /></ProtectedRoute>} />
         </Routes>
     )
 }
