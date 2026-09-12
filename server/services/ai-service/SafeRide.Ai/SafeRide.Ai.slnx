@@ -1,0 +1,6 @@
+<Solution>
+  <Project Path="SafeRide.Ai.Api/SafeRide.Ai.Api.csproj" />
+  <Project Path="SafeRide.Ai.Application/SafeRide.Ai.Application.csproj" />
+  <Project Path="SafeRide.Ai.Domain/SafeRide.Ai.Domain.csproj" />
+  <Project Path="SafeRide.Ai.Infrastructure/SafeRide.Ai.Infrastructure.csproj" />
+</Solution>

@@ -30,4 +30,5 @@ export const ROUTES = {
     schoolStudentDetail: "/school-admin/students/:id",
     schoolTrips: "/school-admin/trips",
     schoolTripDetail: "/school-admin/trips/:id",
+    schoolAlerts: "/school-admin/alerts",
 } as const

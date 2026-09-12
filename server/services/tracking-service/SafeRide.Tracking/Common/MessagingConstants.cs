@@ -6,4 +6,5 @@ public static class MessagingConstants
     public const string TripEnded = "trip-ended";
     public const string StudentBoarded = "student-boarded";
     public const string StopReached = "stop-reached";
+    public const string RouteDeviationDetected = "route-deviation-detected";
 }

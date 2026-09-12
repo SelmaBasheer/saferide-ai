@@ -35,6 +35,8 @@ public static class JobExtensions
                     settings.Database,
                     new MongoStorageOptions
                     {
+                        CheckQueuedJobsStrategy =
+                            CheckQueuedJobsStrategy.TailNotificationsCollection,
                         MigrationOptions = new MongoMigrationOptions
                         {
                             MigrationStrategy = new MigrateMongoMigrationStrategy(),

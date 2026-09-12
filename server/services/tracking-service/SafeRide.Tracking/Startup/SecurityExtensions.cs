@@ -11,7 +11,7 @@ public static class SecurityExtensions
         IConfiguration configuration
     )
     {
-        var jwt = configuration.GetSection("Jwt");
+        var jwt = configuration.GetSection("JwtSettings");
         var signingKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwt["Secret"]!));
 
         services
