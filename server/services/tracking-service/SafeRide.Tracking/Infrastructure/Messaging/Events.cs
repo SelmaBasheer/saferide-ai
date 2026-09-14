@@ -33,6 +33,8 @@ public sealed record StudentBoardedEvent(
     DateTime OccurredAtUtc
 );
 
+/// EventId identifies this message, not this incident. A consumer uses it to
+/// answer one question: "have I already finished this exact message?"
 public sealed record RouteDeviationDetected(
     Guid EventId,
     Guid TripId,
@@ -48,5 +50,27 @@ public sealed record RouteDeviationDetected(
     int StopsTotal,
     int StopsReached,
     DateTime TripStartedAt,
+    DateTime OccurredAtUtc
+);
+
+/// A stop the bus never reached. Places, not people — no child is named here,
+/// and nothing downstream can infer one from it.
+public sealed record SkippedStopInfo(int Sequence, string Name, string PickupTime);
+
+/// One event per trip rather than one per stop: three missed stops on a single
+/// run is one story for the school office, not three separate alarms.
+public sealed record StopsSkippedDetected(
+    Guid EventId,
+    Guid TripId,
+    Guid SchoolId,
+    Guid BusId,
+    Guid DriverId,
+    string RouteCode,
+    string RouteName,
+    int StopsTotal,
+    int StopsReached,
+    IReadOnlyList<SkippedStopInfo> SkippedStops,
+    DateTime TripStartedAt,
+    DateTime TripEndedAt,
     DateTime OccurredAtUtc
 );

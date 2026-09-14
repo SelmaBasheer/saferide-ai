@@ -1,29 +1,21 @@
-using System.Text.Json;
 using Microsoft.Extensions.Logging;
 using SafeRide.Ai.Application.Abstractions;
 using SafeRide.Ai.Application.Common;
 using SafeRide.Ai.Domain.Entities;
 using SafeRide.Ai.Domain.Enums;
 
-namespace SafeRide.Ai.Application.Anomalies.RecordDeviation;
+namespace SafeRide.Ai.Application.Anomalies.RecordAnomaly;
 
-public sealed class RecordDeviationHandler(
+public sealed class RecordAnomalyHandler(
     IAnomalyRepository anomalies,
-    ILogger<RecordDeviationHandler> logger
+    ILogger<RecordAnomalyHandler> logger
 )
 {
-    public async Task<Result<Guid?>> HandleAsync(
-        RecordDeviationCommand command,
-        CancellationToken ct
-    )
+    public async Task<Result<Guid?>> HandleAsync(RecordAnomalyCommand command, CancellationToken ct)
     {
-        // Tracking applies its own cooldown, so repeats are already rare. This
-        // stops one incident becoming two alerts if one slips through.
-        var existing = await anomalies.GetUnresolvedAsync(
-            command.TripId,
-            AnomalyType.RouteDeviation,
-            ct
-        );
+        // Deduplication is per trip *and per type*: a trip that both deviated and
+        // skipped a stop has two genuine problems, and the school should see both.
+        var existing = await anomalies.GetUnresolvedAsync(command.TripId, command.Type, ct);
 
         if (existing is not null)
         {
@@ -35,16 +27,18 @@ public sealed class RecordDeviationHandler(
             if (existing.Status == AnomalyStatus.Detected)
             {
                 logger.LogInformation(
-                    "Trip {TripId} has an unclassified deviation alert, finishing it",
-                    command.TripId
+                    "Trip {TripId} has an unclassified {Type} alert, finishing it",
+                    command.TripId,
+                    command.Type
                 );
 
                 return Result.Success<Guid?>(existing.Id);
             }
 
             logger.LogInformation(
-                "Trip {TripId} already has an unresolved deviation alert",
-                command.TripId
+                "Trip {TripId} already has an unresolved {Type} alert",
+                command.TripId,
+                command.Type
             );
 
             return Result.Success<Guid?>(null);
@@ -56,8 +50,8 @@ public sealed class RecordDeviationHandler(
             command.BusId,
             command.RouteCode,
             command.RouteName,
-            AnomalyType.RouteDeviation,
-            JsonSerializer.Serialize(command),
+            command.Type,
+            command.ContextJson,
             command.OccurredAtUtc
         );
 
@@ -65,10 +59,10 @@ public sealed class RecordDeviationHandler(
         await anomalies.SaveChangesAsync(ct);
 
         logger.LogInformation(
-            "Recorded deviation anomaly {AnomalyId} for trip {TripId}, {Metres} m off route",
+            "Recorded {Type} anomaly {AnomalyId} for trip {TripId}",
+            command.Type,
             anomaly.Id,
-            command.TripId,
-            command.MetresOffRoute
+            command.TripId
         );
 
         return Result.Success<Guid?>(anomaly.Id);
