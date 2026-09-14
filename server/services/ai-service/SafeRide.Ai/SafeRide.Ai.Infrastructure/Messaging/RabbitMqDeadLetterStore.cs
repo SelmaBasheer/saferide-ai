@@ -7,10 +7,10 @@ using SafeRide.Ai.Application.Abstractions;
 
 namespace SafeRide.Ai.Infrastructure.Messaging;
 
-public sealed class RabbitMqDeadLetterQueue(
+public sealed class RabbitMqDeadLetterStore(
     IOptions<RabbitMqSettings> options,
-    ILogger<RabbitMqDeadLetterQueue> logger
-) : IDeadLetterQueue
+    ILogger<RabbitMqDeadLetterStore> logger
+) : IDeadLetterStore
 {
     private readonly RabbitMqSettings _settings = options.Value;
 

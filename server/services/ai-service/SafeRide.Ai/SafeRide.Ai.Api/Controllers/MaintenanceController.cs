@@ -14,7 +14,7 @@ namespace SafeRide.Ai.Api.Controllers;
 [Route("api/maintenance")]
 [ApiController]
 [Authorize(Policy = "SuperAdmin")]
-public class MaintenanceController(IDeadLetterQueue deadLetters) : ControllerBase
+public class MaintenanceController(IDeadLetterStore deadLetters) : ControllerBase
 {
     private const int MaxBatch = 50;
 
