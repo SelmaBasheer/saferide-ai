@@ -69,6 +69,8 @@ public sealed class EndTripHandler(
             ct
         );
 
+        await PublishSkippedStopsAsync(ended, ct);
+
         await hub
             .Clients.Groups(
                 TrackingHub.TripGroup(ended.Id),
@@ -91,5 +93,59 @@ public sealed class EndTripHandler(
         );
 
         return ended.ToResponse();
+    }
+
+    /// A stop with no ReachedAt is one the geofence never matched, so the bus
+    /// never came within 100 m of it. Unlike a deviation, this is not a judgement
+    /// call and there is no threshold to tune — the stop was reached or it wasn't.
+    private async Task PublishSkippedStopsAsync(Trip ended, CancellationToken ct)
+    {
+        var skipped = ended
+            .Route.Stops.Where(s => s.ReachedAt is null)
+            .OrderBy(s => s.Sequence)
+            .Select(s => new SkippedStopInfo(s.Sequence, s.Name, s.PickupTime))
+            .ToList();
+
+        if (skipped.Count == 0)
+        {
+            return;
+        }
+
+        logger.LogWarning(
+            "Trip {TripId} ended with {SkippedCount} of {Total} stops never reached",
+            ended.Id,
+            skipped.Count,
+            ended.Route.Stops.Count
+        );
+
+        try
+        {
+            await events.PublishAsync(
+                MessagingConstants.StopsSkipped,
+                new StopsSkippedDetected(
+                    Guid.NewGuid(),
+                    ended.Id,
+                    ended.SchoolId,
+                    ended.BusId,
+                    ended.DriverId,
+                    ended.Route.Code,
+                    ended.Route.Name,
+                    ended.Route.Stops.Count,
+                    ended.Route.Stops.Count - skipped.Count,
+                    skipped,
+                    ended.StartedAt,
+                    ended.EndedAt!.Value,
+                    DateTime.UtcNow
+                ),
+                ct
+            );
+        }
+        catch (Exception ex)
+        {
+            // The trip has already been completed in the database and the driver
+            // has their response. A broker outage must not turn a successful
+            // "end trip" into an error on the driver's phone.
+            logger.LogError(ex, "Failed to publish skipped stops for trip {TripId}", ended.Id);
+        }
     }
 }

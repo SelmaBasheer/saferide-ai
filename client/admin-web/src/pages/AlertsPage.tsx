@@ -40,7 +40,10 @@ export default function AlertsPage() {
     const [page, setPage] = useState(1)
     const [pendingApproval, setPendingApproval] = useState<Alert | null>(null)
     const [actionError, setActionError] = useState<string | null>(null)
-    const [dismissingId, setDismissingId] = useState<string | null>(null)
+
+    // A set rather than a single id: two dismissals can be in flight at once, and
+    // the first one to finish must not re-enable the button for the second.
+    const [dismissingIds, setDismissingIds] = useState<ReadonlySet<string>>(new Set())
 
     const { data, isLoading, isError } = useGetAlertsQuery({ status, page, pageSize: PAGE_SIZE })
     const [approveAlert, { isLoading: approving }] = useApproveAlertMutation()
@@ -64,14 +67,21 @@ export default function AlertsPage() {
     }
 
     const onDismiss = async (alert: Alert) => {
+        if (dismissingIds.has(alert.id)) return
+
         setActionError(null)
-        setDismissingId(alert.id)
+        setDismissingIds((current) => new Set(current).add(alert.id))
+
         try {
             await dismissAlert(alert.id).unwrap()
         } catch {
             setActionError("Could not dismiss that alert. Nothing was changed — please try again.")
         } finally {
-            setDismissingId(null)
+            setDismissingIds((current) => {
+                const next = new Set(current)
+                next.delete(alert.id)
+                return next
+            })
         }
     }
 
@@ -194,10 +204,10 @@ export default function AlertsPage() {
                                 </Button>
                                 <Button
                                     variant="outline"
-                                    disabled={dismissingId === alert.id}
+                                    disabled={dismissingIds.has(alert.id)}
                                     onClick={() => onDismiss(alert)}
                                 >
-                                    {dismissingId === alert.id ? "Dismissing…" : "Dismiss"}
+                                    {dismissingIds.has(alert.id) ? "Dismissing…" : "Dismiss"}
                                 </Button>
                             </div>
                         )}

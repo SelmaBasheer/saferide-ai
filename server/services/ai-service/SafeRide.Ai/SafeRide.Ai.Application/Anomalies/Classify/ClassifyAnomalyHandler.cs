@@ -21,6 +21,9 @@ public sealed class ClassifyAnomalyHandler(
 
         var classification = await classifier.ClassifyAsync(
             new AnomalyContext(
+                anomaly.SchoolId,
+                anomaly.TripId,
+                anomaly.BusId,
                 anomaly.Type,
                 anomaly.RouteCode,
                 anomaly.RouteName,

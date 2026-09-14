@@ -2,6 +2,7 @@ using System.Text;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using RabbitMQ.Client;
+using RabbitMQ.Client.Exceptions;
 using SafeRide.Ai.Application.Abstractions;
 
 namespace SafeRide.Ai.Infrastructure.Messaging;
@@ -20,10 +21,23 @@ public sealed class RabbitMqDeadLetterQueue(
         await using var connection = await ConnectAsync(ct);
         await using var channel = await connection.CreateChannelAsync(cancellationToken: ct);
 
-        // Passive: asking "how many?" must not be able to create the queue.
-        var declared = await channel.QueueDeclarePassiveAsync(QueueName, ct);
+        try
+        {
+            // Passive: asking "how many?" must not be able to create the queue.
+            var declared = await channel.QueueDeclarePassiveAsync(QueueName, ct);
 
-        return new DeadLetterStatus(QueueName, declared.MessageCount);
+            return new DeadLetterStatus(QueueName, declared.MessageCount);
+        }
+        catch (OperationInterruptedException ex) when (ex.ShutdownReason?.ReplyCode == 404)
+        {
+            // The consumer declares the topology at startup, so an operator who
+            // asks first gets a 404. That is not a fault: nothing is parked
+            // because the queue does not exist yet. Any other broker error is a
+            // real problem and is allowed through.
+            logger.LogInformation("{Queue} does not exist yet, reporting empty", QueueName);
+
+            return new DeadLetterStatus(QueueName, 0);
+        }
     }
 
     public async Task<IReadOnlyList<DeadLetterMessage>> PeekAsync(

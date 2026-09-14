@@ -30,12 +30,13 @@ services:
       ReverseProxy__Clusters__bus__Destinations__d1__Address: http://host.docker.internal:5011/
       ReverseProxy__Clusters__route__Destinations__d1__Address: http://host.docker.internal:5013/
       ReverseProxy__Clusters__tracking__Destinations__d1__Address: http://host.docker.internal:5015/
-      ReverseProxy__Clusters__ai__Destinations__d1__Address: http://host.docker.internal:5017/
+      ReverseProxy__Clusters__ai__Destinations__d1__Address: http://ai-service:8080/
     extra_hosts:
       - "host.docker.internal:host-gateway"
     depends_on:
       - identity-service
       - school-service
+      - ai-service
 
   postgres:
     <<: *common
@@ -206,6 +207,33 @@ services:
       SUPERADMIN_EMAIL: ${SUPERADMIN_EMAIL}
       APP_BASE_URL: ${APP_BASE_URL:-http://localhost:5173}
     depends_on:
+      rabbitmq:
+        condition: service_healthy
+
+  ai-service:
+    <<: *common
+    build:
+      context: .
+      dockerfile: server/services/ai-service/SafeRide.Ai/Dockerfile
+    image: saferide/ai-service:local
+    container_name: saferide-ai
+    ports:
+      - "5017:8080"
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      ConnectionStrings__AiDb: "Server=sqlserver,1433;Database=SafeRide_Ai_Db;User Id=sa;Password=${MSSQL_SA_PASSWORD};TrustServerCertificate=True"
+      RabbitMQ__Host: rabbitmq
+      RabbitMQ__Username: ${RABBITMQ_USER}
+      RabbitMQ__Password: ${RABBITMQ_PASSWORD}
+      JwtSettings__Secret: ${JWT_SECRET}
+      JwtSettings__Issuer: ${JWT_ISSUER}
+      JwtSettings__Audience: ${JWT_AUDIENCE}
+      Gemini__ApiKey: ${GEMINI__APIKEY}
+      Gemini__Model: "gemini-3.6-flash"
+      Gemini__MaxTokens: "2048"
+    depends_on:
+      sqlserver:
+        condition: service_healthy
       rabbitmq:
         condition: service_healthy
 

@@ -1,5 +1,6 @@
 using System.Text;
 using System.Text.Json;
+using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -8,7 +9,8 @@ using Microsoft.Extensions.Options;
 using RabbitMQ.Client;
 using RabbitMQ.Client.Events;
 using SafeRide.Ai.Application.Anomalies.Classify;
-using SafeRide.Ai.Application.Anomalies.RecordDeviation;
+using SafeRide.Ai.Application.Anomalies.RecordAnomaly;
+using SafeRide.Ai.Domain.Enums;
 using SafeRide.Ai.Infrastructure.Persistence;
 
 namespace SafeRide.Ai.Infrastructure.Messaging;
@@ -22,6 +24,15 @@ public sealed class TrackingEventConsumer(
     private const string DeadLetterExchange = "saferide.dlx";
 
     private const int MaxAttempts = 3;
+
+    /// Every routing key this service knows how to turn into an anomaly. Adding a
+    /// detector means adding a key here and a case in Parse — nothing else in the
+    /// consumer changes.
+    private static readonly string[] RoutingKeys =
+    [
+        TrackingRoutingKeys.RouteDeviationDetected,
+        TrackingRoutingKeys.StopsSkipped,
+    ];
 
     /// Short and increasing. Long enough for a connection blip or a database
     /// failover, short enough that one bad message cannot block the queue.
@@ -114,12 +125,15 @@ public sealed class TrackingEventConsumer(
             cancellationToken: ct
         );
 
-        await channel.QueueBindAsync(
-            _settings.Queue,
-            _settings.Exchange,
-            TrackingRoutingKeys.RouteDeviationDetected,
-            cancellationToken: ct
-        );
+        foreach (var key in RoutingKeys)
+        {
+            await channel.QueueBindAsync(
+                _settings.Queue,
+                _settings.Exchange,
+                key,
+                cancellationToken: ct
+            );
+        }
 
         // Take a handful at a time — the LLM step later is slow, and a large
         // prefetch would leave messages sitting unacknowledged on one consumer.
@@ -136,9 +150,10 @@ public sealed class TrackingEventConsumer(
         );
 
         logger.LogInformation(
-            "Listening on {Queue} bound to {Exchange}",
+            "Listening on {Queue} bound to {Exchange} for {Keys}",
             _settings.Queue,
-            _settings.Exchange
+            _settings.Exchange,
+            string.Join(", ", RoutingKeys)
         );
 
         await Task.Delay(Timeout.Infinite, ct);
@@ -150,24 +165,25 @@ public sealed class TrackingEventConsumer(
         // fail for different reasons. A message we cannot read is broken for
         // good: retrying it a hundred times produces the same result, so it goes
         // straight to the dead letter queue for a human to look at.
-        RouteDeviationDetectedEvent? evt;
+        ParsedEvent? parsed;
 
         try
         {
             var json = Encoding.UTF8.GetString(ea.Body.ToArray());
-            evt = JsonSerializer.Deserialize<RouteDeviationDetectedEvent>(json, JsonOptions);
+            parsed = Parse(ea.RoutingKey, json);
         }
         catch (JsonException ex)
         {
-            logger.LogError(ex, "Deviation event is not valid JSON, dead-lettering without retry");
+            logger.LogError(ex, "Event is not valid JSON, dead-lettering without retry");
             await channel.BasicNackAsync(ea.DeliveryTag, false, requeue: false, ct);
             return;
         }
 
-        if (evt is null || evt.TripId == Guid.Empty || evt.SchoolId == Guid.Empty)
+        if (parsed is null)
         {
             logger.LogError(
-                "Deviation event is missing required fields, dead-lettering without retry"
+                "Event on {RoutingKey} is unreadable or missing required fields, dead-lettering without retry",
+                ea.RoutingKey
             );
 
             await channel.BasicNackAsync(ea.DeliveryTag, false, requeue: false, ct);
@@ -180,7 +196,7 @@ public sealed class TrackingEventConsumer(
         {
             try
             {
-                await ProcessAsync(evt, ct);
+                await ProcessAsync(parsed, ct);
                 await channel.BasicAckAsync(ea.DeliveryTag, false, ct);
                 return;
             }
@@ -199,7 +215,7 @@ public sealed class TrackingEventConsumer(
                     "Attempt {Attempt} of {Max} failed for event {EventId}, retrying in {Seconds}s",
                     attempt,
                     MaxAttempts,
-                    evt.EventId,
+                    parsed.EventId,
                     delay.TotalSeconds
                 );
 
@@ -213,7 +229,7 @@ public sealed class TrackingEventConsumer(
                 logger.LogError(
                     ex,
                     "Event {EventId} failed {Max} times, dead-lettering",
-                    evt.EventId,
+                    parsed.EventId,
                     MaxAttempts
                 );
 
@@ -226,7 +242,7 @@ public sealed class TrackingEventConsumer(
     /// One complete attempt. It takes a fresh scope every time on purpose: a
     /// DbContext that has thrown is not safe to reuse, so a retry must start
     /// with a clean one.
-    private async Task ProcessAsync(RouteDeviationDetectedEvent evt, CancellationToken ct)
+    private async Task ProcessAsync(ParsedEvent parsed, CancellationToken ct)
     {
         using var scope = scopeFactory.CreateScope();
 
@@ -235,33 +251,19 @@ public sealed class TrackingEventConsumer(
         // The receipt book. A message we have already finished is dropped. This
         // is what makes replaying a batch safe: pressing the button twice cannot
         // produce two alerts.
-        if (evt.EventId != Guid.Empty && await inbox.HasProcessedAsync(evt.EventId, ct))
+        if (await inbox.HasProcessedAsync(parsed.EventId, ct))
         {
-            logger.LogInformation("Event {EventId} was already processed, skipping", evt.EventId);
+            logger.LogInformation(
+                "Event {EventId} was already processed, skipping",
+                parsed.EventId
+            );
             return;
         }
 
-        var record = scope.ServiceProvider.GetRequiredService<RecordDeviationHandler>();
+        var record = scope.ServiceProvider.GetRequiredService<RecordAnomalyHandler>();
         var classify = scope.ServiceProvider.GetRequiredService<ClassifyAnomalyHandler>();
 
-        var recorded = await record.HandleAsync(
-            new RecordDeviationCommand(
-                evt.TripId,
-                evt.SchoolId,
-                evt.BusId,
-                evt.RouteCode,
-                evt.RouteName,
-                evt.Latitude,
-                evt.Longitude,
-                evt.MetresOffRoute,
-                evt.SpeedKmh,
-                evt.StopsTotal,
-                evt.StopsReached,
-                evt.TripStartedAt,
-                evt.OccurredAtUtc
-            ),
-            ct
-        );
+        var recorded = await record.HandleAsync(parsed.Command, ct);
 
         // Null means a second alert would duplicate one a human is already
         // dealing with. An unfinished alert comes back with its id instead, so
@@ -272,25 +274,98 @@ public sealed class TrackingEventConsumer(
         }
 
         // The receipt is signed last, and only once everything above succeeded.
-        if (evt.EventId != Guid.Empty)
+        try
         {
-            try
-            {
-                await inbox.MarkProcessedAsync(
-                    evt.EventId,
-                    nameof(RouteDeviationDetectedEvent),
-                    ct
-                );
-            }
-            catch (DbUpdateException)
-            {
-                // Another delivery of the same message signed first. Nothing is
-                // wrong — the primary key did exactly its job.
-                logger.LogInformation(
-                    "Event {EventId} was recorded by another delivery",
-                    evt.EventId
-                );
-            }
+            await inbox.MarkProcessedAsync(parsed.EventId, parsed.EventType, ct);
+        }
+        catch (DbUpdateException ex) when (IsDuplicateKey(ex))
+        {
+            // Another delivery of the same message signed first. Nothing is
+            // wrong — the primary key did exactly its job. Any *other* write
+            // failure must not be swallowed: acknowledging then would leave the
+            // side effects in place with no receipt, and a replay would redo them.
+            logger.LogInformation(
+                "Event {EventId} was recorded by another delivery",
+                parsed.EventId
+            );
         }
     }
+
+    /// Turns whatever arrived into the one shape the application layer works in.
+    /// The raw JSON is carried through untouched as the context the model reads,
+    /// so there is no translation layer here to drift out of date.
+    private static ParsedEvent? Parse(string routingKey, string json)
+    {
+        switch (routingKey)
+        {
+            case TrackingRoutingKeys.RouteDeviationDetected:
+            {
+                var evt = JsonSerializer.Deserialize<RouteDeviationDetectedEvent>(
+                    json,
+                    JsonOptions
+                );
+
+                if (evt is null || !IsUsable(evt.EventId, evt.TripId, evt.SchoolId))
+                {
+                    return null;
+                }
+
+                return new ParsedEvent(
+                    evt.EventId,
+                    nameof(RouteDeviationDetectedEvent),
+                    new RecordAnomalyCommand(
+                        evt.SchoolId,
+                        evt.TripId,
+                        evt.BusId,
+                        evt.RouteCode,
+                        evt.RouteName,
+                        AnomalyType.RouteDeviation,
+                        json,
+                        evt.OccurredAtUtc
+                    )
+                );
+            }
+
+            case TrackingRoutingKeys.StopsSkipped:
+            {
+                var evt = JsonSerializer.Deserialize<StopsSkippedEvent>(json, JsonOptions);
+
+                if (evt is null || !IsUsable(evt.EventId, evt.TripId, evt.SchoolId))
+                {
+                    return null;
+                }
+
+                return new ParsedEvent(
+                    evt.EventId,
+                    nameof(StopsSkippedEvent),
+                    new RecordAnomalyCommand(
+                        evt.SchoolId,
+                        evt.TripId,
+                        evt.BusId,
+                        evt.RouteCode,
+                        evt.RouteName,
+                        AnomalyType.SkippedStop,
+                        json,
+                        evt.OccurredAtUtc
+                    )
+                );
+            }
+
+            default:
+                return null;
+        }
+    }
+
+    /// EventId is required, not optional. Without one there is no receipt and no
+    /// duplicate check, so the message would quietly lose every guarantee the
+    /// inbox exists to provide.
+    private static bool IsUsable(Guid eventId, Guid tripId, Guid schoolId) =>
+        eventId != Guid.Empty && tripId != Guid.Empty && schoolId != Guid.Empty;
+
+    /// 2627 is a primary key violation, 2601 a unique index violation. Only these
+    /// two mean "someone else got there first".
+    private static bool IsDuplicateKey(DbUpdateException ex) =>
+        ex.InnerException is SqlException { Number: 2601 or 2627 };
+
+    private sealed record ParsedEvent(Guid EventId, string EventType, RecordAnomalyCommand Command);
 }

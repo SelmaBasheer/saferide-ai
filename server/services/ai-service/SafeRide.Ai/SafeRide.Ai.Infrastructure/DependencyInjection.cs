@@ -21,6 +21,8 @@ public static class DependencyInjection
 
         services.AddDbContext<AiDbContext>(options => options.UseSqlServer(connectionString));
         services.AddScoped<IAnomalyRepository, AnomalyRepository>();
+        services.AddScoped<IAnomalyInsights, AnomalyInsights>();
+        services.AddScoped<AnomalyToolbox>();
         services.AddScoped<InboxStore>();
         services.AddScoped<IDeadLetterQueue, RabbitMqDeadLetterQueue>();
         services.Configure<RabbitMqSettings>(
