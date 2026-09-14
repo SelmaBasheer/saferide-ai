@@ -31,7 +31,10 @@ public class StudentRepositoryAdapter implements StudentRepositoryPort {
 
     @Override
     public Page<Student> findPage(UUID schoolId, String search, Pageable pageable) {
-        return jpa.search(schoolId, (search == null || search.isBlank()) ? null : search.trim(), pageable);
+        // The blank check now lives in matching(), so this reads as one sentence:
+        // students of this school, optionally narrowed by a search term.
+        return jpa.findAll(
+                StudentSpecifications.forSchool(schoolId).and(StudentSpecifications.matching(search)), pageable);
     }
 
     @Override

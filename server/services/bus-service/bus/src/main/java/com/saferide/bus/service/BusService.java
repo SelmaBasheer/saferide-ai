@@ -16,6 +16,7 @@ import com.saferide.bus.messaging.RabbitEventPublisher;
 import com.saferide.bus.projection.SchoolStatusRepository;
 import com.saferide.bus.projection.SchoolStatuses;
 import com.saferide.bus.repository.BusRepository;
+import com.saferide.bus.repository.BusSpecifications;
 import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
@@ -77,11 +78,18 @@ public class BusService {
         int safePage = Math.max(page, 1);
         int safeSize = Math.min(Math.max(pageSize, 1), MAX_PAGE_SIZE);
 
-        String term = (search == null || search.isBlank()) ? null : search.trim();
         Pageable pageable = PageRequest.of(
                 safePage - 1, safeSize, Sort.by("registrationNumber").ascending());
 
-        Page<Bus> result = busRepository.search(schoolId, term, includeInactive, pageable);
+        // Reads as one sentence: buses of this school, optionally only the active
+        // ones, optionally narrowed by a search term. The blank-search check now
+        // lives in matching(), so there is nothing to prepare here.
+        Page<Bus> result = busRepository.findAll(
+                BusSpecifications.forSchool(schoolId)
+                        .and(BusSpecifications.activeOnly(includeInactive))
+                        .and(BusSpecifications.matching(search)),
+                pageable);
+
         List<BusResponse> items =
                 result.getContent().stream().map(busMapper::toResponse).toList();
 
