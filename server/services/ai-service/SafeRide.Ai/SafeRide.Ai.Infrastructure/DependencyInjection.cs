@@ -16,11 +16,13 @@ public static class DependencyInjection
     )
     {
         var connectionString =
-            configuration.GetConnectionString("Default")
-            ?? throw new InvalidOperationException("ConnectionStrings:Default is not configured.");
+            configuration.GetConnectionString("AiDb")
+            ?? throw new InvalidOperationException("ConnectionStrings:AiDb is not configured.");
 
         services.AddDbContext<AiDbContext>(options => options.UseSqlServer(connectionString));
         services.AddScoped<IAnomalyRepository, AnomalyRepository>();
+        services.AddScoped<InboxStore>();
+        services.AddScoped<IDeadLetterQueue, RabbitMqDeadLetterQueue>();
         services.Configure<RabbitMqSettings>(
             configuration.GetSection(RabbitMqSettings.SectionName)
         );
@@ -46,7 +48,7 @@ public static class DependencyInjection
             services.AddHttpClient<IAnomalyClassifier, GeminiAnomalyClassifier>(client =>
             {
                 client.BaseAddress = new Uri("https://generativelanguage.googleapis.com/");
-                client.Timeout = TimeSpan.FromSeconds(15);
+                client.Timeout = TimeSpan.FromSeconds(30);
                 client.DefaultRequestHeaders.Add("x-goog-api-key", geminiKey);
             });
         }

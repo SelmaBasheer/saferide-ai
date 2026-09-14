@@ -99,6 +99,7 @@ public sealed class DeviationCheckJob(
             await events.PublishAsync(
                 MessagingConstants.RouteDeviationDetected,
                 new RouteDeviationDetected(
+                    Guid.NewGuid(),
                     trip.Id,
                     trip.SchoolId,
                     trip.BusId,

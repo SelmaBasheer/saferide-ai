@@ -34,6 +34,7 @@ public sealed record StudentBoardedEvent(
 );
 
 public sealed record RouteDeviationDetected(
+    Guid EventId,
     Guid TripId,
     Guid SchoolId,
     Guid BusId,

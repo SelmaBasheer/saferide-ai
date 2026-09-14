@@ -8,6 +8,8 @@ public sealed class AiDbContext(DbContextOptions<AiDbContext> options) : DbConte
 {
     public DbSet<Anomaly> Anomalies => Set<Anomaly>();
 
+    public DbSet<ProcessedEvent> ProcessedEvents => Set<ProcessedEvent>();
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.Entity<Anomaly>(e =>
@@ -30,6 +32,15 @@ public sealed class AiDbContext(DbContextOptions<AiDbContext> options) : DbConte
                 a.Type,
                 a.Status,
             });
+        });
+
+        modelBuilder.Entity<ProcessedEvent>(e =>
+        {
+            // The event id *is* the key. Two deliveries of the same message can
+            // never both insert a row — the database rejects the second one, so
+            // deduplication doesn't depend on our code winning a race.
+            e.HasKey(p => p.EventId);
+            e.Property(p => p.EventType).IsRequired().HasMaxLength(100);
         });
     }
 }

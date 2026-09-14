@@ -43,7 +43,7 @@ public class AlertsController(ListAlertsHandler listHandler, ResolveAlertHandler
     public async Task<IActionResult> Approve(Guid id, CancellationToken ct)
     {
         var result = await resolveHandler.ApproveAsync(id, User.SchoolId(), User.UserId(), ct);
-        return result.ToApiResponse("Alert sent.");
+        return result.ToApiResponse("Alert approved.");
     }
 
     [HttpPost("{id:guid}/dismiss")]

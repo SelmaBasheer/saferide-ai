@@ -7,18 +7,20 @@ namespace SafeRide.Ai.Infrastructure.Persistence;
 
 public sealed class AnomalyRepository(AiDbContext context) : IAnomalyRepository
 {
-    public Task<bool> HasUnresolvedAsync(
+    public Task<Anomaly?> GetUnresolvedAsync(
         Guid tripId,
         AnomalyType type,
         CancellationToken ct = default
     ) =>
-        context.Anomalies.AnyAsync(
-            a =>
+        context
+            .Anomalies.Where(a =>
                 a.TripId == tripId
                 && a.Type == type
-                && (a.Status == AnomalyStatus.Detected || a.Status == AnomalyStatus.Classified),
-            ct
-        );
+                && (a.Status == AnomalyStatus.Detected || a.Status == AnomalyStatus.Classified)
+            )
+            // Oldest first: if there is unfinished work, it is the earliest one.
+            .OrderBy(a => a.DetectedAtUtc)
+            .FirstOrDefaultAsync(ct);
 
     public async Task AddAsync(Anomaly anomaly, CancellationToken ct = default) =>
         await context.Anomalies.AddAsync(anomaly, ct);

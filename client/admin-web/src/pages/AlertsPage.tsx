@@ -22,10 +22,25 @@ const statusClass = (status: Alert["status"]) =>
                 ? "bg-slate-100 text-slate-600"
                 : "bg-sky-50 text-sky-700"
 
+/**
+ * Three states, not two. The template classifier produces a real explanation
+ * with classifiedByModel false, so "no model" does not mean "no explanation".
+ * The third case — no explanation at all — only appears on a Detected alert,
+ * which means classification never completed.
+ */
+const explanationLabel = (alert: Alert) =>
+    alert.classifiedByModel
+        ? "explained by model"
+        : alert.draftMessage
+            ? "template explanation"
+            : "not yet interpreted"
+
 export default function AlertsPage() {
     const [status, setStatus] = useState("Classified")
     const [page, setPage] = useState(1)
     const [pendingApproval, setPendingApproval] = useState<Alert | null>(null)
+    const [actionError, setActionError] = useState<string | null>(null)
+    const [dismissingId, setDismissingId] = useState<string | null>(null)
 
     const { data, isLoading, isError } = useGetAlertsQuery({ status, page, pageSize: PAGE_SIZE })
     const [approveAlert, { isLoading: approving }] = useApproveAlertMutation()
@@ -36,10 +51,27 @@ export default function AlertsPage() {
 
     const onApprove = async () => {
         if (!pendingApproval) return
+        setActionError(null)
         try {
             await approveAlert(pendingApproval.id).unwrap()
-        } finally {
             setPendingApproval(null)
+        } catch {
+            // The alert stays Classified, so its Approve button is still there
+            // to retry with. Close the dialog and say what happened.
+            setPendingApproval(null)
+            setActionError("Could not approve that alert. Nothing was changed — please try again.")
+        }
+    }
+
+    const onDismiss = async (alert: Alert) => {
+        setActionError(null)
+        setDismissingId(alert.id)
+        try {
+            await dismissAlert(alert.id).unwrap()
+        } catch {
+            setActionError("Could not dismiss that alert. Nothing was changed — please try again.")
+        } finally {
+            setDismissingId(null)
         }
     }
 
@@ -48,14 +80,15 @@ export default function AlertsPage() {
             <div>
                 <h1 className="text-2xl font-semibold text-slate-800">Alerts</h1>
                 <p className="mt-1 text-sm text-slate-500">
-                    Unusual events detected during trips. Nothing reaches a parent until you send it.
+                    Unusual events detected during trips. Approving an alert marks its message as
+                    ready to go to parents; nothing is delivered without your approval.
                 </p>
             </div>
 
             <div className="mt-6 flex flex-wrap gap-2">
                 {[
                     { value: "Classified", label: "Needs review" },
-                    { value: "Approved", label: "Sent" },
+                    { value: "Approved", label: "Approved" },
                     { value: "Dismissed", label: "Dismissed" },
                     { value: "", label: "All" },
                 ].map((tab) => (
@@ -64,6 +97,7 @@ export default function AlertsPage() {
                         onClick={() => {
                             setStatus(tab.value)
                             setPage(1)
+                            setActionError(null)
                         }}
                         className={`rounded-md px-3 py-1.5 text-sm ${status === tab.value ? "bg-sky-700 text-white" : "border border-slate-300"
                             }`}
@@ -72,6 +106,22 @@ export default function AlertsPage() {
                     </button>
                 ))}
             </div>
+
+            {actionError && (
+                <div
+                    role="alert"
+                    className="mt-4 flex items-start justify-between gap-3 rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-700"
+                >
+                    <span>{actionError}</span>
+                    <button
+                        onClick={() => setActionError(null)}
+                        className="text-red-500 hover:text-red-700"
+                        aria-label="Dismiss this error"
+                    >
+                        ✕
+                    </button>
+                </div>
+            )}
 
             <div className="mt-6 space-y-4">
                 {isLoading && <p className="text-slate-500">Loading…</p>}
@@ -114,9 +164,7 @@ export default function AlertsPage() {
                                             ` · ${Math.round(alert.confidence * 100)}%`}
                                     </div>
                                 )}
-                                <div className="text-slate-400">
-                                    {alert.classifiedByModel ? "explained by model" : "not interpreted"}
-                                </div>
+                                <div className="text-slate-400">{explanationLabel(alert)}</div>
                             </div>
                         </div>
 
@@ -137,12 +185,19 @@ export default function AlertsPage() {
                             <div className="mt-4 flex gap-3">
                                 <Button
                                     className="bg-sky-700 hover:bg-sky-800"
-                                    onClick={() => setPendingApproval(alert)}
+                                    onClick={() => {
+                                        setActionError(null)
+                                        setPendingApproval(alert)
+                                    }}
                                 >
-                                    Send to parents
+                                    Approve
                                 </Button>
-                                <Button variant="outline" onClick={() => dismissAlert(alert.id)}>
-                                    Dismiss
+                                <Button
+                                    variant="outline"
+                                    disabled={dismissingId === alert.id}
+                                    onClick={() => onDismiss(alert)}
+                                >
+                                    {dismissingId === alert.id ? "Dismissing…" : "Dismiss"}
                                 </Button>
                             </div>
                         )}
@@ -171,9 +226,9 @@ export default function AlertsPage() {
             <ConfirmDialog
                 open={pendingApproval !== null}
                 busy={approving}
-                title="Send this to parents?"
+                title="Approve this message?"
                 description={pendingApproval?.draftMessage ?? ""}
-                confirmLabel="Send"
+                confirmLabel="Approve"
                 onConfirm={onApprove}
                 onCancel={() => setPendingApproval(null)}
             />

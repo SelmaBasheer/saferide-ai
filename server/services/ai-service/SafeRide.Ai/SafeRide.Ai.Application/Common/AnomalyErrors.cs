@@ -6,6 +6,6 @@ public static class AnomalyErrors
 
     public static readonly Error AlreadyResolved = new(
         ErrorCodes.AlreadyResolved,
-        "This alert has already been sent or dismissed."
+        "This alert has already been approved or dismissed."
     );
 }
