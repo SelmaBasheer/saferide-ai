@@ -16,6 +16,10 @@ import {
     useMarkBoardingMutation,
 } from "@/features/tracking/trackingApi"
 
+/** About 780 m north. The deviation threshold is 500 m, so this clears it
+ *  without being so far that the anomaly is obviously a GPS glitch. */
+const OFF_ROUTE_LATITUDE_OFFSET = 0.007
+
 const busIcon = L.divIcon({
     className: "",
     html: '<div style="font-size:26px;line-height:26px">🚌</div>',
@@ -161,6 +165,30 @@ export default function DriverTripPage() {
         }
     }
 
+    /**
+     * Development only. A real bus cannot be driven off its route to order, so
+     * this nudges the last known position far enough north to trip the deviation
+     * check. The simulator is paused first — otherwise it overwrites the point a
+     * second later and the background job never sees it.
+     */
+    const onSendOffRoute = async () => {
+        if (!position) {
+            setBanner("Wait for the bus to report a position first")
+            return
+        }
+
+        setMode("idle")
+
+        const [latitude, longitude] = position
+
+        try {
+            await sendPosition(id, latitude + OFF_ROUTE_LATITUDE_OFFSET, longitude, 10, "Simulated")
+            setBanner("Sent a position about 780 m off route — wait for the deviation check")
+        } catch {
+            setBanner("Could not send the off-route position")
+        }
+    }
+
     const onEnd = async () => {
         try {
             await endTrip(id).unwrap()
@@ -298,6 +326,17 @@ export default function DriverTripPage() {
                             )}
                         </>
                     )}
+                </div>
+            )}
+
+            {isActive && import.meta.env.DEV && (
+                <div className="border-b border-slate-200 px-3 pb-3">
+                    <button
+                        onClick={onSendOffRoute}
+                        className="w-full rounded-lg border border-dashed border-amber-400 bg-amber-50 px-3 py-2 text-xs font-medium text-amber-800"
+                    >
+                        Dev · send a position ~780 m off route
+                    </button>
                 </div>
             )}
 

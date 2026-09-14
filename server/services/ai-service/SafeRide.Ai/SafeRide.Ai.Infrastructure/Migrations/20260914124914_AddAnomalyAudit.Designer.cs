@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using SafeRide.Ai.Infrastructure.Persistence;
 
@@ -11,9 +12,11 @@ using SafeRide.Ai.Infrastructure.Persistence;
 namespace SafeRide.Ai.Infrastructure.Migrations
 {
     [DbContext(typeof(AiDbContext))]
-    partial class AiDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260914124914_AddAnomalyAudit")]
+    partial class AddAnomalyAudit
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -150,30 +153,6 @@ namespace SafeRide.Ai.Infrastructure.Migrations
                     b.HasKey("EventId");
 
                     b.ToTable("ProcessedEvents");
-                });
-
-            modelBuilder.Entity("SafeRide.Ai.Infrastructure.Persistence.RouteAnomalyRow", b =>
-                {
-                    b.Property<string>("Classification")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("RouteCode")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("RouteName")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<int>("Total")
-                        .HasColumnType("int");
-
-                    b.Property<int>("Type")
-                        .HasColumnType("int");
-
-                    b.ToTable((string)null);
-
-                    b.ToView(null, (string)null);
                 });
 #pragma warning restore 612, 618
         }
