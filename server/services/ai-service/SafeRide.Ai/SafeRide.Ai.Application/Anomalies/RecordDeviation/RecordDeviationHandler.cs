@@ -19,12 +19,34 @@ public sealed class RecordDeviationHandler(
     {
         // Tracking applies its own cooldown, so repeats are already rare. This
         // stops one incident becoming two alerts if one slips through.
-        if (await anomalies.HasUnresolvedAsync(command.TripId, AnomalyType.RouteDeviation, ct))
+        var existing = await anomalies.GetUnresolvedAsync(
+            command.TripId,
+            AnomalyType.RouteDeviation,
+            ct
+        );
+
+        if (existing is not null)
         {
+            // "Already recorded" and "already finished" are different things. An
+            // alert still sitting at Detected never got its explanation, so hand
+            // its id back and let the caller complete it. Treating it as a plain
+            // duplicate would strand it forever: it can be neither approved nor
+            // dismissed until it has been classified.
+            if (existing.Status == AnomalyStatus.Detected)
+            {
+                logger.LogInformation(
+                    "Trip {TripId} has an unclassified deviation alert, finishing it",
+                    command.TripId
+                );
+
+                return Result.Success<Guid?>(existing.Id);
+            }
+
             logger.LogInformation(
                 "Trip {TripId} already has an unresolved deviation alert",
                 command.TripId
             );
+
             return Result.Success<Guid?>(null);
         }
 

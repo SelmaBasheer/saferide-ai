@@ -6,6 +6,7 @@ public static class TrackingRoutingKeys
 }
 
 public sealed record RouteDeviationDetectedEvent(
+    Guid EventId,
     Guid TripId,
     Guid SchoolId,
     Guid BusId,
