@@ -24,7 +24,7 @@ public static class DependencyInjection
         services.AddScoped<IAnomalyInsights, AnomalyInsights>();
         services.AddScoped<AnomalyToolbox>();
         services.AddScoped<InboxStore>();
-        services.AddScoped<IDeadLetterQueue, RabbitMqDeadLetterQueue>();
+        services.AddScoped<IDeadLetterStore, RabbitMqDeadLetterStore>();
         services.Configure<RabbitMqSettings>(
             configuration.GetSection(RabbitMqSettings.SectionName)
         );

@@ -12,7 +12,9 @@ public sealed record DeadLetterMessage(
     string Body
 );
 
-public interface IDeadLetterQueue
+/// Named "Store" rather than "Queue" because the suffix Queue implies a
+/// collection type — this is a way of talking to one, not one itself.
+public interface IDeadLetterStore
 {
     Task<DeadLetterStatus> GetStatusAsync(CancellationToken ct = default);
 

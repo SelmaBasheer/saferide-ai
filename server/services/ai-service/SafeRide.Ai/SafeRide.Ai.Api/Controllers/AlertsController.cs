@@ -2,8 +2,10 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using SafeRide.Ai.Api.Common;
 using SafeRide.Ai.Api.Contracts;
+using SafeRide.Ai.Application.Abstractions;
 using SafeRide.Ai.Application.Anomalies.ListAlerts;
 using SafeRide.Ai.Application.Anomalies.ResolveAlert;
+using SafeRide.Ai.Application.Anomalies.RouteReport;
 using SafeRide.Ai.Domain.Enums;
 
 namespace SafeRide.Ai.Api.Controllers;
@@ -11,8 +13,11 @@ namespace SafeRide.Ai.Api.Controllers;
 [Route("api/alerts")]
 [ApiController]
 [Authorize(Policy = "SchoolAdmin")]
-public class AlertsController(ListAlertsHandler listHandler, ResolveAlertHandler resolveHandler)
-    : ControllerBase
+public class AlertsController(
+    ListAlertsHandler listHandler,
+    ResolveAlertHandler resolveHandler,
+    RouteReportHandler reportHandler
+) : ControllerBase
 {
     [HttpGet]
     public async Task<IActionResult> List(
@@ -37,6 +42,20 @@ public class AlertsController(ListAlertsHandler listHandler, ResolveAlertHandler
             p.Page,
             p.PageSize
         ));
+    }
+
+    /// Backed by a stored procedure rather than by EF, so that EXECUTE on the
+    /// procedure and SELECT on the table can be granted separately.
+    [HttpGet("report")]
+    public async Task<IActionResult> Report(
+        [FromQuery] DateTime? from,
+        [FromQuery] DateTime? to,
+        CancellationToken ct = default
+    )
+    {
+        var lines = await reportHandler.HandleAsync(User.SchoolId(), from, to, ct);
+
+        return Ok(ApiResponse<IReadOnlyList<RouteAnomalyReportLine>>.Ok(lines, null));
     }
 
     [HttpPost("{id:guid}/approve")]

@@ -1,6 +1,8 @@
+using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
 using SafeRide.Ai.Application.Abstractions;
 using SafeRide.Ai.Domain.Entities;
+using SafeRide.Ai.Domain.Enums;
 
 namespace SafeRide.Ai.Infrastructure.Persistence;
 
@@ -49,6 +51,42 @@ public sealed class AnomalyInsights(AiDbContext context) : IAnomalyInsights
             context.Anomalies.Where(a => a.SchoolId == schoolId && a.TripId == tripId),
             ct
         );
+
+    /// The one query that isn't LINQ. Not because LINQ couldn't express it — the
+    /// method above proves it can — but because a procedure can be granted
+    /// separately from the table: GRANT EXECUTE on this, REVOKE SELECT on
+    /// Anomalies, and the application can run the report without being able to
+    /// read a single row of it.
+    ///
+    /// Note the parameters. "EXEC usp_RouteAnomalyReport @SchoolId, ..." is a
+    /// procedure call, not a query built from strings, and the values travel
+    /// separately from the text.
+    public async Task<IReadOnlyList<RouteAnomalyReportLine>> ReportAsync(
+        Guid schoolId,
+        DateTime fromUtc,
+        DateTime toUtc,
+        CancellationToken ct = default
+    )
+    {
+        var rows = await context
+            .Set<RouteAnomalyRow>()
+            .FromSqlRaw(
+                "EXEC usp_RouteAnomalyReport @SchoolId, @FromUtc, @ToUtc",
+                new SqlParameter("@SchoolId", schoolId),
+                new SqlParameter("@FromUtc", fromUtc),
+                new SqlParameter("@ToUtc", toUtc)
+            )
+            .ToListAsync(ct);
+
+        return rows.Select(r => new RouteAnomalyReportLine(
+                r.RouteCode,
+                r.RouteName,
+                ((AnomalyType)r.Type).ToString(),
+                r.Classification,
+                r.Total
+            ))
+            .ToList();
+    }
 
     /// Clamped so a model asking for a year of history cannot turn a tool call
     /// into a table scan.
