@@ -1,5 +1,6 @@
 package com.saferide.bus.service;
 
+import com.saferide.bus.constants.MessagingConstants;
 import com.saferide.bus.constants.ResponseMessages;
 import com.saferide.bus.dto.BusDocumentResponse;
 import com.saferide.bus.dto.DocumentLinkResponse;
@@ -7,6 +8,8 @@ import com.saferide.bus.entity.Bus;
 import com.saferide.bus.entity.BusDocument;
 import com.saferide.bus.entity.BusDocumentType;
 import com.saferide.bus.exception.AppException;
+import com.saferide.bus.messaging.BusStatusChanged;
+import com.saferide.bus.messaging.RabbitEventPublisher;
 import com.saferide.bus.repository.BusDocumentRepository;
 import com.saferide.bus.repository.BusRepository;
 import com.saferide.bus.storage.FileStorage;
@@ -14,6 +17,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.net.URI;
 import java.time.Duration;
+import java.time.Instant;
 import java.time.LocalDate;
 import java.util.Collection;
 import java.util.HashMap;
@@ -47,12 +51,17 @@ public class BusDocumentService {
     private final BusRepository busRepository;
     private final BusDocumentRepository documentRepository;
     private final FileStorage storage;
+    private final RabbitEventPublisher publisher;
 
     public BusDocumentService(
-            BusRepository busRepository, BusDocumentRepository documentRepository, FileStorage storage) {
+            BusRepository busRepository,
+            BusDocumentRepository documentRepository,
+            FileStorage storage,
+            RabbitEventPublisher publisher) {
         this.busRepository = busRepository;
         this.documentRepository = documentRepository;
         this.storage = storage;
+        this.publisher = publisher;
     }
 
     @Transactional
@@ -96,6 +105,20 @@ public class BusDocumentService {
                 userId);
 
         documentRepository.save(document);
+
+        // Recomputed after the save, so it accounts for the certificate just
+        // uploaded. Anything gating on a bus's paperwork hears about it here.
+        boolean documentsValid = validityFor(schoolId, List.of(busId)).getOrDefault(busId, false);
+
+        publisher.publish(
+                MessagingConstants.BUS_STATUS_CHANGED,
+                new BusStatusChanged(
+                        bus.getId(),
+                        schoolId,
+                        bus.getRegistrationNumber(),
+                        bus.isActive(),
+                        documentsValid,
+                        Instant.now()));
 
         return toResponse(document, LocalDate.now());
     }

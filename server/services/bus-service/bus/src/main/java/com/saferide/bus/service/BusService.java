@@ -12,6 +12,7 @@ import com.saferide.bus.exception.AppException;
 import com.saferide.bus.mapper.BusMapper;
 import com.saferide.bus.messaging.BusCreated;
 import com.saferide.bus.messaging.BusDriverAssigned;
+import com.saferide.bus.messaging.BusStatusChanged;
 import com.saferide.bus.messaging.RabbitEventPublisher;
 import com.saferide.bus.projection.SchoolStatusRepository;
 import com.saferide.bus.projection.SchoolStatuses;
@@ -73,9 +74,7 @@ public class BusService {
                         bus.getCapacity(),
                         Instant.now()));
 
-        // A bus created a moment ago has no certificates yet, so this is provably
-        // false — but going through the same path keeps one source of truth.
-        return toResponse(schoolId, bus);
+        return respondAndAnnounce(schoolId, bus);
     }
 
     @Transactional(readOnly = true)
@@ -108,7 +107,9 @@ public class BusService {
 
     @Transactional(readOnly = true)
     public BusResponse getById(UUID schoolId, UUID id) {
-        return toResponse(schoolId, findOwned(schoolId, id));
+        Bus bus = findOwned(schoolId, id);
+
+        return busMapper.toResponse(bus, documentsValid(schoolId, bus));
     }
 
     @Transactional
@@ -121,7 +122,10 @@ public class BusService {
         }
 
         bus.update(registration, request.model(), request.capacity());
-        return toResponse(schoolId, bus);
+
+        // The registration number is on the event, so a rename has to be announced
+        // or other services keep showing the old plate.
+        return respondAndAnnounce(schoolId, bus);
     }
 
     @Transactional
@@ -135,21 +139,42 @@ public class BusService {
                 MessagingConstants.BUS_DRIVER_ASSIGNED,
                 new BusDriverAssigned(bus.getId(), schoolId, request.driverId(), Instant.now()));
 
-        return toResponse(schoolId, bus);
+        return busMapper.toResponse(bus, documentsValid(schoolId, bus));
     }
 
     @Transactional
     public void deactivate(UUID schoolId, UUID id) {
         Bus bus = findOwned(schoolId, id);
+
         if (bus.isActive()) {
             bus.deactivate();
+            respondAndAnnounce(schoolId, bus);
         }
     }
 
-    private BusResponse toResponse(UUID schoolId, Bus bus) {
-        Map<UUID, Boolean> validity = busDocumentService.validityFor(schoolId, List.of(bus.getId()));
+    /**
+     * Builds the response and tells everyone else, from one computation of the
+     * document state — so the answer a caller gets and the answer other services
+     * get can never disagree.
+     */
+    private BusResponse respondAndAnnounce(UUID schoolId, Bus bus) {
+        boolean documentsValid = documentsValid(schoolId, bus);
 
-        return busMapper.toResponse(bus, validity.getOrDefault(bus.getId(), false));
+        publisher.publish(
+                MessagingConstants.BUS_STATUS_CHANGED,
+                new BusStatusChanged(
+                        bus.getId(),
+                        schoolId,
+                        bus.getRegistrationNumber(),
+                        bus.isActive(),
+                        documentsValid,
+                        Instant.now()));
+
+        return busMapper.toResponse(bus, documentsValid);
+    }
+
+    private boolean documentsValid(UUID schoolId, Bus bus) {
+        return busDocumentService.validityFor(schoolId, List.of(bus.getId())).getOrDefault(bus.getId(), false);
     }
 
     private Bus findOwned(UUID schoolId, UUID id) {

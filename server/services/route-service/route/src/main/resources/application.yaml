@@ -37,6 +37,8 @@ saferide:
     route-exchange: route.events
     school-exchange: school.events
     school-events-queue: route.school-events
+    bus-exchange: bus.events
+    bus-events-queue: route.bus-events
   routing:
     base-url: ${ROUTING_BASE_URL:https://router.project-osrm.org}
     timeout-seconds: 10

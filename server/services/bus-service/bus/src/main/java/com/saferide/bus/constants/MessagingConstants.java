@@ -4,6 +4,7 @@ public final class MessagingConstants {
 
     public static final String BUS_CREATED = "bus-created";
     public static final String BUS_DRIVER_ASSIGNED = "bus-driver-assigned";
+    public static final String BUS_STATUS_CHANGED = "bus-status-changed";
 
     private MessagingConstants() {}
 }

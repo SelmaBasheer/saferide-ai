@@ -45,13 +45,22 @@ export default function BusDocumentsPanel({
     const [expiresOn, setExpiresOn] = useState("")
     const [file, setFile] = useState<File | null>(null)
     const [error, setError] = useState<string | null>(null)
+    const [showHistory, setShowHistory] = useState(false)
 
-    // The newest document of each type is the current one. Older rows stay in the
-    // list below as history.
+    // The list arrives newest first, so the first of each type is the current one.
+    // Older uploads are superseded, not deleted — an expired certificate still
+    // answers "was this bus insured in March?"
     const current = new Map<BusDocumentType, BusDocument>()
     for (const document of documents) {
         if (!current.has(document.type)) current.set(document.type, document)
     }
+
+    const currentIds = new Set([...current.values()].map((d) => d.id))
+    const superseded = documents.filter((d) => !currentIds.has(d.id))
+
+    const currentDocuments = DOCUMENT_TYPES.map(({ value }) => current.get(value)).filter(
+        (d): d is BusDocument => d !== undefined
+    )
 
     const tomorrow = new Date(Date.now() + 86_400_000).toISOString().slice(0, 10)
 
@@ -94,6 +103,26 @@ export default function BusDocumentsPanel({
             setError(apiErrorMessage(e) ?? "Could not open that document.")
         }
     }
+
+    const row = (document: BusDocument, muted: boolean) => (
+        <div
+            key={document.id}
+            className={`flex flex-wrap items-center gap-3 border-t border-slate-100 py-2 text-sm ${muted ? "text-slate-400" : ""
+                }`}
+        >
+            <span className={`min-w-52 font-medium ${muted ? "text-slate-400" : "text-slate-700"}`}>
+                {labelFor(document.type)}
+            </span>
+            <span className="flex-1 truncate">{document.fileName}</span>
+            <span className="text-xs text-slate-400">{formatSize(document.sizeBytes)}</span>
+            <span className={document.expired && !muted ? "text-xs text-red-600" : "text-xs text-slate-500"}>
+                expires {formatDate(document.expiresOn)}
+            </span>
+            <Button variant="outline" onClick={() => onDownload(document.id)}>
+                <Download className="mr-1 h-4 w-4" /> Open
+            </Button>
+        </div>
+    )
 
     return (
         <section className="mt-6 rounded-lg border bg-white p-6">
@@ -181,6 +210,10 @@ export default function BusDocumentsPanel({
                         <Upload className="mr-1 h-4 w-4" />
                         {uploading ? "Uploading…" : "Upload"}
                     </Button>
+
+                    <p className="w-full text-xs text-slate-500">
+                        Uploading again replaces the current one. The previous version is kept.
+                    </p>
                 </div>
             )}
 
@@ -190,24 +223,24 @@ export default function BusDocumentsPanel({
                 <p className="text-sm text-slate-500">No documents uploaded yet.</p>
             )}
 
-            {documents.map((document) => (
-                <div
-                    key={document.id}
-                    className="flex flex-wrap items-center gap-3 border-t border-slate-100 py-2 text-sm"
-                >
-                    <span className="min-w-52 font-medium text-slate-700">
-                        {labelFor(document.type)}
-                    </span>
-                    <span className="flex-1 truncate text-slate-600">{document.fileName}</span>
-                    <span className="text-xs text-slate-400">{formatSize(document.sizeBytes)}</span>
-                    <span className={document.expired ? "text-xs text-red-600" : "text-xs text-slate-500"}>
-                        expires {formatDate(document.expiresOn)}
-                    </span>
-                    <Button variant="outline" onClick={() => onDownload(document.id)}>
-                        <Download className="mr-1 h-4 w-4" /> Open
-                    </Button>
+            {currentDocuments.map((document) => row(document, false))}
+
+            {superseded.length > 0 && (
+                <div className="mt-3">
+                    <button
+                        onClick={() => setShowHistory((v) => !v)}
+                        className="text-xs text-sky-700 hover:underline"
+                    >
+                        {showHistory
+                            ? "Hide previous versions"
+                            : `Show ${superseded.length} previous version${superseded.length === 1 ? "" : "s"}`}
+                    </button>
+
+                    {showHistory && (
+                        <div className="mt-2">{superseded.map((document) => row(document, true))}</div>
+                    )}
                 </div>
-            ))}
+            )}
         </section>
     )
 }
