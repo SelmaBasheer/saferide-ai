@@ -19,6 +19,7 @@ import com.saferide.bus.repository.BusRepository;
 import com.saferide.bus.repository.BusSpecifications;
 import java.time.Instant;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -33,16 +34,19 @@ public class BusService {
     private static final int MAX_PAGE_SIZE = 50;
 
     private final BusRepository busRepository;
+    private final BusDocumentService busDocumentService;
     private final SchoolStatusRepository schoolStatusRepository;
     private final BusMapper busMapper;
     private final RabbitEventPublisher publisher;
 
     public BusService(
             BusRepository busRepository,
+            BusDocumentService busDocumentService,
             SchoolStatusRepository schoolStatusRepository,
             BusMapper busMapper,
             RabbitEventPublisher publisher) {
         this.busRepository = busRepository;
+        this.busDocumentService = busDocumentService;
         this.schoolStatusRepository = schoolStatusRepository;
         this.busMapper = busMapper;
         this.publisher = publisher;
@@ -69,7 +73,9 @@ public class BusService {
                         bus.getCapacity(),
                         Instant.now()));
 
-        return busMapper.toResponse(bus);
+        // A bus created a moment ago has no certificates yet, so this is provably
+        // false — but going through the same path keeps one source of truth.
+        return toResponse(schoolId, bus);
     }
 
     @Transactional(readOnly = true)
@@ -82,23 +88,27 @@ public class BusService {
                 safePage - 1, safeSize, Sort.by("registrationNumber").ascending());
 
         // Reads as one sentence: buses of this school, optionally only the active
-        // ones, optionally narrowed by a search term. The blank-search check now
-        // lives in matching(), so there is nothing to prepare here.
+        // ones, optionally narrowed by a search term.
         Page<Bus> result = busRepository.findAll(
                 BusSpecifications.forSchool(schoolId)
                         .and(BusSpecifications.activeOnly(includeInactive))
                         .and(BusSpecifications.matching(search)),
                 pageable);
 
-        List<BusResponse> items =
-                result.getContent().stream().map(busMapper::toResponse).toList();
+        // One document query for the whole page rather than one per bus.
+        Map<UUID, Boolean> validity = busDocumentService.validityFor(
+                schoolId, result.getContent().stream().map(Bus::getId).toList());
+
+        List<BusResponse> items = result.getContent().stream()
+                .map(bus -> busMapper.toResponse(bus, validity.getOrDefault(bus.getId(), false)))
+                .toList();
 
         return new PagedResult<>(items, result.getTotalElements(), safePage, safeSize);
     }
 
     @Transactional(readOnly = true)
     public BusResponse getById(UUID schoolId, UUID id) {
-        return busMapper.toResponse(findOwned(schoolId, id));
+        return toResponse(schoolId, findOwned(schoolId, id));
     }
 
     @Transactional
@@ -111,7 +121,7 @@ public class BusService {
         }
 
         bus.update(registration, request.model(), request.capacity());
-        return busMapper.toResponse(bus);
+        return toResponse(schoolId, bus);
     }
 
     @Transactional
@@ -125,7 +135,7 @@ public class BusService {
                 MessagingConstants.BUS_DRIVER_ASSIGNED,
                 new BusDriverAssigned(bus.getId(), schoolId, request.driverId(), Instant.now()));
 
-        return busMapper.toResponse(bus);
+        return toResponse(schoolId, bus);
     }
 
     @Transactional
@@ -134,6 +144,12 @@ public class BusService {
         if (bus.isActive()) {
             bus.deactivate();
         }
+    }
+
+    private BusResponse toResponse(UUID schoolId, Bus bus) {
+        Map<UUID, Boolean> validity = busDocumentService.validityFor(schoolId, List.of(bus.getId()));
+
+        return busMapper.toResponse(bus, validity.getOrDefault(bus.getId(), false));
     }
 
     private Bus findOwned(UUID schoolId, UUID id) {

@@ -43,9 +43,31 @@ public class AzureBlobFileStorage implements FileStorage {
 
         container.createIfNotExists();
 
+        requireSecurePublicEndpoint(publicEndpoint);
+
         this.privatePrefix = container.getBlobContainerUrl();
         this.publicPrefix =
                 publicEndpoint.isBlank() ? privatePrefix : publicEndpoint.replaceAll("/+$", "") + "/" + containerName;
+    }
+
+    /**
+     * The signed URL carries a read-capable token to a browser. Over plain HTTP
+     * anyone on the path can lift both the token and the document. Loopback is
+     * allowed because the local storage emulator has no HTTPS listener.
+     */
+    private static void requireSecurePublicEndpoint(String publicEndpoint) {
+        if (publicEndpoint.isBlank()) {
+            return;
+        }
+
+        URI uri = URI.create(publicEndpoint);
+        String host = uri.getHost() == null ? "" : uri.getHost();
+        boolean loopback = "localhost".equals(host) || "127.0.0.1".equals(host);
+
+        if (!"https".equalsIgnoreCase(uri.getScheme()) && !loopback) {
+            throw new IllegalStateException(
+                    "saferide.storage.public-endpoint must use HTTPS unless it is loopback: " + publicEndpoint);
+        }
     }
 
     @Override

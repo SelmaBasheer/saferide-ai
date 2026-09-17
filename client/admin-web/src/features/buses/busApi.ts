@@ -14,6 +14,7 @@ export interface BusListItem {
     capacity: number
     status: BusStatus
     assignedDriverId: string | null
+    documentsValid: boolean
     createdAt: string
     updatedAt: string
 }
