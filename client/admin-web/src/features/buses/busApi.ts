@@ -4,6 +4,8 @@ import type { PagedResult } from "@/features/schools/schoolApi"
 
 export type BusStatus = "ACTIVE" | "INACTIVE"
 
+export type BusDocumentType = "RC" | "INSURANCE" | "POLLUTION"
+
 export interface BusListItem {
     id: string
     schoolId: string
@@ -14,6 +16,21 @@ export interface BusListItem {
     assignedDriverId: string | null
     createdAt: string
     updatedAt: string
+}
+
+export interface BusDocument {
+    id: string
+    type: BusDocumentType
+    fileName: string
+    sizeBytes: number
+    expiresOn: string
+    expired: boolean
+    uploadedAt: string
+}
+
+export interface DocumentLink {
+    url: string
+    expiresInSeconds: number
 }
 
 export interface CreateBusRequest {
@@ -27,6 +44,13 @@ export interface BusesQueryArgs {
     includeInactive?: boolean
     page: number
     pageSize: number
+}
+
+export interface UploadDocumentArgs {
+    busId: string
+    type: BusDocumentType
+    expiresOn: string
+    file: File
 }
 
 export const busApi = baseApi.injectEndpoints({
@@ -72,6 +96,39 @@ export const busApi = baseApi.injectEndpoints({
             query: (id) => ({ url: `/buses/${id}`, method: "DELETE" }),
             invalidatesTags: ["Buses"],
         }),
+
+        getBusDocuments: builder.query<BusDocument[], string>({
+            query: (busId) => ({ url: `/buses/${busId}/documents` }),
+            transformResponse: (r: ApiResponse<BusDocument[]>) => r.data,
+            providesTags: ["Buses"],
+        }),
+
+        uploadBusDocument: builder.mutation<BusDocument, UploadDocumentArgs>({
+            query: ({ busId, type, expiresOn, file }) => {
+                const body = new FormData()
+                body.append("file", file)
+
+                return {
+                    url: `/buses/${busId}/documents`,
+                    method: "POST",
+                    // type and expiresOn are request params on the server, so they
+                    // belong in the query string rather than the form body.
+                    params: { type, expiresOn },
+                    // No Content-Type here on purpose. The browser sets it, because
+                    // only the browser knows the multipart boundary it generated.
+                    body,
+                }
+            },
+            transformResponse: (r: ApiResponse<BusDocument>) => r.data,
+            invalidatesTags: ["Buses"],
+        }),
+
+        getDocumentLink: builder.query<DocumentLink, { busId: string; documentId: string }>({
+            query: ({ busId, documentId }) => ({
+                url: `/buses/${busId}/documents/${documentId}/link`,
+            }),
+            transformResponse: (r: ApiResponse<DocumentLink>) => r.data,
+        }),
     }),
 })
 
@@ -82,4 +139,7 @@ export const {
     useUpdateBusMutation,
     useAssignDriverMutation,
     useDeactivateBusMutation,
+    useGetBusDocumentsQuery,
+    useUploadBusDocumentMutation,
+    useLazyGetDocumentLinkQuery,
 } = busApi

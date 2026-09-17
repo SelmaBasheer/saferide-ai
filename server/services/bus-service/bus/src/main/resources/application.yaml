@@ -12,9 +12,12 @@ spring:
     hibernate:
       ddl-auto: update
     open-in-view: false
+  servlet:
+    multipart:
+      max-file-size: 5MB
+      max-request-size: 6MB
   rabbitmq:
     host: ${SPRING_RABBITMQ_HOST:localhost}
-
     port: 5672
     username: ${SPRING_RABBITMQ_USERNAME:saferide}
     password: ${SPRING_RABBITMQ_PASSWORD}
@@ -36,3 +39,7 @@ saferide:
     bus-exchange: bus.events
     school-exchange: school.events
     school-events-queue: bus.school-events
+  storage:
+    connection-string: ${AZURE_STORAGE_CONNECTION_STRING}
+    container: bus-documents
+    public-endpoint: ${AZURE_STORAGE_PUBLIC_ENDPOINT:}
