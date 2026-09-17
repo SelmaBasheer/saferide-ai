@@ -31,6 +31,12 @@ public class RabbitConfig {
     @Value("${saferide.rabbitmq.school-events-queue}")
     String schoolEventsQueue;
 
+    @Value("${saferide.rabbitmq.bus-exchange}")
+    String busExchange;
+
+    @Value("${saferide.rabbitmq.bus-events-queue}")
+    String busEventsQueue;
+
     @Bean
     TopicExchange routeEventsExchange() {
         return new TopicExchange(routeExchange, true, false);
@@ -76,6 +82,34 @@ public class RabbitConfig {
         return BindingBuilder.bind(schoolEventsQueueBean())
                 .to(schoolEventsExchange())
                 .with("school-suspended");
+    }
+
+    @Bean
+    TopicExchange busEventsExchange() {
+        return new TopicExchange(busExchange, true, false);
+    }
+
+    @Bean
+    Queue busEventsQueueBean() {
+        return QueueBuilder.durable(busEventsQueue)
+                .withArgument("x-dead-letter-exchange", DLX)
+                .withArgument("x-dead-letter-routing-key", busEventsQueue)
+                .build();
+    }
+
+    @Bean
+    Queue busEventsDlq() {
+        return QueueBuilder.durable(busEventsQueue + ".dlq").build();
+    }
+
+    @Bean
+    Binding busEventsDlqBinding() {
+        return BindingBuilder.bind(busEventsDlq()).to(deadLetterExchange()).with(busEventsQueue);
+    }
+
+    @Bean
+    Binding busStatusChangedBinding() {
+        return BindingBuilder.bind(busEventsQueueBean()).to(busEventsExchange()).with("bus-status-changed");
     }
 
     @Bean

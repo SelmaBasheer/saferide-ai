@@ -24,5 +24,9 @@ public final class ResponseMessages {
     public static final String NO_ROAD_ROUTE =
             "No road route could be found between these stops. Check that each stop is on a road.";
 
+    public static final String BUS_NOT_FOUND = "That bus does not exist for this school.";
+    public static final String BUS_NOT_ACTIVE = "That bus is not active.";
+    public static final String BUS_DOCUMENTS_INVALID = "That bus is missing a certificate or one has expired.";
+
     private ResponseMessages() {}
 }

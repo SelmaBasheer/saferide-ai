@@ -1,5 +1,7 @@
 package com.saferide.bus.controller;
 
+import static com.saferide.bus.security.JwtClaims.schoolId;
+
 import com.saferide.bus.constants.ResponseMessages;
 import com.saferide.bus.dto.ApiResponse;
 import com.saferide.bus.dto.AssignDriverRequest;
@@ -7,7 +9,6 @@ import com.saferide.bus.dto.BusResponse;
 import com.saferide.bus.dto.CreateBusRequest;
 import com.saferide.bus.dto.PagedResult;
 import com.saferide.bus.dto.UpdateBusRequest;
-import com.saferide.bus.exception.AppException;
 import com.saferide.bus.service.BusService;
 import jakarta.validation.Valid;
 import java.util.UUID;
@@ -73,17 +74,5 @@ public class BusController {
     public ApiResponse<Void> deactivate(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID id) {
         busService.deactivate(schoolId(jwt), id);
         return ApiResponse.ok(null, ResponseMessages.BUS_DEACTIVATED);
-    }
-
-    private static UUID schoolId(Jwt jwt) {
-        var claim = jwt.getClaimAsString("schoolId");
-        if (claim == null) {
-            throw new AppException.ForbiddenException(ResponseMessages.MISSING_SCHOOL_CLAIM);
-        }
-        try {
-            return UUID.fromString(claim);
-        } catch (IllegalArgumentException e) {
-            throw new AppException.ForbiddenException(ResponseMessages.MISSING_SCHOOL_CLAIM);
-        }
     }
 }

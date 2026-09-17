@@ -11,5 +11,6 @@ public record BusResponse(
         int capacity,
         String status,
         UUID assignedDriverId,
+        boolean documentsValid,
         Instant createdAt,
         Instant updatedAt) {}

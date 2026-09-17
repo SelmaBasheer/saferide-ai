@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button"
 import { ROUTES } from "@/routes/paths"
 import { useGetDriversQuery } from "@/features/drivers/driverApi"
 import EditBusForm from "@/features/buses/EditBusForm"
+import BusDocumentsPanel from "@/features/buses/BusDocumentsPanel"
 import {
     useAssignDriverMutation,
     useDeactivateBusMutation,
@@ -185,6 +186,8 @@ export default function BusDetailPage() {
                             </p>
                         )}
                     </section>
+
+                    <BusDocumentsPanel busId={id} canUpload={bus.status === "ACTIVE"} />
 
                     {bus.status === "ACTIVE" && (
                         <section className="mt-6 rounded-lg border border-red-200 bg-white p-6">

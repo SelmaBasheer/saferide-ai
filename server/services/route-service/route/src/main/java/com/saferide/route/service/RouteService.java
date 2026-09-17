@@ -12,6 +12,8 @@ import com.saferide.route.mapper.RouteMapper;
 import com.saferide.route.messaging.RabbitEventPublisher;
 import com.saferide.route.messaging.RouteBusAssigned;
 import com.saferide.route.messaging.RouteCreated;
+import com.saferide.route.projection.BusStatus;
+import com.saferide.route.projection.BusStatusRepository;
 import com.saferide.route.projection.SchoolStatusRepository;
 import com.saferide.route.projection.SchoolStatuses;
 import com.saferide.route.repository.RouteRepository;
@@ -45,6 +47,7 @@ public class RouteService {
 
     private final RouteRepository routeRepository;
     private final SchoolStatusRepository schoolStatusRepository;
+    private final BusStatusRepository busStatusRepository;
     private final MongoTemplate mongo;
     private final RouteMapper routeMapper;
     private final RabbitEventPublisher publisher;
@@ -53,12 +56,14 @@ public class RouteService {
     public RouteService(
             RouteRepository routeRepository,
             SchoolStatusRepository schoolStatusRepository,
+            BusStatusRepository busStatusRepository,
             MongoTemplate mongo,
             RouteMapper routeMapper,
             RabbitEventPublisher publisher,
             RoutingClient routingClient) {
         this.routeRepository = routeRepository;
         this.schoolStatusRepository = schoolStatusRepository;
+        this.busStatusRepository = busStatusRepository;
         this.mongo = mongo;
         this.routeMapper = routeMapper;
         this.publisher = publisher;
@@ -235,6 +240,8 @@ public class RouteService {
         requireApprovedSchool(schoolId);
         Route route = findOwned(schoolId, routeId);
 
+        requireAssignableBus(schoolId, request.busId());
+
         route.assignBus(request.busId());
         Route saved = routeRepository.save(route);
 
@@ -243,6 +250,20 @@ public class RouteService {
                 new RouteBusAssigned(route.getId(), schoolId, request.busId(), Instant.now()));
 
         return routeMapper.toResponse(saved);
+    }
+
+    private void requireAssignableBus(UUID schoolId, UUID busId) {
+        BusStatus bus = busStatusRepository
+                .findByBusIdAndSchoolId(busId, schoolId)
+                .orElseThrow(() -> new AppException.NotFoundException(ResponseMessages.BUS_NOT_FOUND));
+
+        if (!bus.isActive()) {
+            throw new AppException.ValidationException(ResponseMessages.BUS_NOT_ACTIVE);
+        }
+
+        if (!bus.isDocumentsValid()) {
+            throw new AppException.ValidationException(ResponseMessages.BUS_DOCUMENTS_INVALID);
+        }
     }
 
     private void requireInsideIndia(double latitude, double longitude, String label) {

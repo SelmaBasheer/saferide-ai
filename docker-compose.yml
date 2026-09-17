@@ -27,7 +27,7 @@ services:
       # These still run on the host, so they need the host gateway address.
       ReverseProxy__Clusters__driver__Destinations__d1__Address: http://host.docker.internal:5007/
       ReverseProxy__Clusters__student__Destinations__d1__Address: http://host.docker.internal:5009/
-      ReverseProxy__Clusters__bus__Destinations__d1__Address: http://host.docker.internal:5011/
+      ReverseProxy__Clusters__bus__Destinations__d1__Address: http://bus-service:8080/      
       ReverseProxy__Clusters__route__Destinations__d1__Address: http://host.docker.internal:5013/
       ReverseProxy__Clusters__tracking__Destinations__d1__Address: http://host.docker.internal:5015/
       ReverseProxy__Clusters__ai__Destinations__d1__Address: http://ai-service:8080/
@@ -36,6 +36,7 @@ services:
     depends_on:
       - identity-service
       - school-service
+      - bus-service
       - ai-service
 
   postgres:
@@ -208,6 +209,36 @@ services:
       APP_BASE_URL: ${APP_BASE_URL:-http://localhost:5173}
     depends_on:
       rabbitmq:
+        condition: service_healthy
+
+  bus-service:
+    <<: *common
+    build:
+      context: server/services/bus-service/bus
+      dockerfile: Dockerfile
+    image: saferide/bus-service:local
+    container_name: saferide-bus
+    ports:
+      - "5011:8080"
+    environment:
+      SPRING_DATASOURCE_URL: "jdbc:mysql://mysql:3306/saferide_bus?createDatabaseIfNotExist=true&allowPublicKeyRetrieval=true&useSSL=false"
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      SPRING_RABBITMQ_HOST: rabbitmq
+      SPRING_RABBITMQ_USERNAME: ${RABBITMQ_USER}
+      SPRING_RABBITMQ_PASSWORD: ${RABBITMQ_PASSWORD}
+      JWT_SECRET: ${JWT_SECRET}
+      JWT_ISSUER: ${JWT_ISSUER}
+      JWT_AUDIENCE: ${JWT_AUDIENCE}
+      AZURE_STORAGE_CONNECTION_STRING: "DefaultEndpointsProtocol=http;AccountName=devstoreaccount1;AccountKey=Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw==;BlobEndpoint=http://host.docker.internal:10000/devstoreaccount1;"
+      AZURE_STORAGE_PUBLIC_ENDPOINT: "http://localhost:10000/devstoreaccount1"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    depends_on:
+      mysql:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      azurite:
         condition: service_healthy
 
   ai-service:

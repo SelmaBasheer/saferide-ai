@@ -144,6 +144,20 @@ export default function RouteDetailPage() {
                             )}
                         </p>
 
+                        {assignedBus && !assignedBus.documentsValid && (
+                            <p className="mb-4 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">
+                                This bus is missing a certificate or one has expired. Check its
+                                documents on the{" "}
+                                <Link
+                                    to={ROUTES.schoolBusDetail.replace(":id", assignedBus.id)}
+                                    className="font-medium underline"
+                                >
+                                    bus page
+                                </Link>
+                                .
+                            </p>
+                        )}
+
                         {route.status === "ACTIVE" && (
                             <div className="flex flex-wrap items-center gap-3">
                                 <select
@@ -153,8 +167,9 @@ export default function RouteDetailPage() {
                                 >
                                     <option value="">Choose a bus…</option>
                                     {activeBuses.map((b) => (
-                                        <option key={b.id} value={b.id}>
+                                        <option key={b.id} value={b.id} disabled={!b.documentsValid}>
                                             {b.registrationNumber} · {b.model} · {b.capacity} seats
+                                            {b.documentsValid ? "" : " · documents missing or expired"}
                                         </option>
                                     ))}
                                 </select>

@@ -12,6 +12,7 @@ import com.saferide.bus.exception.AppException;
 import com.saferide.bus.mapper.BusMapper;
 import com.saferide.bus.messaging.BusCreated;
 import com.saferide.bus.messaging.BusDriverAssigned;
+import com.saferide.bus.messaging.BusStatusChanged;
 import com.saferide.bus.messaging.RabbitEventPublisher;
 import com.saferide.bus.projection.SchoolStatusRepository;
 import com.saferide.bus.projection.SchoolStatuses;
@@ -19,6 +20,7 @@ import com.saferide.bus.repository.BusRepository;
 import com.saferide.bus.repository.BusSpecifications;
 import java.time.Instant;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -33,16 +35,19 @@ public class BusService {
     private static final int MAX_PAGE_SIZE = 50;
 
     private final BusRepository busRepository;
+    private final BusDocumentService busDocumentService;
     private final SchoolStatusRepository schoolStatusRepository;
     private final BusMapper busMapper;
     private final RabbitEventPublisher publisher;
 
     public BusService(
             BusRepository busRepository,
+            BusDocumentService busDocumentService,
             SchoolStatusRepository schoolStatusRepository,
             BusMapper busMapper,
             RabbitEventPublisher publisher) {
         this.busRepository = busRepository;
+        this.busDocumentService = busDocumentService;
         this.schoolStatusRepository = schoolStatusRepository;
         this.busMapper = busMapper;
         this.publisher = publisher;
@@ -69,7 +74,7 @@ public class BusService {
                         bus.getCapacity(),
                         Instant.now()));
 
-        return busMapper.toResponse(bus);
+        return respondAndAnnounce(schoolId, bus);
     }
 
     @Transactional(readOnly = true)
@@ -82,23 +87,29 @@ public class BusService {
                 safePage - 1, safeSize, Sort.by("registrationNumber").ascending());
 
         // Reads as one sentence: buses of this school, optionally only the active
-        // ones, optionally narrowed by a search term. The blank-search check now
-        // lives in matching(), so there is nothing to prepare here.
+        // ones, optionally narrowed by a search term.
         Page<Bus> result = busRepository.findAll(
                 BusSpecifications.forSchool(schoolId)
                         .and(BusSpecifications.activeOnly(includeInactive))
                         .and(BusSpecifications.matching(search)),
                 pageable);
 
-        List<BusResponse> items =
-                result.getContent().stream().map(busMapper::toResponse).toList();
+        // One document query for the whole page rather than one per bus.
+        Map<UUID, Boolean> validity = busDocumentService.validityFor(
+                schoolId, result.getContent().stream().map(Bus::getId).toList());
+
+        List<BusResponse> items = result.getContent().stream()
+                .map(bus -> busMapper.toResponse(bus, validity.getOrDefault(bus.getId(), false)))
+                .toList();
 
         return new PagedResult<>(items, result.getTotalElements(), safePage, safeSize);
     }
 
     @Transactional(readOnly = true)
     public BusResponse getById(UUID schoolId, UUID id) {
-        return busMapper.toResponse(findOwned(schoolId, id));
+        Bus bus = findOwned(schoolId, id);
+
+        return busMapper.toResponse(bus, documentsValid(schoolId, bus));
     }
 
     @Transactional
@@ -111,7 +122,10 @@ public class BusService {
         }
 
         bus.update(registration, request.model(), request.capacity());
-        return busMapper.toResponse(bus);
+
+        // The registration number is on the event, so a rename has to be announced
+        // or other services keep showing the old plate.
+        return respondAndAnnounce(schoolId, bus);
     }
 
     @Transactional
@@ -125,15 +139,42 @@ public class BusService {
                 MessagingConstants.BUS_DRIVER_ASSIGNED,
                 new BusDriverAssigned(bus.getId(), schoolId, request.driverId(), Instant.now()));
 
-        return busMapper.toResponse(bus);
+        return busMapper.toResponse(bus, documentsValid(schoolId, bus));
     }
 
     @Transactional
     public void deactivate(UUID schoolId, UUID id) {
         Bus bus = findOwned(schoolId, id);
+
         if (bus.isActive()) {
             bus.deactivate();
+            respondAndAnnounce(schoolId, bus);
         }
+    }
+
+    /**
+     * Builds the response and tells everyone else, from one computation of the
+     * document state — so the answer a caller gets and the answer other services
+     * get can never disagree.
+     */
+    private BusResponse respondAndAnnounce(UUID schoolId, Bus bus) {
+        boolean documentsValid = documentsValid(schoolId, bus);
+
+        publisher.publish(
+                MessagingConstants.BUS_STATUS_CHANGED,
+                new BusStatusChanged(
+                        bus.getId(),
+                        schoolId,
+                        bus.getRegistrationNumber(),
+                        bus.isActive(),
+                        documentsValid,
+                        Instant.now()));
+
+        return busMapper.toResponse(bus, documentsValid);
+    }
+
+    private boolean documentsValid(UUID schoolId, Bus bus) {
+        return busDocumentService.validityFor(schoolId, List.of(bus.getId())).getOrDefault(bus.getId(), false);
     }
 
     private Bus findOwned(UUID schoolId, UUID id) {
