@@ -21,15 +21,13 @@ services:
       # otherwise every start waits ~10s for a credential that cannot exist.
       # On the host, dotnet run still reads Key Vault via az login.
       KeyVault__Uri: ""
-      # Containerised services are reachable by name on saferide-net.
       ReverseProxy__Clusters__identity__Destinations__d1__Address: http://identity-service:8080/
       ReverseProxy__Clusters__school__Destinations__d1__Address: http://school-service:8080/
-      # These still run on the host, so they need the host gateway address.
-      ReverseProxy__Clusters__driver__Destinations__d1__Address: http://host.docker.internal:5007/
-      ReverseProxy__Clusters__student__Destinations__d1__Address: http://host.docker.internal:5009/
-      ReverseProxy__Clusters__bus__Destinations__d1__Address: http://bus-service:8080/      
-      ReverseProxy__Clusters__route__Destinations__d1__Address: http://host.docker.internal:5013/
-      ReverseProxy__Clusters__tracking__Destinations__d1__Address: http://host.docker.internal:5015/
+      ReverseProxy__Clusters__driver__Destinations__d1__Address: http://driver-service:8080/
+      ReverseProxy__Clusters__student__Destinations__d1__Address: http://student-service:8080/
+      ReverseProxy__Clusters__bus__Destinations__d1__Address: http://bus-service:8080/
+      ReverseProxy__Clusters__route__Destinations__d1__Address: http://route-service:8080/
+      ReverseProxy__Clusters__tracking__Destinations__d1__Address: http://tracking-service:8080/
       ReverseProxy__Clusters__ai__Destinations__d1__Address: http://ai-service:8080/
     extra_hosts:
       - "host.docker.internal:host-gateway"
@@ -239,6 +237,112 @@ services:
       rabbitmq:
         condition: service_healthy
       azurite:
+        condition: service_healthy
+
+  route-service:
+    <<: *common
+    build:
+      context: server/services/route-service/route
+      dockerfile: Dockerfile
+    image: saferide/route-service:local
+    container_name: saferide-route
+    ports:
+      - "5013:8080"
+    environment:
+      MONGO_HOST: mongodb
+      MONGO_PORT: "27017"
+      MONGO_USERNAME: ${MONGO_ROOT_USERNAME}
+      MONGO_PASSWORD: ${MONGO_ROOT_PASSWORD}
+      SPRING_RABBITMQ_HOST: rabbitmq
+      SPRING_RABBITMQ_USERNAME: ${RABBITMQ_USER}
+      SPRING_RABBITMQ_PASSWORD: ${RABBITMQ_PASSWORD}
+      JWT_SECRET: ${JWT_SECRET}
+      JWT_ISSUER: ${JWT_ISSUER}
+      JWT_AUDIENCE: ${JWT_AUDIENCE}
+      ROUTING_BASE_URL: ${ROUTING_BASE_URL:-https://router.project-osrm.org}
+    depends_on:
+      mongodb:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+
+  student-service:
+    <<: *common
+    build:
+      context: server/services/student-service/student
+      dockerfile: Dockerfile
+    image: saferide/student-service:local
+    container_name: saferide-student
+    ports:
+      - "5009:8080"
+    environment:
+      SPRING_DATASOURCE_URL: "jdbc:mysql://mysql:3306/saferide_student?createDatabaseIfNotExist=true&allowPublicKeyRetrieval=true&useSSL=false"
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      SPRING_RABBITMQ_HOST: rabbitmq
+      SPRING_RABBITMQ_USERNAME: ${RABBITMQ_USER}
+      SPRING_RABBITMQ_PASSWORD: ${RABBITMQ_PASSWORD}
+      JWT_SECRET: ${JWT_SECRET}
+      JWT_ISSUER: ${JWT_ISSUER}
+      JWT_AUDIENCE: ${JWT_AUDIENCE}
+    depends_on:
+      mysql:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+
+  driver-service:
+    <<: *common
+    build:
+      context: .
+      dockerfile: server/services/driver-service/Dockerfile
+    image: saferide/driver-service:local
+    container_name: saferide-driver
+    ports:
+      - "5007:8080"
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      ConnectionStrings__DriverDb: "Host=postgres;Port=5432;Database=saferide_driver;Username=${POSTGRES_USER};Password=${POSTGRES_PASSWORD}"
+      RabbitMQ__Host: rabbitmq
+      RabbitMQ__Username: ${RABBITMQ_USER}
+      RabbitMQ__Password: ${RABBITMQ_PASSWORD}
+      JwtSettings__Secret: ${JWT_SECRET}
+      JwtSettings__Issuer: ${JWT_ISSUER}
+      JwtSettings__Audience: ${JWT_AUDIENCE}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+
+  tracking-service:
+    <<: *common
+    build:
+      context: .
+      dockerfile: server/services/tracking-service/Dockerfile
+    image: saferide/tracking-service:local
+    container_name: saferide-tracking
+    ports:
+      - "5015:8080"
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      Mongo__Host: mongodb
+      Mongo__Port: "27017"
+      Mongo__Username: ${MONGO_ROOT_USERNAME}
+      Mongo__Password: ${MONGO_ROOT_PASSWORD}
+      JwtSettings__Secret: ${JWT_SECRET}
+      JwtSettings__Issuer: ${JWT_ISSUER}
+      JwtSettings__Audience: ${JWT_AUDIENCE}
+      RabbitMQ__Host: rabbitmq
+      RabbitMQ__Username: ${RABBITMQ_USER}
+      RabbitMQ__Password: ${RABBITMQ_PASSWORD}
+      # Trip start is the only time Tracking calls out. Inside the network these
+      # are container names, not host ports.
+      Services__Route: "http://route-service:8080"
+      Services__Student: "http://student-service:8080"
+    depends_on:
+      mongodb:
+        condition: service_healthy
+      rabbitmq:
         condition: service_healthy
 
   ai-service:
