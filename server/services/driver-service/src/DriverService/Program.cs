@@ -57,5 +57,6 @@ if (app.Environment.IsDevelopment())
 // ---------- Endpoints (one line per slice) ----------
 app.MapCreateDriver();
 app.MapGetDrivers();
+app.MapGet("/health", () => Results.Ok(new { status = "ok" })).AllowAnonymous();
 
 app.Run();

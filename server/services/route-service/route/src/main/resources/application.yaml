@@ -9,13 +9,13 @@ spring:
       host: ${MONGO_HOST:localhost}
       port: ${MONGO_PORT:27018}
       database: saferide_route
-      username: ${MONGO_USERNAME:saferide}
-      password: ${MONGO_PASSWORD:Admin@123}
+      username: ${MONGO_USERNAME}
+      password: ${MONGO_PASSWORD}
       authentication-database: admin
       auto-index-creation: true
       uuid-representation: standard
   rabbitmq:
-    host: ${SPRING_RABBITMQ_HOST:localhost}
+    host: ${SPRING_RABBITMQ_HOST}
     port: 5672
     username: ${SPRING_RABBITMQ_USERNAME:saferide}
     password: ${SPRING_RABBITMQ_PASSWORD:password}
@@ -30,7 +30,7 @@ spring:
 
 saferide:
   jwt:
-    secret: ${JWT_SECRET:SaferideIdentitySecretKey2026!VeryStrongRandomKey12345}
+    secret: ${JWT_SECRET}
     issuer: ${JWT_ISSUER:saferide-ai}
     audience: ${JWT_AUDIENCE:saferide-ai-clients}
   rabbitmq:
