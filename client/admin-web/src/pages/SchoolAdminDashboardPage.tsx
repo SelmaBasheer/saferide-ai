@@ -1,5 +1,5 @@
 import {
-    Clock, AlertTriangle, CheckCircle2, Ban, Send
+    Clock, AlertTriangle, Ban, Send
 } from "lucide-react"
 import DashboardLayout from "@/components/layout/DashboardLayout"
 import { useAppSelector } from "@/app/hooks"
@@ -8,6 +8,7 @@ import { useGetMySchoolQuery, useSubmitSchoolMutation, type SchoolDetail } from 
 import OnboardingProfileForm from "@/features/schools/OnboardingProfileForm"
 import DocumentsCard from "@/features/schools/DocumentsCard"
 import { schoolAdminNav } from "@/components/layout/schoolAdminNav"
+import SchoolOverview from "@/features/dashboard/SchoolOverview"
 
 // ---------- Onboarding (Draft / Rejected) ----------
 
@@ -92,31 +93,6 @@ function StatusCard({ icon, title, children }: {
     )
 }
 
-// ---------- Approved: the real dashboard ----------
-
-function ApprovedDashboard({ school }: { school: SchoolDetail }) {
-    return (
-        <>
-            <div className="flex items-center gap-2">
-                <h1 className="text-2xl font-semibold text-slate-800">{school.name}</h1>
-                <CheckCircle2 className="h-5 w-5 text-emerald-600" />
-            </div>
-            <p className="mt-1 text-sm text-slate-500">Your school is approved and active.</p>
-            <div className="mt-6 grid gap-4 sm:grid-cols-3">
-                {["Buses", "Routes", "Drivers"].map((k) => (
-                    <div key={k} className="rounded-lg border bg-white p-5">
-                        <p className="text-sm text-slate-500">{k}</p>
-                        <p className="mt-1 text-2xl font-semibold text-slate-800">—</p>
-                    </div>
-                ))}
-            </div>
-            <p className="mt-6 text-sm text-slate-400">
-                Manage your school's buses, routes, drivers and students here.
-            </p>
-        </>
-    )
-}
-
 // ---------- The page: one component, four faces ----------
 
 export default function SchoolAdminDashboardPage() {
@@ -146,7 +122,7 @@ export default function SchoolAdminDashboardPage() {
                     <p>Your school's access has been suspended. Contact SafeRide support for details.</p>
                 </StatusCard>
             ) : (
-                <ApprovedDashboard school={school} />
+                <SchoolOverview school={school} />
             )}
         </DashboardLayout>
     )
