@@ -58,10 +58,20 @@ public class AlertsController(
         return Ok(ApiResponse<IReadOnlyList<RouteAnomalyReportLine>>.Ok(lines, null));
     }
 
+    /// The email comes from the approver's own token. This service has no way to
+    /// look up a school's contact address, and giving it one would mean a second
+    /// copy of something Identity already owns.
     [HttpPost("{id:guid}/approve")]
     public async Task<IActionResult> Approve(Guid id, CancellationToken ct)
     {
-        var result = await resolveHandler.ApproveAsync(id, User.SchoolId(), User.UserId(), ct);
+        var result = await resolveHandler.ApproveAsync(
+            id,
+            User.SchoolId(),
+            User.UserId(),
+            User.Email(),
+            ct
+        );
+
         return result.ToApiResponse("Alert approved.");
     }
 
