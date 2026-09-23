@@ -39,6 +39,12 @@ public class RabbitConfig {
     @Value("${saferide.rabbitmq.school-rejected-queue}")
     String rejectedQueue;
 
+    @Value("${saferide.rabbitmq.ai-exchange}")
+    String aiExchange;
+
+    @Value("${saferide.rabbitmq.alert-approved-queue}")
+    String alertApprovedQueue;
+
     // ---------- exchanges ----------
     @Bean
     TopicExchange identityExchange() {
@@ -48,6 +54,11 @@ public class RabbitConfig {
     @Bean
     TopicExchange schoolEventsExchange() {
         return new TopicExchange(schoolExchange, true, false);
+    }
+
+    @Bean
+    TopicExchange aiEventsExchange() {
+        return new TopicExchange(aiExchange, true, false);
     }
 
     @Bean
@@ -84,6 +95,11 @@ public class RabbitConfig {
         return queueWithDlq(rejectedQueue);
     }
 
+    @Bean
+    Queue alertApprovedQueue() {
+        return queueWithDlq(alertApprovedQueue);
+    }
+
     // ---------- dead-letter queues ----------
     @Bean
     Queue otpDlq() {
@@ -103,6 +119,11 @@ public class RabbitConfig {
     @Bean
     Queue schoolRejectedDlq() {
         return QueueBuilder.durable(rejectedQueue + ".dlq").build();
+    }
+
+    @Bean
+    Queue alertApprovedDlq() {
+        return QueueBuilder.durable(alertApprovedQueue + ".dlq").build();
     }
 
     // ---------- bindings ----------
@@ -132,6 +153,11 @@ public class RabbitConfig {
                 .with("school-rejected");
     }
 
+    @Bean
+    Binding alertApprovedBinding() {
+        return BindingBuilder.bind(alertApprovedQueue()).to(aiEventsExchange()).with("alert-approved");
+    }
+
     // ---------- DLQ bindings ----------
     @Bean
     Binding otpDlqBinding() {
@@ -153,6 +179,11 @@ public class RabbitConfig {
     @Bean
     Binding rejectedDlqBinding() {
         return BindingBuilder.bind(schoolRejectedDlq()).to(deadLetterExchange()).with(rejectedQueue);
+    }
+
+    @Bean
+    Binding alertApprovedDlqBinding() {
+        return BindingBuilder.bind(alertApprovedDlq()).to(deadLetterExchange()).with(alertApprovedQueue);
     }
 
     @Bean

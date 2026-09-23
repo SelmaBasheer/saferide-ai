@@ -28,6 +28,7 @@ public static class DependencyInjection
         services.Configure<RabbitMqSettings>(
             configuration.GetSection(RabbitMqSettings.SectionName)
         );
+        services.AddSingleton<IEventPublisher, RabbitMqEventPublisher>();
         services.AddHostedService<TrackingEventConsumer>();
         services.AddScoped<IAnomalyClassifier, TemplateAnomalyClassifier>();
 

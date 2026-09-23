@@ -18,6 +18,18 @@ sendgrid:
   from-email: ${SENDGRID_FROM_EMAIL}
   from-name: SafeRide AI
 
+whatsapp:
+  provider: ${WHATSAPP_PROVIDER:twilio}
+  enabled: ${WHATSAPP_ENABLED:true}
+  twilio:
+    account-sid: ${TWILIO_ACCOUNT_SID:}
+    auth-token: ${TWILIO_AUTH_TOKEN:}
+    from: ${TWILIO_WHATSAPP_FROM:}
+  meta:
+    api-version: ${WHATSAPP_API_VERSION:v23.0}
+    phone-number-id: ${WHATSAPP_PHONE_NUMBER_ID:}
+    access-token: ${WHATSAPP_ACCESS_TOKEN:}
+
 saferide:
   rabbitmq:
     identity-exchange: identity.events
@@ -27,7 +39,10 @@ saferide:
     school-submitted-queue: notification.school-submitted
     school-approved-queue: notification.school-approved
     school-rejected-queue: notification.school-rejected
+    ai-exchange: ai.events
+    alert-approved-queue: notification.alert-approved
   notification:
     superadmin-email: ${SUPERADMIN_EMAIL}
+    alert-whatsapp-to: ${ALERT_WHATSAPP_TO:}
   app:
     base-url: ${APP_BASE_URL:http://localhost:5173}

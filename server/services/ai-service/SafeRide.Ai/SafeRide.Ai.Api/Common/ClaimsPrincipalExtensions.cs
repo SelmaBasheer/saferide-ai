@@ -14,4 +14,9 @@ public static class ClaimsPrincipalExtensions
         Guid.TryParse(user.FindFirstValue(ClaimTypes.NameIdentifier), out var id)
             ? id
             : throw new InvalidOperationException("No user id on this token.");
+
+    /// Both forms, because the short name is what a hand-built token usually
+    /// carries and the long URI is what ASP.NET maps it to.
+    public static string Email(this ClaimsPrincipal user) =>
+        user.FindFirst(ClaimTypes.Email)?.Value ?? user.FindFirst("email")?.Value ?? string.Empty;
 }
