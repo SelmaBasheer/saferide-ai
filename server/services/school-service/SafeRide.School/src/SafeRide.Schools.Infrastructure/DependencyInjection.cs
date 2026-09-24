@@ -3,6 +3,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using SafeRide.Schools.Application.Abstractions;
 using SafeRide.Schools.Domain.Repositories;
+using SafeRide.Schools.Infrastructure.Jobs;
 using SafeRide.Schools.Infrastructure.Messaging;
 using SafeRide.Schools.Infrastructure.Persistence;
 using SafeRide.Schools.Infrastructure.Persistence.Repositories;
@@ -39,6 +40,9 @@ public static class DependencyInjection
         services.AddScoped(typeof(IGenericRepository<>), typeof(GenericRepository<>));
         services.AddScoped<ISchoolRepository, SchoolRepository>();
         services.AddSingleton<IFileStorage, AzureBlobFileStorage>();
+        services.AddScoped<ISubscriptionPlanRepository, SubscriptionPlanRepository>();
+        services.AddScoped<ISubscriptionRepository, SubscriptionRepository>();
+        services.AddHostedService<SubscriptionExpiryWorker>();
         services.AddScoped<IUnitOfWork, UnitOfWork>();
 
         return services;

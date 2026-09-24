@@ -11,6 +11,8 @@ public sealed class SchoolDbContext(
 ) : DbContext(options)
 {
     public DbSet<School> Schools => Set<School>();
+    public DbSet<SubscriptionPlan> SubscriptionPlans => Set<SubscriptionPlan>();
+    public DbSet<Subscription> Subscriptions => Set<Subscription>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -58,6 +60,37 @@ public sealed class SchoolDbContext(
             e.Property(d => d.ContentType).HasMaxLength(100).IsRequired();
             e.HasIndex(d => new { d.SchoolId, d.Type }).IsUnique();
             e.ToTable("SchoolDocuments");
+        });
+
+        // Plans belong to the platform, not to a school, so deliberately no
+        // TenantId and no query filter. A school admin choosing a plan must be
+        // able to see the same rows the super admin created.
+        modelBuilder.Entity<SubscriptionPlan>(e =>
+        {
+            e.HasKey(p => p.Id);
+            e.Property(p => p.Id).ValueGeneratedNever();
+            e.Property(p => p.Name).HasMaxLength(100).IsRequired();
+            e.Property(p => p.Description).HasMaxLength(500);
+            e.HasIndex(p => p.Name).IsUnique();
+            e.ToTable("SubscriptionPlans");
+        });
+
+        modelBuilder.Entity<Subscription>(e =>
+        {
+            e.HasKey(s => s.Id);
+            e.Property(s => s.Id).ValueGeneratedNever();
+            e.Property(s => s.PlanName).HasMaxLength(100).IsRequired();
+
+            // The question asked on every page load is "what is this school's
+            // subscription", so that is the index.
+            e.HasIndex(s => new { s.SchoolId, s.Status });
+
+            // The daily job scans by end date.
+            e.HasIndex(s => s.EndsOn);
+
+            e.Ignore(s => s.GraceEndsOn);
+
+            e.ToTable("Subscriptions");
         });
 
         foreach (var entityType in modelBuilder.Model.GetEntityTypes())

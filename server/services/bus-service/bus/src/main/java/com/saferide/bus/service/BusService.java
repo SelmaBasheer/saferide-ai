@@ -14,6 +14,7 @@ import com.saferide.bus.messaging.BusCreated;
 import com.saferide.bus.messaging.BusDriverAssigned;
 import com.saferide.bus.messaging.BusStatusChanged;
 import com.saferide.bus.messaging.RabbitEventPublisher;
+import com.saferide.bus.projection.SchoolStatus;
 import com.saferide.bus.projection.SchoolStatusRepository;
 import com.saferide.bus.projection.SchoolStatuses;
 import com.saferide.bus.repository.BusRepository;
@@ -56,6 +57,7 @@ public class BusService {
     @Transactional
     public BusResponse create(UUID schoolId, CreateBusRequest request) {
         requireApprovedSchool(schoolId);
+        requireBusCapacity(schoolId);
 
         String registration = Bus.normalizeRegistrationNumber(request.registrationNumber());
         if (busRepository.existsBySchoolIdAndRegistrationNumber(schoolId, registration)) {
@@ -186,6 +188,37 @@ public class BusService {
     private void requireApprovedSchool(UUID schoolId) {
         if (!schoolStatusRepository.existsBySchoolIdAndStatus(schoolId, SchoolStatuses.APPROVED)) {
             throw new AppException.ForbiddenException(ResponseMessages.SCHOOL_NOT_APPROVED);
+        }
+    }
+
+    /**
+     * Refuses a new bus once the subscription's limit is reached.
+     *
+     * <p>This service never asks the School service anything. The limit arrived
+     * on an event and is sitting in a local table, so the check costs one row
+     * read and works whether or not School service is up.
+     *
+     * <p>A null limit means no enforcement — either the plan is unlimited, or no
+     * subscription event has arrived for this school. That is deliberate:
+     * schools created before subscriptions existed keep working, and introducing
+     * billing does not lock anyone out of a bus service overnight.
+     */
+    private void requireBusCapacity(UUID schoolId) {
+        Integer limit = schoolStatusRepository
+                .findById(schoolId)
+                .map(SchoolStatus::getBusLimit)
+                .orElse(null);
+
+        if (limit == null) {
+            return;
+        }
+
+        // Only active buses count. A deactivated bus is not occupying a seat.
+        long active =
+                busRepository.count(BusSpecifications.forSchool(schoolId).and(BusSpecifications.activeOnly(false)));
+
+        if (active >= limit) {
+            throw new AppException.ForbiddenException(ResponseMessages.BUS_LIMIT_REACHED);
         }
     }
 }

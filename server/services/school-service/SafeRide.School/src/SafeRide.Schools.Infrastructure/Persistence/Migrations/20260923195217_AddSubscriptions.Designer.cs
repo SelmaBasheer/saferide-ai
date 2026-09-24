@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using SafeRide.Schools.Infrastructure.Persistence;
 
@@ -11,9 +12,11 @@ using SafeRide.Schools.Infrastructure.Persistence;
 namespace SafeRide.Schools.Infrastructure.Persistence.Migrations
 {
     [DbContext(typeof(SchoolDbContext))]
-    partial class SchoolDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260923195217_AddSubscriptions")]
+    partial class AddSubscriptions
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -211,9 +214,6 @@ namespace SafeRide.Schools.Infrastructure.Persistence.Migrations
                         .HasColumnType("datetime2");
 
                     b.Property<DateOnly>("EndsOn")
-                        .HasColumnType("date");
-
-                    b.Property<DateOnly?>("LastWarningSentOn")
                         .HasColumnType("date");
 
                     b.Property<Guid>("PlanId")

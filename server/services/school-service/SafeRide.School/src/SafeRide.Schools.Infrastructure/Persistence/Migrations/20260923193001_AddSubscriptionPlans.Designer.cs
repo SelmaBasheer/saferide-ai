@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using SafeRide.Schools.Infrastructure.Persistence;
 
@@ -11,9 +12,11 @@ using SafeRide.Schools.Infrastructure.Persistence;
 namespace SafeRide.Schools.Infrastructure.Persistence.Migrations
 {
     [DbContext(typeof(SchoolDbContext))]
-    partial class SchoolDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260923193001_AddSubscriptionPlans")]
+    partial class AddSubscriptionPlans
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -194,58 +197,6 @@ namespace SafeRide.Schools.Infrastructure.Persistence.Migrations
                         .IsUnique();
 
                     b.ToTable("SchoolDocuments", (string)null);
-                });
-
-            modelBuilder.Entity("SafeRide.Schools.Domain.Entities.Subscription", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<int?>("BusLimit")
-                        .HasColumnType("int");
-
-                    b.Property<DateTime?>("CancelledAtUtc")
-                        .HasColumnType("datetime2");
-
-                    b.Property<DateTime>("CreatedAtUtc")
-                        .HasColumnType("datetime2");
-
-                    b.Property<DateOnly>("EndsOn")
-                        .HasColumnType("date");
-
-                    b.Property<DateOnly?>("LastWarningSentOn")
-                        .HasColumnType("date");
-
-                    b.Property<Guid>("PlanId")
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<string>("PlanName")
-                        .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
-
-                    b.Property<long>("PriceInPaise")
-                        .HasColumnType("bigint");
-
-                    b.Property<Guid>("SchoolId")
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<DateOnly>("StartsOn")
-                        .HasColumnType("date");
-
-                    b.Property<int>("Status")
-                        .HasColumnType("int");
-
-                    b.Property<DateTime>("UpdatedAtUtc")
-                        .HasColumnType("datetime2");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("EndsOn");
-
-                    b.HasIndex("SchoolId", "Status");
-
-                    b.ToTable("Subscriptions", (string)null);
                 });
 
             modelBuilder.Entity("SafeRide.Schools.Domain.Entities.SubscriptionPlan", b =>
