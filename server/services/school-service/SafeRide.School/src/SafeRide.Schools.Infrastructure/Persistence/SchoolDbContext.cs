@@ -13,6 +13,7 @@ public sealed class SchoolDbContext(
     public DbSet<School> Schools => Set<School>();
     public DbSet<SubscriptionPlan> SubscriptionPlans => Set<SubscriptionPlan>();
     public DbSet<Subscription> Subscriptions => Set<Subscription>();
+    public DbSet<Payment> Payments => Set<Payment>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -91,6 +92,22 @@ public sealed class SchoolDbContext(
             e.Ignore(s => s.GraceEndsOn);
 
             e.ToTable("Subscriptions");
+        });
+
+        modelBuilder.Entity<Payment>(e =>
+        {
+            e.HasKey(p => p.Id);
+            e.Property(p => p.Id).ValueGeneratedNever();
+            e.Property(p => p.RazorpayOrderId).HasMaxLength(64).IsRequired();
+            e.Property(p => p.RazorpayPaymentId).HasMaxLength(64);
+
+            // Unique, because the webhook looks a payment up by it — and because
+            // a duplicate order id would mean two rows disagreeing about what
+            // one payment bought.
+            e.HasIndex(p => p.RazorpayOrderId).IsUnique();
+
+            e.HasIndex(p => new { p.SchoolId, p.Status });
+            e.ToTable("Payments");
         });
 
         foreach (var entityType in modelBuilder.Model.GetEntityTypes())

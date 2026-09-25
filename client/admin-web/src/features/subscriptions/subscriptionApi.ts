@@ -48,6 +48,17 @@ export interface SubscriptionsQueryArgs {
     pageSize: number
 }
 
+export interface CheckoutSession {
+    orderId: string
+    amountInPaise: number
+    currency: string
+    publicKey: string
+    planName: string
+    schoolName: string
+    adminEmail: string
+    adminPhone: string
+}
+
 /**
  * Prices travel as whole paise, the same integer the database and Razorpay use.
  * Dividing happens here and nowhere else — the moment a rupee value with a
@@ -105,6 +116,11 @@ export const subscriptionApi = baseApi.injectEndpoints({
             transformResponse: (r: ApiResponse<{ id: string }>) => r.data,
             invalidatesTags: ["Subscription"],
         }),
+
+        startCheckout: builder.mutation<CheckoutSession, { planId: string }>({
+            query: (body) => ({ url: "/subscriptions/checkout", method: "POST", body }),
+            transformResponse: (r: ApiResponse<CheckoutSession>) => r.data,
+        }),
     }),
 })
 
@@ -116,4 +132,5 @@ export const {
     useGetMySubscriptionQuery,
     useGetSubscriptionsQuery,
     useActivateSubscriptionMutation,
+    useStartCheckoutMutation
 } = subscriptionApi

@@ -20,4 +20,9 @@ public static class SubscriptionErrors
         "Subscription.PlanNotAvailable",
         "That plan does not exist or is no longer offered."
     );
+
+    public static readonly Error GatewayFailed = new(
+        "Subscription.GatewayFailed",
+        "The payment gateway could not be reached. Please try again."
+    );
 }

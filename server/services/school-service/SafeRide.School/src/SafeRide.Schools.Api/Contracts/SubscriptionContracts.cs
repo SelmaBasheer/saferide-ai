@@ -17,3 +17,5 @@ public sealed record SubscriptionDto(
     SubscriptionStatus Status,
     int DaysRemaining
 );
+
+public sealed record CheckoutRequest(Guid PlanId);

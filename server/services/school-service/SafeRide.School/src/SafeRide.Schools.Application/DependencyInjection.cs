@@ -25,6 +25,8 @@ public static class DependencyInjection
         services.AddScoped<ActivateSubscriptionHandler>();
         services.AddScoped<GetSubscriptionsHandler>();
         services.AddScoped<ExpireSubscriptionsHandler>();
+        services.AddScoped<StartCheckoutHandler>();
+        services.AddScoped<CapturePaymentHandler>();
 
         return services;
     }

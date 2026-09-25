@@ -1,13 +1,17 @@
+import { useEffect, useState } from "react"
 import { AlertTriangle, Bus, Calendar, CheckCircle2, CreditCard } from "lucide-react"
 import DashboardLayout from "@/components/layout/DashboardLayout"
 import { schoolAdminNav } from "@/components/layout/schoolAdminNav"
+import { Button } from "@/components/ui/button"
 import {
     useGetMySubscriptionQuery,
     useGetPlansQuery,
+    useStartCheckoutMutation,
     formatRupees,
     type Plan,
     type Subscription,
 } from "@/features/subscriptions/subscriptionApi"
+import { loadRazorpay } from "@/features/subscriptions/razorpay"
 
 const statusStyles: Record<Subscription["status"], string> = {
     Active: "bg-emerald-50 text-emerald-700",
@@ -104,7 +108,9 @@ function CurrentPlan({ subscription }: { subscription: Subscription }) {
                         <Bus className="h-3.5 w-3.5" /> Buses
                     </p>
                     <p className="mt-1 text-sm font-medium text-slate-800">
-                        {subscription.busLimit === null ? "Unlimited" : `Up to ${subscription.busLimit}`}
+                        {subscription.busLimit === null
+                            ? "Unlimited"
+                            : `Up to ${subscription.busLimit}`}
                     </p>
                 </div>
                 <div>
@@ -127,7 +133,68 @@ function CurrentPlan({ subscription }: { subscription: Subscription }) {
     )
 }
 
-function PlanCard({ plan, current }: { plan: Plan; current: boolean }) {
+function PayButton({ planId, onPaid }: { planId: string; onPaid: () => void }) {
+    const [startCheckout, { isLoading }] = useStartCheckoutMutation()
+    const [error, setError] = useState<string | null>(null)
+
+    const pay = async () => {
+        setError(null)
+
+        try {
+            const session = await startCheckout({ planId }).unwrap()
+            await loadRazorpay()
+
+            const checkout = new window.Razorpay!({
+                key: session.publicKey,
+                amount: session.amountInPaise,
+                currency: session.currency,
+                name: "SafeRide AI",
+                description: session.planName,
+                order_id: session.orderId,
+                prefill: {
+                    name: session.schoolName,
+                    email: session.adminEmail,
+                    contact: session.adminPhone,
+                },
+                theme: { color: "#0369a1" },
+
+                // Razorpay tells the browser the payment worked. That is not what
+                // activates anything — the webhook is. All this does is start
+                // looking for the subscription the webhook will create.
+                handler: onPaid,
+            })
+
+            checkout.open()
+        } catch {
+            setError("Could not start checkout. Please try again.")
+        }
+    }
+
+    return (
+        <div className="mt-4">
+            <Button
+                onClick={pay}
+                disabled={isLoading}
+                className="w-full bg-sky-700 hover:bg-sky-800"
+            >
+                {isLoading ? "Opening…" : "Pay and activate"}
+            </Button>
+            {error && <p className="mt-2 text-xs text-red-600">{error}</p>}
+        </div>
+    )
+}
+
+function PlanCard({
+    plan,
+    current,
+    payable,
+    onPaid,
+}: {
+    plan: Plan
+    current: boolean
+    payable: boolean
+    onPaid: () => void
+}) {
     return (
         <div
             className={`rounded-lg border bg-white p-5 ${current ? "border-sky-300 ring-1 ring-sky-100" : ""}`}
@@ -147,13 +214,33 @@ function PlanCard({ plan, current }: { plan: Plan; current: boolean }) {
             <p className="mt-4 text-sm text-slate-600">
                 {plan.busLimit === null ? "Unlimited buses" : `Up to ${plan.busLimit} buses`}
             </p>
+
+            {payable && <PayButton planId={plan.id} onPaid={onPaid} />}
         </div>
     )
 }
 
 export default function SubscriptionPage() {
-    const { data: subscription, isLoading, isError } = useGetMySubscriptionQuery()
+    // While confirming, poll. The subscription appears when the webhook lands,
+    // a second or two after the browser thinks it is finished — because the
+    // browser's opinion is not what creates it.
+    const [confirming, setConfirming] = useState(false)
+
+    const {
+        data: subscription,
+        isLoading,
+        isError,
+    } = useGetMySubscriptionQuery(undefined, {
+        pollingInterval: confirming ? 2000 : 0,
+    })
+
     const { data: plans = [] } = useGetPlansQuery(false)
+
+    const live = subscription?.status === "Active" || subscription?.status === "InGrace"
+
+    useEffect(() => {
+        if (confirming && live) setConfirming(false)
+    }, [confirming, live])
 
     return (
         <DashboardLayout roleLabel="School Admin" nav={schoolAdminNav("Subscription")}>
@@ -172,7 +259,7 @@ export default function SubscriptionPage() {
                     <div className="rounded-lg border border-dashed p-6 text-center">
                         <p className="text-sm font-medium text-slate-700">No active subscription</p>
                         <p className="mt-1 text-sm text-slate-500">
-                            Contact SafeRide to choose a plan and activate your school.
+                            Choose a plan below to activate your school.
                         </p>
                     </div>
                 ) : (
@@ -180,6 +267,13 @@ export default function SubscriptionPage() {
                         <Notice subscription={subscription} />
                         <CurrentPlan subscription={subscription} />
                     </>
+                )}
+
+                {confirming && !live && (
+                    <div className="rounded-lg border border-sky-200 bg-sky-50 p-4 text-sm text-sky-800">
+                        Payment received. Waiting for confirmation from the payment gateway — this
+                        usually takes a few seconds.
+                    </div>
                 )}
 
                 {plans.length > 0 && (
@@ -193,16 +287,11 @@ export default function SubscriptionPage() {
                                     key={p.id}
                                     plan={p}
                                     current={p.name === subscription?.planName}
+                                    payable={!live}
+                                    onPaid={() => setConfirming(true)}
                                 />
                             ))}
                         </div>
-
-                        {/* Said plainly rather than shown as a dead button. The UI
-                            does not claim something that does not happen. */}
-                        <p className="mt-3 text-sm text-slate-400">
-                            Online payment is not available yet. Contact SafeRide to change or renew
-                            your plan.
-                        </p>
                     </div>
                 )}
             </div>
