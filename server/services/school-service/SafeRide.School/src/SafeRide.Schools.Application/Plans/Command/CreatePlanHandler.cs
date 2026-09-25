@@ -11,22 +11,12 @@ public sealed class CreatePlanHandler(ISubscriptionPlanRepository plans, IUnitOf
 
     public async Task<Result<Guid>> CreateAsync(CreatePlanCommand command, CancellationToken ct)
     {
-        // User input is validated here and comes back as an error code. The
-        // domain factory guards the same rules by throwing, because reaching
-        // it with bad values would mean a bug rather than a bad request.
-        if (string.IsNullOrWhiteSpace(command.Name))
-            return Result.Failure<Guid>(PlanErrors.NameRequired);
+        var invalid = Validate(command);
 
-        if (command.PriceInPaise < 0)
-            return Result.Failure<Guid>(PlanErrors.PriceInvalid);
+        if (invalid is not null)
+            return Result.Failure<Guid>(invalid);
 
-        if (command.DurationMonths is < 1 or > MaxDurationMonths)
-            return Result.Failure<Guid>(PlanErrors.DurationInvalid);
-
-        if (command.BusLimit is < 1)
-            return Result.Failure<Guid>(PlanErrors.BusLimitInvalid);
-
-        if (await plans.NameExistsAsync(command.Name.Trim(), ct))
+        if (await plans.NameExistsAsync(command.Name.Trim(), null, ct))
             return Result.Failure<Guid>(PlanErrors.NameTaken);
 
         var plan = SubscriptionPlan.Create(
@@ -43,6 +33,35 @@ public sealed class CreatePlanHandler(ISubscriptionPlanRepository plans, IUnitOf
         return Result.Success(plan.Id);
     }
 
+    public async Task<Result> UpdateAsync(Guid id, CreatePlanCommand command, CancellationToken ct)
+    {
+        var invalid = Validate(command);
+
+        if (invalid is not null)
+            return Result.Failure(invalid);
+
+        var plan = await plans.GetByIdAsync(id, ct);
+
+        if (plan is null)
+            return Result.Failure(PlanErrors.NotFound);
+
+        // Excluding itself, so keeping the same name is not a conflict.
+        if (await plans.NameExistsAsync(command.Name.Trim(), id, ct))
+            return Result.Failure(PlanErrors.NameTaken);
+
+        plan.Update(
+            command.Name,
+            command.Description,
+            command.PriceInPaise,
+            command.BusLimit,
+            command.DurationMonths
+        );
+
+        await unitOfWork.SaveChangesAsync(ct);
+
+        return Result.Success();
+    }
+
     public async Task<Result> DeactivateAsync(Guid id, CancellationToken ct)
     {
         var plan = await plans.GetByIdAsync(id, ct);
@@ -54,5 +73,23 @@ public sealed class CreatePlanHandler(ISubscriptionPlanRepository plans, IUnitOf
         await unitOfWork.SaveChangesAsync(ct);
 
         return Result.Success();
+    }
+
+    /// Returns the first thing wrong, or null when the command is fine.
+    private static Error? Validate(CreatePlanCommand command)
+    {
+        if (string.IsNullOrWhiteSpace(command.Name))
+            return PlanErrors.NameRequired;
+
+        if (command.PriceInPaise < 0)
+            return PlanErrors.PriceInvalid;
+
+        if (command.DurationMonths is < 1 or > MaxDurationMonths)
+            return PlanErrors.DurationInvalid;
+
+        if (command.BusLimit is < 1)
+            return PlanErrors.BusLimitInvalid;
+
+        return null;
     }
 }

@@ -9,5 +9,5 @@ public interface ISubscriptionPlanRepository : IGenericRepository<SubscriptionPl
         CancellationToken ct = default
     );
 
-    Task<bool> NameExistsAsync(string name, CancellationToken ct = default);
+    Task<bool> NameExistsAsync(string name, Guid? excludeId = null, CancellationToken ct = default);
 }

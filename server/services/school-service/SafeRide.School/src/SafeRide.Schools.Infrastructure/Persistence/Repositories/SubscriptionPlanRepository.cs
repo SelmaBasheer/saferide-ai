@@ -18,10 +18,12 @@ public class SubscriptionPlanRepository(SchoolDbContext context)
         if (!includeInactive)
             query = query.Where(p => p.IsActive);
 
-        // Cheapest first, so the list reads like a pricing page.
         return await query.OrderBy(p => p.PriceInPaise).ToListAsync(ct);
     }
 
-    public Task<bool> NameExistsAsync(string name, CancellationToken ct = default) =>
-        Set.AnyAsync(p => p.Name == name, ct);
+    public Task<bool> NameExistsAsync(
+        string name,
+        Guid? excludeId = null,
+        CancellationToken ct = default
+    ) => Set.AnyAsync(p => p.Name == name && (excludeId == null || p.Id != excludeId), ct);
 }

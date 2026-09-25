@@ -56,6 +56,31 @@ public class PlansController(CreatePlanHandler createPlan, GetPlansHandler getPl
         return result.ToApiResponse("Plan deactivated.");
     }
 
+    /// Reuses CreatePlanRequest: an update sets every field, so the shape is
+    /// identical and a second near-identical record would only drift.
+    [Authorize(Roles = "SuperAdmin")]
+    [HttpPut("{id:guid}")]
+    public async Task<IActionResult> Update(
+        Guid id,
+        CreatePlanRequest request,
+        CancellationToken ct
+    )
+    {
+        var result = await createPlan.UpdateAsync(
+            id,
+            new CreatePlanCommand(
+                request.Name,
+                request.Description,
+                request.PriceInPaise,
+                request.BusLimit,
+                request.DurationMonths
+            ),
+            ct
+        );
+
+        return result.ToApiResponse("Plan updated.");
+    }
+
     // Mapped by hand rather than through AutoMapper: one small shape, and it
     // avoids a profile edit for something this shallow.
     private static PlanDto ToDto(SubscriptionPlan p) =>

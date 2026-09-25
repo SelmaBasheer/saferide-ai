@@ -27,6 +27,10 @@ import TripsPage from "@/pages/TripsPage"
 import TripDetailPage from "@/pages/TripDetailPage"
 import MobileTripsPage from "@/pages/MobileTripsPage"
 import AlertsPage from "@/pages/AlertsPage"
+import SubscriptionPage from "@/pages/SubscriptionPage"
+import SuperAdminOverviewPage from "@/pages/SuperAdminOverviewPage"
+import SuperAdminPlansPage from "@/pages/SuperAdminPlansPage"
+import SuperAdminSubscriptionsPage from "@/pages/SuperAdminSubscriptionsPage"
 
 export default function AppRoutes() {
     return (
@@ -36,7 +40,13 @@ export default function AppRoutes() {
             <Route path={ROUTES.register} element={<RegisterPage />} />
             <Route path={ROUTES.dashboard} element={<ProtectedRoute><DashboardHome /></ProtectedRoute>} />
             <Route path={ROUTES.superAdmin} element={
+                <ProtectedRoute roles={["SuperAdmin"]}><SuperAdminOverviewPage /></ProtectedRoute>} />
+            <Route path={ROUTES.superAdminSchools} element={
                 <ProtectedRoute roles={["SuperAdmin"]}><DashboardPage /></ProtectedRoute>} />
+            <Route path={ROUTES.superAdminPlans} element={
+                <ProtectedRoute roles={["SuperAdmin"]}><SuperAdminPlansPage /></ProtectedRoute>} />
+            <Route path={ROUTES.superAdminSubscriptions} element={
+                <ProtectedRoute roles={["SuperAdmin"]}><SuperAdminSubscriptionsPage /></ProtectedRoute>} />
             <Route path={ROUTES.schoolAdmin} element={
                 <ProtectedRoute roles={["SchoolAdmin"]}><SchoolAdminDashboardPage /></ProtectedRoute>} />
             <Route path={ROUTES.forgotPassword} element={<ForgotPasswordPage />} />
@@ -75,6 +85,8 @@ export default function AppRoutes() {
                 <ProtectedRoute roles={["SchoolAdmin"]}><TripDetailPage /></ProtectedRoute>} />
             <Route path={ROUTES.schoolAlerts} element={
                 <ProtectedRoute roles={["SchoolAdmin"]}><AlertsPage /></ProtectedRoute>} />
+            <Route path={ROUTES.schoolSubscription} element={
+                <ProtectedRoute roles={["SchoolAdmin"]}><SubscriptionPage /></ProtectedRoute>} />
         </Routes>
     )
 }

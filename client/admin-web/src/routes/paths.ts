@@ -5,10 +5,13 @@ export const ROUTES = {
     forgotPassword: "/forgot-password",
     resetPassword: "/reset-password",
     dashboard: "/dashboard",
-    superAdmin: "/super-admin",       // SuperAdmin → schools
+    superAdmin: "/super-admin",       // SuperAdmin → overview
     schoolAdmin: "/school-admin",     // SchoolAdmin → their school
     verifyEmail: "/verify-email",
+    superAdminSchools: "/super-admin/schools",
     superAdminSchool: "/super-admin/schools/:id",
+    superAdminPlans: "/super-admin/plans",
+    superAdminSubscriptions: "/super-admin/subscriptions",
     schoolDrivers: "/school-admin/drivers",
     schoolStudents: "/school-admin/students",
     // driver (mobile)
@@ -31,4 +34,5 @@ export const ROUTES = {
     schoolTrips: "/school-admin/trips",
     schoolTripDetail: "/school-admin/trips/:id",
     schoolAlerts: "/school-admin/alerts",
+    schoolSubscription: "/school-admin/subscription",
 } as const

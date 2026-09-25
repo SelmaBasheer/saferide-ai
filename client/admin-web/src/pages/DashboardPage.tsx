@@ -1,12 +1,13 @@
 import { useState } from "react"
 import { useNavigate } from "react-router-dom"
 import DashboardLayout from "@/components/layout/DashboardLayout"
+import { superAdminNav } from "@/components/layout/superAdminNav"
 import { DataTable, type Column } from "@/components/ui/data-table"
 import { useDebounce } from "@/lib/useDebounce"
 import { Button } from "@/components/ui/button"
 import { ROUTES } from "@/routes/paths"
 import { useGetSchoolsQuery, type SchoolStatus, type SchoolListItem } from "@/features/schools/schoolApi"
-import { School, Users, BarChart3, Search } from "lucide-react"
+import { Search } from "lucide-react"
 
 const FILTERS: { label: string; value: SchoolStatus | "All" }[] = [
     { label: "Pending review", value: "Submitted" },
@@ -84,11 +85,7 @@ export default function DashboardPage() {
     ]
 
     return (
-        <DashboardLayout roleLabel="Super Admin" nav={[
-            { label: "Schools", icon: School, active: true },
-            { label: "Users", icon: Users },
-            { label: "Reports", icon: BarChart3 },
-        ]}>
+        <DashboardLayout roleLabel="Super Admin" nav={superAdminNav("Schools")}>
             <h1 className="text-2xl font-semibold text-slate-800">Schools</h1>
             <p className="mt-1 text-sm text-slate-500">Review, approve, or suspend registered schools.</p>
 
