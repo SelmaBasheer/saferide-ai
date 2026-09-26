@@ -102,3 +102,23 @@ public class Payment : BaseEntity
         UpdatedAtUtc = DateTime.UtcNow;
     }
 }
+
+/// <summary>
+/// The idempotency gate, and the reason it returns a bool rather than
+/// throwing.
+///
+/// Razorpay retries a webhook whenever the response is slow or fails, so
+/// the same payment.captured arrives more than once. The first call moves
+/// the row to Captured and returns true — that caller creates the
+/// subscription. Every later call returns false and creates nothing.
+///
+/// This protects against sequential redelivery, which is what actually
+/// happens. It does not protect against two deliveries being processed at
+/// the same instant: there is no concurrency token on this row, so both
+/// would read Created and both would win. A rowversion would close that,
+/// and is not implemented.
+///
+/// Only an already-captured payment blocks a capture. A failed attempt does
+/// not: Razorpay allows retries on the same order, so failed-then-succeeded
+/// is normal, and the failure webhook often lands first.
+/// </summary>

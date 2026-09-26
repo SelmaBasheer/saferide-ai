@@ -9,19 +9,21 @@ public class SubscriptionRepository(SchoolDbContext context)
     : GenericRepository<Subscription>(context),
         ISubscriptionRepository
 {
-    private static readonly SubscriptionStatus[] Serviceable =
-    [
-        SubscriptionStatus.Active,
-        SubscriptionStatus.InGrace,
-    ];
-
     public Task<Subscription?> GetCurrentForSchoolAsync(
         Guid schoolId,
         CancellationToken ct = default
-    ) =>
-        Set.Where(s => s.SchoolId == schoolId && Serviceable.Contains(s.Status))
+    )
+    {
+        var graceCutoff = DateOnly.FromDateTime(DateTime.UtcNow).AddDays(-Subscription.GraceDays);
+
+        return Set.Where(s =>
+                s.SchoolId == schoolId
+                && s.Status != SubscriptionStatus.Cancelled
+                && s.EndsOn >= graceCutoff
+            )
             .OrderByDescending(s => s.EndsOn)
             .FirstOrDefaultAsync(ct);
+    }
 
     public async Task<(IReadOnlyList<SubscriptionWithSchool>, int)> SearchAsync(
         SubscriptionStatus? status,
@@ -30,10 +32,34 @@ public class SubscriptionRepository(SchoolDbContext context)
         CancellationToken ct = default
     )
     {
-        var query = Set.AsQueryable();
+        var today = DateOnly.FromDateTime(DateTime.UtcNow);
+        var graceCutoff = today.AddDays(-Subscription.GraceDays);
 
-        if (status is not null)
-            query = query.Where(s => s.Status == status);
+        // Only Active and Cancelled are ever stored. The other two are date
+        // arithmetic, so each effective status becomes a condition on EndsOn.
+        // Doing this in SQL rather than after the fact keeps totalCount honest.
+        var query = status switch
+        {
+            SubscriptionStatus.Cancelled => Set.Where(s =>
+                s.Status == SubscriptionStatus.Cancelled
+            ),
+
+            SubscriptionStatus.Active => Set.Where(s =>
+                s.Status != SubscriptionStatus.Cancelled && s.EndsOn >= today
+            ),
+
+            SubscriptionStatus.InGrace => Set.Where(s =>
+                s.Status != SubscriptionStatus.Cancelled
+                && s.EndsOn < today
+                && s.EndsOn >= graceCutoff
+            ),
+
+            SubscriptionStatus.Expired => Set.Where(s =>
+                s.Status != SubscriptionStatus.Cancelled && s.EndsOn < graceCutoff
+            ),
+
+            _ => Set.AsQueryable(),
+        };
 
         var total = await query.CountAsync(ct);
 
@@ -54,10 +80,7 @@ public class SubscriptionRepository(SchoolDbContext context)
         return (items, total);
     }
 
-    public async Task<IReadOnlyList<Subscription>> GetServiceableAsync(
-        CancellationToken ct = default
-    ) => await Set.Where(s => Serviceable.Contains(s.Status)).ToListAsync(ct);
-
+    /// Candidates for a warning: still running, end date not yet passed.
     public async Task<IReadOnlyList<Subscription>> GetEndingOnOrAfterAsync(
         DateOnly date,
         CancellationToken ct = default
@@ -65,6 +88,9 @@ public class SubscriptionRepository(SchoolDbContext context)
         await Set.Where(s => s.Status == SubscriptionStatus.Active && s.EndsOn >= date)
             .ToListAsync(ct);
 
+    /// Candidates for suspension: not cancelled, already past their last day of
+    /// service. Whether the grace period has also run out is date arithmetic
+    /// the entity does.
     public async Task<IReadOnlyList<Subscription>> GetEndedBeforeAsync(
         DateOnly date,
         CancellationToken ct = default

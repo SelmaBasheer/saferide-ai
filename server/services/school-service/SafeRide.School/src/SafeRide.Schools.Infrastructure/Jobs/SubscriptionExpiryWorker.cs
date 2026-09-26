@@ -6,18 +6,21 @@ using SafeRide.Schools.Application.Subscriptions.Command;
 namespace SafeRide.Schools.Infrastructure.Jobs;
 
 /// <summary>
-/// Runs the warning-and-expiry check hourly.
+/// Runs the warning-and-expiry check once a day.
 ///
-/// Hourly rather than daily-at-a-fixed-time because the work is idempotent, and
-/// that removes every question about what happens if the process restarts at
-/// 3am, or which timezone "daily" means. A warning is sent at most once per day
-/// because the subscription records the date it last went out.
+/// Daily rather than hourly because the work is idempotent, so twelve extra
+/// runs a day would only find nothing. A warning is sent at most once per day
+/// regardless, because the subscription records the date it last went out.
 ///
-/// With more than one instance of this service, every instance runs it. Harmless
-/// here — an already-sent warning and an already-suspended school are both
-/// skipped — but a job whose side effects were not idempotent would need a
-/// distributed lock, the way Tracking uses Hangfire for its deviation check.
-/// </summary>
+/// The timer counts 24 hours from process start, so a redeploy moves the time
+/// of day it runs. That does not matter: a school suspended a few hours later
+/// than another has already been a week overdue.
+///
+/// With more than one instance, every instance runs it. Harmless here — an
+/// already-sent warning and an already-suspended school are both skipped — but
+/// a job whose side effects were not idempotent would need a distributed lock,
+/// the way Tracking uses Hangfire for its deviation check.
+/// /// </summary>
 public sealed class SubscriptionExpiryWorker(
     IServiceScopeFactory scopeFactory,
     ILogger<SubscriptionExpiryWorker> logger
@@ -43,9 +46,6 @@ public sealed class SubscriptionExpiryWorker(
     {
         try
         {
-            // A fresh scope each run: the handler is scoped, and a DbContext
-            // held for the lifetime of the process would accumulate every
-            // entity it ever loaded.
             using var scope = scopeFactory.CreateScope();
 
             var handler = scope.ServiceProvider.GetRequiredService<ExpireSubscriptionsHandler>();
@@ -56,6 +56,11 @@ public sealed class SubscriptionExpiryWorker(
                 logger.LogInformation(
                     "Sent {Count} subscription expiry warning(s)",
                     outcome.Warned
+                );
+
+            if (outcome.WarningsFailed)
+                logger.LogError(
+                    "The expiry warning pass failed. Suspensions still ran; warnings will retry tomorrow."
                 );
 
             if (outcome.Suspended.Count > 0)
@@ -71,10 +76,7 @@ public sealed class SubscriptionExpiryWorker(
         }
         catch (Exception ex)
         {
-            // Swallowed on purpose. An unhandled exception here would take the
-            // whole service down, and a database blip should not stop schools
-            // logging in.
-            logger.LogError(ex, "Subscription expiry run failed, will retry next hour");
+            logger.LogError(ex, "Subscription expiry run failed, will retry tomorrow");
         }
     }
 }

@@ -40,7 +40,7 @@ function PlanForm({ plan, onDone }: { plan?: Plan; onDone: () => void }) {
             description: description.trim() || null,
             // Whole rupees only, so the conversion is an integer multiply and no
             // decimal ever exists in JavaScript.
-            priceInPaise: Number.parseInt(rupees, 10) * 100,
+            priceInPaise: Math.round(Number(rupees) * 100),
             busLimit: busLimit.trim() === "" ? null : Number.parseInt(busLimit, 10),
             durationMonths: Number.parseInt(months, 10),
         }

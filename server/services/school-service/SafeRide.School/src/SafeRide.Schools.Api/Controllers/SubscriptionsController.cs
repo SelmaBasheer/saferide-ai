@@ -139,7 +139,9 @@ public class SubscriptionsController(
             return Ok();
         }
 
-        var paymentId = entity.GetProperty("id").GetString() ?? string.Empty;
+        var paymentId = entity.TryGetProperty("id", out var p)
+            ? p.GetString() ?? string.Empty
+            : string.Empty;
         var orderId = entity.TryGetProperty("order_id", out var o) ? o.GetString() : null;
 
         if (string.IsNullOrEmpty(orderId))
@@ -154,14 +156,19 @@ public class SubscriptionsController(
 
         var outcome = await capture.CaptureAsync(orderId, paymentId, ct);
 
-        logger.LogInformation("Webhook for order {OrderId}: {Outcome}", orderId, outcome);
+        if (outcome == CapturePaymentHandler.Outcome.CapturedWithoutSubscription)
+        {
+            // Money taken, nothing sold. Loud, because somebody has to refund it.
+            logger.LogError(
+                "Payment captured for order {OrderId} but no subscription was created",
+                orderId
+            );
+        }
+        else
+        {
+            logger.LogInformation("Webhook for order {OrderId}: {Outcome}", orderId, outcome);
+        }
 
-        // 200 either way. Ignored means we have already dealt with it, and
-        // telling Razorpay otherwise would make it retry something finished.
-        //
-        // An exception, by contrast, escapes and becomes a 500 — which is what
-        // we want for a database blip, because then Razorpay retries and the
-        // idempotency above makes that safe.
         return Ok();
     }
 }

@@ -1,24 +1,13 @@
 using SafeRide.Schools.Application.Abstractions;
 using SafeRide.Schools.Application.Common;
 using SafeRide.Schools.Application.Events;
+using SafeRide.Schools.Domain.Common;
 using SafeRide.Schools.Domain.Entities;
 using SafeRide.Schools.Domain.Enums;
 using SafeRide.Schools.Domain.Repositories;
 
 namespace SafeRide.Schools.Application.Subscriptions.Command;
 
-/// <summary>
-/// Two jobs on one pass: warn schools whose subscription is about to end, and
-/// suspend the ones whose grace period has gone.
-///
-/// The suspension writes no new enforcement. Suspending a school publishes
-/// school-suspended, and Route, Bus and the rest already refuse to work for a
-/// suspended school — so the entire consequence of not paying is one status
-/// change on one row.
-///
-/// Safe to run as often as you like. A warning already sent today is skipped,
-/// and a school already suspended is skipped.
-/// </summary>
 public sealed class ExpireSubscriptionsHandler(
     ISubscriptionRepository subscriptions,
     IGenericRepository<School> schools,
@@ -26,16 +15,33 @@ public sealed class ExpireSubscriptionsHandler(
     IEventPublisher publisher
 )
 {
-    public sealed record Outcome(int Warned, IReadOnlyList<Guid> Suspended);
+    public sealed record Outcome(int Warned, IReadOnlyList<Guid> Suspended, bool WarningsFailed);
 
     public async Task<Outcome> RunAsync(CancellationToken ct)
     {
         var today = DateOnly.FromDateTime(DateTime.UtcNow);
 
-        var warnings = await WarnAsync(today, ct);
+        var warned = 0;
+        var warningsFailed = false;
+
+        // Deliberately isolated. A broker outage during the warning pass must
+        // not postpone suspensions — the two jobs share a schedule, not a fate.
+        try
+        {
+            warned = await WarnAsync(today, ct);
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
+        catch (Exception)
+        {
+            warningsFailed = true;
+        }
+
         var suspended = await SuspendAsync(today, ct);
 
-        return new Outcome(warnings, suspended);
+        return new Outcome(warned, suspended, warningsFailed);
     }
 
     private async Task<int> WarnAsync(DateOnly today, CancellationToken ct)
@@ -103,6 +109,14 @@ public sealed class ExpireSubscriptionsHandler(
             if (subscription.EffectiveStatus(today) != SubscriptionStatus.Expired)
                 continue;
 
+            // The school may have renewed. The old row stays non-cancelled
+            // forever, so without this a paying school would be suspended by
+            // last year's subscription.
+            var current = await subscriptions.GetCurrentForSchoolAsync(subscription.SchoolId, ct);
+
+            if (current is not null)
+                continue;
+
             var school = await schools.GetByIdAsync(subscription.SchoolId, ct);
 
             // Already suspended, rejected, or never approved. Suspend() only
@@ -117,9 +131,6 @@ public sealed class ExpireSubscriptionsHandler(
         if (suspended.Count == 0)
             return [];
 
-        // One save for the batch, then announce. Publishing before the save
-        // would tell five services about a suspension that might not survive
-        // the transaction.
         await unitOfWork.SaveChangesAsync(ct);
 
         foreach (var school in suspended)

@@ -6,14 +6,6 @@ using SafeRide.Schools.Domain.Repositories;
 
 namespace SafeRide.Schools.Application.Subscriptions.Command;
 
-/// <summary>
-/// Turns a captured payment into a subscription.
-///
-/// Called only from the webhook. The browser also learns that the payment
-/// succeeded, and that is deliberately ignored — anyone with devtools open can
-/// fire the browser's success callback without paying. Only a request the
-/// gateway signed counts.
-/// </summary>
 public sealed class CapturePaymentHandler(
     IPaymentRepository payments,
     ISubscriptionPlanRepository plans,
@@ -26,6 +18,14 @@ public sealed class CapturePaymentHandler(
     {
         /// A subscription was created. Only the first delivery gets this.
         Activated,
+
+        /// <summary>
+        /// The money arrived but bought nothing — the school already had a live
+        /// subscription, or the plan has gone. The payment is still recorded,
+        /// because a captured payment that exists nowhere in our database is
+        /// money we took and cannot account for. Somebody has to refund it.
+        /// </summary>
+        CapturedWithoutSubscription,
 
         /// Nothing to do — already captured, or an order we do not know about.
         Ignored,
@@ -44,26 +44,33 @@ public sealed class CapturePaymentHandler(
         if (payment is null)
             return Outcome.Ignored;
 
-        // The idempotency gate. Razorpay retries whenever we are slow or fail,
-        // so this same call arrives more than once; only the first moves the row
-        // out of Created.
+        // Razorpay retries whenever we are slow or fail, so this same call
+        // arrives more than once; only the first moves the row out of Created.
         if (!payment.TryCapture(razorpayPaymentId))
             return Outcome.Ignored;
 
         var plan = await plans.GetByIdAsync(payment.PlanId, ct);
 
         if (plan is null)
-            return Outcome.Ignored;
+        {
+            // Save first. Returning here without saving would leave the capture
+            // only in memory and the row still reading Created — and Razorpay,
+            // having had a 200, would never send it again.
+            await unitOfWork.SaveChangesAsync(ct);
+            return Outcome.CapturedWithoutSubscription;
+        }
 
         var today = DateOnly.FromDateTime(DateTime.UtcNow);
 
-        // Two deliveries arriving at the same instant would both pass the check
-        // above in memory; this is the second line of defence, and the
-        // transaction below is the third.
+        // The school may have been activated offline while this checkout was
+        // open. The money is real either way.
         var existing = await subscriptions.GetCurrentForSchoolAsync(payment.SchoolId, ct);
 
-        if (existing is not null && existing.IsServiceable(today))
-            return Outcome.Ignored;
+        if (existing is not null)
+        {
+            await unitOfWork.SaveChangesAsync(ct);
+            return Outcome.CapturedWithoutSubscription;
+        }
 
         var subscription = Subscription.Start(payment.SchoolId, plan, today);
 
@@ -71,8 +78,7 @@ public sealed class CapturePaymentHandler(
         payment.LinkSubscription(subscription.Id);
 
         // One save, so the capture flag and the subscription are written in the
-        // same transaction. Either both happen or neither does — there is no
-        // state where the payment is marked used but bought nothing.
+        // same transaction. Either both happen or neither does.
         await unitOfWork.SaveChangesAsync(ct);
 
         await publisher.PublishAsync(
