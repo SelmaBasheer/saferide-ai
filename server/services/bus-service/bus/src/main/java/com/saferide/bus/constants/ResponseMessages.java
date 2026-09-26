@@ -21,6 +21,8 @@ public final class ResponseMessages {
     public static final String DOCUMENT_UNREADABLE = "The uploaded file could not be read.";
     public static final String DOCUMENT_EXPIRY_IN_PAST = "The expiry date must be in the future.";
     public static final String BUS_NOT_ACTIVE = "This bus is not active.";
+    public static final String BUS_LIMIT_REACHED =
+            "Your subscription's bus limit has been reached. Upgrade your plan to add more buses.";
 
     private ResponseMessages() {}
 }

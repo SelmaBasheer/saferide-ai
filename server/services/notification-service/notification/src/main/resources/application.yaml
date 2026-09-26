@@ -39,6 +39,7 @@ saferide:
     school-submitted-queue: notification.school-submitted
     school-approved-queue: notification.school-approved
     school-rejected-queue: notification.school-rejected
+    subscription-expiring-queue: notification.subscription-expiring
     ai-exchange: ai.events
     alert-approved-queue: notification.alert-approved
   notification:

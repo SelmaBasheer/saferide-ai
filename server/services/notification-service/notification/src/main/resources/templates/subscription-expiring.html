@@ -1,0 +1,43 @@
+<!doctype html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="utf-8">
+</head>
+<body style="margin:0;padding:24px;background:#f8fafc;font-family:Segoe UI,system-ui,sans-serif;color:#1e293b">
+
+<div style="max-width:560px;margin:0 auto;background:#ffffff;border:1px solid #e2e8f0;border-radius:8px;padding:28px">
+
+    <p style="margin:0 0 4px;font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:#64748b">
+        SafeRide AI
+    </p>
+
+    <h1 style="margin:0 0 16px;font-size:20px;font-weight:600;color:#0f172a">
+        Your subscription ends in
+        <span th:text="${daysRemaining}">3</span> days
+    </h1>
+
+    <p style="margin:0 0 20px;font-size:15px;line-height:1.6;color:#475569">
+        <strong th:text="${schoolName}">Green Valley School</strong> is on the
+        <strong th:text="${planName}">Standard</strong> plan, which ends on
+        <strong th:text="${endsOn}">27 September 2026</strong>.
+    </p>
+
+    <div style="border-left:3px solid #f59e0b;background:#fffbeb;padding:14px 16px;margin:0 0 24px">
+        <p style="margin:0;font-size:14px;line-height:1.6;color:#92400e">
+            Tracking keeps working for seven days after that date. After that,
+            buses, routes and the parent app stop until the subscription is renewed.
+        </p>
+    </div>
+
+    <p style="margin:0;font-size:13px;color:#64748b;line-height:1.6">
+        Renew from the Subscription page in your SafeRide admin console.
+    </p>
+
+</div>
+
+<p style="max-width:560px;margin:16px auto 0;font-size:12px;color:#94a3b8;text-align:center">
+    Sent automatically by SafeRide AI.
+</p>
+
+</body>
+</html>

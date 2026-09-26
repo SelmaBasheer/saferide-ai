@@ -1,9 +1,26 @@
-import { School, Bus as BusIcon, Route as RouteIcon, Users, ClipboardList, History, Bell } from "lucide-react"
+import {
+    School,
+    Bus as BusIcon,
+    Route as RouteIcon,
+    Users,
+    ClipboardList,
+    History,
+    Bell,
+    CreditCard,
+} from "lucide-react"
 import { ROUTES } from "@/routes/paths"
 import type { NavItem } from "@/components/layout/DashboardLayout"
 
 export function schoolAdminNav(
-    active: "Overview" | "Drivers" | "Students" | "Buses" | "Routes" | "Trips" | "Alerts"
+    active:
+        | "Overview"
+        | "Drivers"
+        | "Students"
+        | "Buses"
+        | "Routes"
+        | "Trips"
+        | "Alerts"
+        | "Subscription"
 ): NavItem[] {
     return [
         { label: "Overview", icon: School, to: ROUTES.schoolAdmin, active: active === "Overview" },
@@ -13,5 +30,6 @@ export function schoolAdminNav(
         { label: "Students", icon: ClipboardList, to: ROUTES.schoolStudents, active: active === "Students" },
         { label: "Trips", icon: History, to: ROUTES.schoolTrips, active: active === "Trips" },
         { label: "Alerts", icon: Bell, to: ROUTES.schoolAlerts, active: active === "Alerts" },
+        { label: "Subscription", icon: CreditCard, to: ROUTES.schoolSubscription, active: active === "Subscription" },
     ]
 }

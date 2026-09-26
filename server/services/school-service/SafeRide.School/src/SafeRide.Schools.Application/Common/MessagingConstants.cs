@@ -18,4 +18,7 @@ public static class MessagingConstants
 
     // queues owned by this service
     public const string IdentityEventsQueue = "school.identity-events";
+
+    public const string SchoolSubscriptionChangedKey = "school-subscription-changed";
+    public const string SubscriptionExpiringKey = "subscription-expiring";
 }

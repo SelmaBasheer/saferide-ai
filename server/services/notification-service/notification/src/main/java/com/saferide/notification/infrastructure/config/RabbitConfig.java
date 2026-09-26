@@ -3,6 +3,8 @@ package com.saferide.notification.infrastructure.config;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.MapperFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.SerializationFeature;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import org.springframework.amqp.core.Binding;
 import org.springframework.amqp.core.BindingBuilder;
 import org.springframework.amqp.core.Queue;
@@ -44,6 +46,9 @@ public class RabbitConfig {
 
     @Value("${saferide.rabbitmq.alert-approved-queue}")
     String alertApprovedQueue;
+
+    @Value("${saferide.rabbitmq.subscription-expiring-queue}")
+    String subscriptionExpiringQueue;
 
     // ---------- exchanges ----------
     @Bean
@@ -187,8 +192,34 @@ public class RabbitConfig {
     }
 
     @Bean
+    Queue subscriptionExpiringQueue() {
+        return queueWithDlq(subscriptionExpiringQueue);
+    }
+
+    @Bean
+    Queue subscriptionExpiringDlq() {
+        return QueueBuilder.durable(subscriptionExpiringQueue + ".dlq").build();
+    }
+
+    @Bean
+    Binding subscriptionExpiringBinding() {
+        return BindingBuilder.bind(subscriptionExpiringQueue())
+                .to(schoolEventsExchange())
+                .with("subscription-expiring");
+    }
+
+    @Bean
+    Binding subscriptionExpiringDlqBinding() {
+        return BindingBuilder.bind(subscriptionExpiringDlq())
+                .to(deadLetterExchange())
+                .with(subscriptionExpiringQueue);
+    }
+
+    @Bean
     Jackson2JsonMessageConverter jsonConverter() {
         ObjectMapper m = new ObjectMapper();
+        m.registerModule(new JavaTimeModule()); // LocalDate, Instant and friends
+        m.disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS); // ISO-8601 strings, not epoch numbers
         m.configure(MapperFeature.ACCEPT_CASE_INSENSITIVE_PROPERTIES, true);
         m.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
         return new Jackson2JsonMessageConverter(m);

@@ -25,7 +25,7 @@ public class RabbitConfig {
     @Value("${saferide.rabbitmq.bus-exchange}")
     String busExchange;
 
-    @Value("${saferide" + ".rabbitmq.school-exchange}")
+    @Value("${saferide.rabbitmq.school-exchange}")
     String schoolExchange;
 
     @Value("${saferide.rabbitmq.school-events-queue}")
@@ -76,6 +76,14 @@ public class RabbitConfig {
         return BindingBuilder.bind(schoolEventsQueueBean())
                 .to(schoolEventsExchange())
                 .with("school-suspended");
+    }
+
+    /** Same queue as the other school events — the listener branches on the key. */
+    @Bean
+    Binding schoolSubscriptionChangedBinding() {
+        return BindingBuilder.bind(schoolEventsQueueBean())
+                .to(schoolEventsExchange())
+                .with("school-subscription-changed");
     }
 
     @Bean
