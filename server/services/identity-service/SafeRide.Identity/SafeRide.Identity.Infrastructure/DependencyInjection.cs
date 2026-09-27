@@ -9,6 +9,7 @@ using SafeRide.Identity.Infrastructure.Persistence;
 using SafeRide.Identity.Infrastructure.Persistence.Repositories;
 using SafeRide.Identity.Infrastructure.Persistence.Seed;
 using SafeRide.Identity.Infrastructure.Security;
+using SafeRide.Identity.Infrastructure.Storage;
 
 namespace SafeRide.Identity.Infrastructure;
 
@@ -44,6 +45,7 @@ public static class DependencyInjection
 
         services.AddHostedService<InvitationEventsConsumer>();
         services.AddHostedService<OtpCleanupService>();
+        services.AddSingleton<IFileStorage, AzureBlobFileStorage>();
 
         return services;
     }

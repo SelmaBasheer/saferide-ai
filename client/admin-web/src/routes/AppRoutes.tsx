@@ -19,7 +19,7 @@ import DriverHomePage from "@/pages/driver/DriverHomePage"
 import DriverTripPage from "@/pages/driver/DriverTripPage"
 import ParentHomePage from "@/pages/parent/ParentHomePage"
 import ParentTripPage from "@/pages/parent/ParentTripPage"
-import { Users } from "lucide-react"
+import { Users, UserCircle } from "lucide-react"
 import ParentChildrenPage from "@/pages/parent/ParentChildrenPage"
 import BusesPage from "@/pages/BusesPage"
 import BusDetailPage from "@/pages/BusDetailPage"
@@ -33,6 +33,9 @@ import SubscriptionPage from "@/pages/SubscriptionPage"
 import SuperAdminOverviewPage from "@/pages/SuperAdminOverviewPage"
 import SuperAdminPlansPage from "@/pages/SuperAdminPlansPage"
 import SuperAdminSubscriptionsPage from "@/pages/SuperAdminSubscriptionsPage"
+import SchoolAdminProfilePage from "@/pages/SchoolAdminProfilePage"
+import SuperAdminProfilePage from "@/pages/SuperAdminProfilePage"
+import MobileProfilePage from "@/pages/MobileProfilePage"
 
 export default function AppRoutes() {
     return (
@@ -66,20 +69,31 @@ export default function AppRoutes() {
             <Route path={ROUTES.schoolBusDetail} element={
                 <ProtectedRoute roles={["SchoolAdmin"]}><BusDetailPage /></ProtectedRoute>} />
             <Route element={
-                <ProtectedRoute roles={["Driver"]}><MobileLayout tripsPath={ROUTES.driverTrips} /></ProtectedRoute>}>
+                <ProtectedRoute roles={["Driver"]}>
+                    <MobileLayout
+                        tripsPath={ROUTES.driverTrips}
+                        items={[{ label: "Profile", icon: UserCircle, to: ROUTES.driverProfile }]}
+                    />
+                </ProtectedRoute>}>
                 <Route path={ROUTES.driver} element={<DriverHomePage />} />
+                <Route path={ROUTES.driverProfile} element={<MobileProfilePage />} />
                 <Route path={ROUTES.driverTrip} element={<DriverTripPage />} />
                 <Route path={ROUTES.driverTrips} element={<MobileTripsPage title="Past trips" homePath={ROUTES.driver} detailPath={ROUTES.driverTrip} />} />
             </Route>
+
             <Route element={
                 <ProtectedRoute roles={["Parent"]}>
                     <MobileLayout
                         tripsPath={ROUTES.parentTrips}
-                        items={[{ label: "Your children", icon: Users, to: ROUTES.parentChildren }]}
+                        items={[
+                            { label: "Your children", icon: Users, to: ROUTES.parentChildren },
+                            { label: "Profile", icon: UserCircle, to: ROUTES.parentProfile },
+                        ]}
                     />
                 </ProtectedRoute>}>
                 <Route path={ROUTES.parent} element={<ParentHomePage />} />
                 <Route path={ROUTES.parentChildren} element={<ParentChildrenPage />} />
+                <Route path={ROUTES.parentProfile} element={<MobileProfilePage />} />
                 <Route path={ROUTES.parentTrip} element={<ParentTripPage />} />
                 <Route path={ROUTES.parentTrips} element={<MobileTripsPage title="Past trips" homePath={ROUTES.parent} detailPath={ROUTES.parentTrip} />} />
             </Route>
@@ -95,6 +109,10 @@ export default function AppRoutes() {
                 <ProtectedRoute roles={["SchoolAdmin"]}><AlertsPage /></ProtectedRoute>} />
             <Route path={ROUTES.schoolSubscription} element={
                 <ProtectedRoute roles={["SchoolAdmin"]}><SubscriptionPage /></ProtectedRoute>} />
+            <Route path={ROUTES.superAdminProfile} element={
+                <ProtectedRoute roles={["SuperAdmin"]}><SuperAdminProfilePage /></ProtectedRoute>} />
+            <Route path={ROUTES.schoolProfile} element={
+                <ProtectedRoute roles={["SchoolAdmin"]}><SchoolAdminProfilePage /></ProtectedRoute>} />
         </Routes>
     )
 }

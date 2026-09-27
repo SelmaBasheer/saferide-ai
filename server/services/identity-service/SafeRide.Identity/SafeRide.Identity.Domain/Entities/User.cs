@@ -19,6 +19,9 @@ public class User
     public DateTime? LastLoginAt { get; private set; }
     public bool MustChangePassword { get; private set; }
 
+    /// The key in blob storage. Never a URL, and never shown to a user.
+    public string? PhotoBlobName { get; private set; }
+
     private User() { }
 
     public static User RegisterSchoolAdmin(
@@ -129,6 +132,31 @@ public class User
     {
         PasswordHash = newPasswordHash;
         MustChangePassword = false; // invitation completed / password now user-chosen
+        UpdatedAtUtc = DateTime.UtcNow;
+    }
+
+    /// <summary>
+    /// Email is deliberately not here. Changing it needs re-verification, and a
+    /// student record stores the parent's email as the link to their children —
+    /// so a silent change would quietly disconnect a family.
+    /// </summary>
+    public void UpdateProfile(string firstName, string lastName, Phone phone)
+    {
+        FirstName = firstName.Trim();
+        LastName = lastName.Trim();
+        Phone = phone;
+        UpdatedAtUtc = DateTime.UtcNow;
+    }
+
+    public void SetPhoto(string blobName)
+    {
+        PhotoBlobName = blobName;
+        UpdatedAtUtc = DateTime.UtcNow;
+    }
+
+    public void ClearPhoto()
+    {
+        PhotoBlobName = null;
         UpdatedAtUtc = DateTime.UtcNow;
     }
 }

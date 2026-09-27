@@ -29,4 +29,14 @@ public static class AuthErrors
         "Auth.OtpAttemptsExhausted",
         "Too many incorrect attempts. Please request a new code."
     );
+
+    public static readonly Error UserNotFound = new(
+        "Auth.UserNotFound",
+        "Your account could not be found."
+    );
+
+    public static readonly Error IncorrectPassword = new(
+        "Auth.IncorrectPassword",
+        "Your current password is not correct."
+    );
 }
