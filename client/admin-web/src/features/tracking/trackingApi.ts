@@ -27,6 +27,7 @@ export interface TripRosterEntry {
     pickupStopId: string
     boardingStatus: BoardingStatus
     markedAt: string | null
+    onLeave: boolean
 }
 
 export interface LastPosition {

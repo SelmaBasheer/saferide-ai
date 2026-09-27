@@ -6,6 +6,7 @@ import javax.crypto.spec.SecretKeySpec;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
@@ -72,6 +73,12 @@ public class SecurityConfig {
                                 .permitAll()
                                 .requestMatchers("/api/students/roster")
                                 .hasAnyRole("SchoolAdmin", "Driver")
+                                .requestMatchers(HttpMethod.GET, "/api/students/mine")
+                                .hasRole("Parent")
+                                .requestMatchers(HttpMethod.POST, "/api/students/*/leave")
+                                .hasRole("Parent")
+                                .requestMatchers(HttpMethod.DELETE, "/api/students/*/leave/**")
+                                .hasRole("Parent")
                                 .requestMatchers("/api/students/**")
                                 .hasRole("SchoolAdmin")
                                 .anyRequest()

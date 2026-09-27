@@ -18,7 +18,8 @@ public sealed record TripRosterResponse(
     string Name,
     Guid PickupStopId,
     string BoardingStatus,
-    DateTime? MarkedAt
+    DateTime? MarkedAt,
+    bool OnLeave
 );
 
 public sealed record LastPositionResponse(

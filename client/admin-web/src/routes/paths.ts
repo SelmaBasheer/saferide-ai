@@ -23,6 +23,7 @@ export const ROUTES = {
     parent: "/parent",
     parentTrip: "/parent/trip/:id",
     parentTrips: "/parent/trips",
+    parentChildren: "/parent/children",
 
     // school admin (web)
     schoolFleet: "/school-admin/fleet",

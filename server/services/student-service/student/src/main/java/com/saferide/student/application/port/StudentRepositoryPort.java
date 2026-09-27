@@ -17,4 +17,6 @@ public interface StudentRepositoryPort {
     Optional<Student> findByIdAndSchoolId(UUID id, UUID schoolId);
 
     List<Student> findRoster(UUID schoolId, UUID routeId);
+
+    List<Student> findByParentEmail(String parentEmail);
 }

@@ -7,7 +7,8 @@ public sealed record RosterEntryDto(
     string FirstName,
     string LastName,
     string ParentEmail,
-    Guid PickupStopId
+    Guid PickupStopId,
+    bool OnLeaveToday
 );
 
 public sealed class StudentClient(HttpClient http)

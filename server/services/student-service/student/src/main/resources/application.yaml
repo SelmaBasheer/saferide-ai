@@ -13,10 +13,10 @@ spring:
       ddl-auto: update
     open-in-view: false
   rabbitmq:
-    host: ${SPRING_RABBITMQ_HOST}
-    port: 5672
+    host: ${SPRING_RABBITMQ_HOST:localhost}
+    port: ${SPRING_RABBITMQ_PORT:5672}
     username: ${SPRING_RABBITMQ_USERNAME:saferide}
-    password: ${SPRING_RABBITMQ_PASSWORD:password}
+    password: ${SPRING_RABBITMQ_PASSWORD}
     listener:
       simple:
         default-requeue-rejected: false
