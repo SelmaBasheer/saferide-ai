@@ -3,6 +3,7 @@ using Microsoft.Extensions.DependencyInjection;
 using SafeRide.Identity.Application.Auth.Invite;
 using SafeRide.Identity.Application.Auth.Login;
 using SafeRide.Identity.Application.Auth.Password;
+using SafeRide.Identity.Application.Auth.Profile;
 using SafeRide.Identity.Application.Auth.Refresh;
 using SafeRide.Identity.Application.Auth.Register;
 using SafeRide.Identity.Application.Auth.Verify;
@@ -24,6 +25,10 @@ public static class DependencyInjection
         services.AddScoped<ResetPasswordHandler>();
 
         services.AddScoped<InviteUserHandler>();
+        services.AddScoped<GetProfileHandler>();
+        services.AddScoped<UpdateProfileHandler>();
+        services.AddScoped<ChangePasswordHandler>();
+        services.AddScoped<ProfilePhotoHandler>();
 
         return services;
     }

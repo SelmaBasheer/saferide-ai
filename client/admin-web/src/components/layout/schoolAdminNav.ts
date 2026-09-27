@@ -7,6 +7,7 @@ import {
     History,
     Bell,
     CreditCard,
+    UserCircle
 } from "lucide-react"
 import { ROUTES } from "@/routes/paths"
 import type { NavItem } from "@/components/layout/DashboardLayout"
@@ -21,6 +22,7 @@ export function schoolAdminNav(
         | "Trips"
         | "Alerts"
         | "Subscription"
+        | "Profile"
 ): NavItem[] {
     return [
         { label: "Overview", icon: School, to: ROUTES.schoolAdmin, active: active === "Overview" },
@@ -31,5 +33,6 @@ export function schoolAdminNav(
         { label: "Trips", icon: History, to: ROUTES.schoolTrips, active: active === "Trips" },
         { label: "Alerts", icon: Bell, to: ROUTES.schoolAlerts, active: active === "Alerts" },
         { label: "Subscription", icon: CreditCard, to: ROUTES.schoolSubscription, active: active === "Subscription" },
+        { label: "Profile", icon: UserCircle, to: ROUTES.schoolProfile, active: active === "Profile" },
     ]
 }

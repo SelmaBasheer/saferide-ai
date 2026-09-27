@@ -36,4 +36,10 @@ export const ROUTES = {
     schoolTripDetail: "/school-admin/trips/:id",
     schoolAlerts: "/school-admin/alerts",
     schoolSubscription: "/school-admin/subscription",
+
+    // profile settings
+    superAdminProfile: "/super-admin/profile",
+    schoolProfile: "/school-admin/profile",
+    driverProfile: "/driver/profile",
+    parentProfile: "/parent/profile",
 } as const
