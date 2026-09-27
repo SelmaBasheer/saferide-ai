@@ -46,4 +46,11 @@ public class StudentRepositoryAdapter implements StudentRepositoryPort {
     public List<Student> findRoster(UUID schoolId, UUID routeId) {
         return jpa.findBySchoolIdAndRouteIdAndStatus(schoolId, routeId, StudentStatus.ACTIVE);
     }
+
+    @Override
+    public List<Student> findByParentEmail(String parentEmail) {
+        // Active only — a withdrawn child should not appear in a parent's list,
+        // and they certainly should not be able to mark leave for one.
+        return jpa.findByParentEmailAndStatusOrderByFirstNameAsc(parentEmail, StudentStatus.ACTIVE);
+    }
 }

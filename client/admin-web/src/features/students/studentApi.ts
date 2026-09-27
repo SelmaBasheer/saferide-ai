@@ -43,6 +43,17 @@ export interface StudentsQueryArgs {
     pageSize: number
 }
 
+export interface MyChild {
+    id: string
+    firstName: string
+    lastName: string
+    grade: string
+    routeId: string | null
+    pickupStopId: string | null
+    /** ISO dates, today onwards. */
+    upcomingLeaves: string[]
+}
+
 export const studentApi = baseApi.injectEndpoints({
     endpoints: (builder) => ({
         getStudents: builder.query<PagedResult<StudentListItem>, StudentsQueryArgs>({
@@ -71,6 +82,29 @@ export const studentApi = baseApi.injectEndpoints({
             transformResponse: (r: ApiResponse<StudentListItem>) => r.data,
             invalidatesTags: (_result, _error, { id }) => ["Students", { type: "Students", id }],
         }),
+
+        getMyChildren: builder.query<MyChild[], void>({
+            query: () => ({ url: "/students/mine" }),
+            transformResponse: (r: ApiResponse<MyChild[]>) => r.data,
+            providesTags: ["Students"],
+        }),
+
+        markLeave: builder.mutation<void, { studentId: string; date: string; reason?: string }>({
+            query: ({ studentId, ...body }) => ({
+                url: `/students/${studentId}/leave`,
+                method: "POST",
+                body,
+            }),
+            invalidatesTags: ["Students"],
+        }),
+
+        cancelLeave: builder.mutation<void, { studentId: string; date: string }>({
+            query: ({ studentId, date }) => ({
+                url: `/students/${studentId}/leave/${date}`,
+                method: "DELETE",
+            }),
+            invalidatesTags: ["Students"],
+        }),
     }),
 })
 
@@ -79,4 +113,7 @@ export const {
     useGetStudentQuery,
     useCreateStudentMutation,
     useAssignStudentRouteMutation,
+    useGetMyChildrenQuery,
+    useMarkLeaveMutation,
+    useCancelLeaveMutation
 } = studentApi

@@ -14,4 +14,5 @@ public sealed class RosterEntry
     public BoardingStatus BoardingStatus { get; set; } = BoardingStatus.Unmarked;
     public DateTime? MarkedAt { get; set; }
     public Guid? MarkedBy { get; set; }
+    public bool OnLeave { get; set; }
 }

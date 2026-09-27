@@ -15,4 +15,6 @@ public interface StudentJpaRepository extends JpaRepository<Student, UUID>, JpaS
     Optional<Student> findByIdAndSchoolId(UUID id, UUID schoolId);
 
     List<Student> findBySchoolIdAndRouteIdAndStatus(UUID schoolId, UUID routeId, StudentStatus status);
+
+    List<Student> findByParentEmailAndStatusOrderByFirstNameAsc(String parentEmail, StudentStatus status);
 }

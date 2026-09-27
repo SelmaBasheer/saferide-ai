@@ -137,14 +137,27 @@ export function useTrackingHub(handlers: TrackingHandlers) {
         }
     }, [token])
 
-    const joinTrip = useCallback((tripId: string) => connectionRef.current?.invoke("JoinTrip", tripId), [])
-    const leaveTrip = useCallback((tripId: string) => connectionRef.current?.invoke("LeaveTrip", tripId), [])
-    const joinFleet = useCallback(() => connectionRef.current?.invoke("JoinSchoolFleet"), [])
+    const invokeIfConnected = useCallback((method: string, ...args: unknown[]) => {
+        const connection = connectionRef.current
+
+        // The connection can be mid-negotiation or already stopping — React's
+        // strict mode mounts twice in development, and a driver closing the app
+        // does the same thing in production.
+        if (connection?.state !== signalR.HubConnectionState.Connected) {
+            return Promise.resolve()
+        }
+
+        return connection.invoke(method, ...args)
+    }, [])
+
+    const joinTrip = useCallback((tripId: string) => invokeIfConnected("JoinTrip", tripId), [invokeIfConnected])
+    const leaveTrip = useCallback((tripId: string) => invokeIfConnected("LeaveTrip", tripId), [invokeIfConnected])
+    const joinFleet = useCallback(() => invokeIfConnected("JoinSchoolFleet"), [invokeIfConnected])
 
     const sendPosition = useCallback(
         (tripId: string, latitude: number, longitude: number, speedKmh: number | null, source: string) =>
-            connectionRef.current?.invoke("SendPosition", tripId, latitude, longitude, speedKmh, source),
-        []
+            invokeIfConnected("SendPosition", tripId, latitude, longitude, speedKmh, source),
+        [invokeIfConnected]
     )
 
     return { status, joinTrip, leaveTrip, joinFleet, sendPosition }

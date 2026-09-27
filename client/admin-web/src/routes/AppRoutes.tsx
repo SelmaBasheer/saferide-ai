@@ -19,6 +19,8 @@ import DriverHomePage from "@/pages/driver/DriverHomePage"
 import DriverTripPage from "@/pages/driver/DriverTripPage"
 import ParentHomePage from "@/pages/parent/ParentHomePage"
 import ParentTripPage from "@/pages/parent/ParentTripPage"
+import { Users } from "lucide-react"
+import ParentChildrenPage from "@/pages/parent/ParentChildrenPage"
 import BusesPage from "@/pages/BusesPage"
 import BusDetailPage from "@/pages/BusDetailPage"
 import RoutesPage from "@/pages/RoutesPage"
@@ -70,8 +72,14 @@ export default function AppRoutes() {
                 <Route path={ROUTES.driverTrips} element={<MobileTripsPage title="Past trips" homePath={ROUTES.driver} detailPath={ROUTES.driverTrip} />} />
             </Route>
             <Route element={
-                <ProtectedRoute roles={["Parent"]}><MobileLayout tripsPath={ROUTES.parentTrips} /></ProtectedRoute>}>
+                <ProtectedRoute roles={["Parent"]}>
+                    <MobileLayout
+                        tripsPath={ROUTES.parentTrips}
+                        items={[{ label: "Your children", icon: Users, to: ROUTES.parentChildren }]}
+                    />
+                </ProtectedRoute>}>
                 <Route path={ROUTES.parent} element={<ParentHomePage />} />
+                <Route path={ROUTES.parentChildren} element={<ParentChildrenPage />} />
                 <Route path={ROUTES.parentTrip} element={<ParentTripPage />} />
                 <Route path={ROUTES.parentTrips} element={<MobileTripsPage title="Past trips" homePath={ROUTES.parent} detailPath={ROUTES.parentTrip} />} />
             </Route>

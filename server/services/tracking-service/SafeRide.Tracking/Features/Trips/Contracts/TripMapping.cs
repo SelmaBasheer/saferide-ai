@@ -46,7 +46,8 @@ public static class TripMapping
                     r.Name,
                     r.PickupStopId,
                     r.BoardingStatus.ToString(),
-                    r.MarkedAt
+                    r.MarkedAt,
+                    r.OnLeave
                 )),
             ],
             trip.LastPosition is null

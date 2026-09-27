@@ -377,9 +377,21 @@ export default function DriverTripPage() {
 
                             {students.map((s) => (
                                 <div key={s.studentId} className="flex items-center gap-2 py-1 pl-8">
-                                    <span className="flex-1 text-sm">{s.name}</span>
+                                    <span
+                                        className={`flex-1 text-sm ${s.onLeave ? "text-slate-400" : ""}`}
+                                    >
+                                        {s.name}
+                                    </span>
 
-                                    {s.boardingStatus !== "Unmarked" ? (
+                                    {/* Checked before boardingStatus, which is already
+                                        Absent for these children. "Absent" reads as a
+                                        child who failed to turn up; the driver needs to
+                                        know this one was expected to be away. */}
+                                    {s.onLeave ? (
+                                        <span className="rounded bg-sky-50 px-2 py-0.5 text-xs font-medium text-sky-700">
+                                            On leave
+                                        </span>
+                                    ) : s.boardingStatus !== "Unmarked" ? (
                                         <span
                                             className={`text-xs font-medium ${s.boardingStatus === "Boarded"
                                                 ? "text-emerald-600"

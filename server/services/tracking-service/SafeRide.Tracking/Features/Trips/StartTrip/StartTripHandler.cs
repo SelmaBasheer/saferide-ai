@@ -121,6 +121,11 @@ public sealed class StartTripHandler(
                 Name = $"{r.FirstName} {r.LastName}".Trim(),
                 ParentEmail = r.ParentEmail.ToLowerInvariant(),
                 PickupStopId = r.PickupStopId,
+                OnLeave = r.OnLeaveToday,
+                // Settled before the trip begins,so the driver never has to
+                // account for them and UnmarkedCount means "children we are
+                // still waiting for" rather than "children unaccounted for".
+                BoardingStatus = r.OnLeaveToday ? BoardingStatus.Absent : BoardingStatus.Unmarked,
             })
             .ToList();
 
