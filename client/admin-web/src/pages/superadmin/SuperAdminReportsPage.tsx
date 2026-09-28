@@ -55,21 +55,17 @@ export default function SuperAdminReportsPage() {
     const [download, { isLoading: isDownloading, error: downloadError, reset }] =
         useDownloadSuperAdminReportMutation()
 
-    const save = async () => {
+    const save = async (format: "csv" | "pdf") => {
         try {
-            const blob = await download({ ...range, format: "csv" }).unwrap()
+            const blob = await download({ ...range, format }).unwrap()
 
             const url = URL.createObjectURL(blob)
             const link = document.createElement("a")
             link.href = url
-            link.download = `saferide-platform-${range.from}-to-${range.to}.csv`
+            link.download = `saferide-platform-${range.from}-to-${range.to}.${format}`
             link.click()
 
-            // Revoke, or the blob stays in memory until the tab closes.
             URL.revokeObjectURL(url)
-
-            // The file is on disk; nothing should still be holding it in the
-            // RTK Query cache either.
             reset()
         } catch {
             // Shown below.
@@ -124,10 +120,20 @@ export default function SuperAdminReportsPage() {
                     type="button"
                     variant="outline"
                     disabled={!data || isDownloading}
-                    onClick={save}
+                    onClick={() => save("csv")}
                 >
                     <Download className="mr-1 h-4 w-4" />
-                    {isDownloading ? "Preparing…" : "Download CSV"}
+                    CSV
+                </Button>
+
+                <Button
+                    type="button"
+                    variant="outline"
+                    disabled={!data || isDownloading}
+                    onClick={() => save("pdf")}
+                >
+                    <Download className="mr-1 h-4 w-4" />
+                    PDF
                 </Button>
             </form>
 

@@ -48,14 +48,6 @@ export interface SuperAdminReport {
     plans: PlanReportRow[]
 }
 
-/** Paise are integers everywhere; rupees exist only at the moment of display. */
-export function formatRupees(paise: number): string {
-    return new Intl.NumberFormat("en-IN", {
-        style: "currency",
-        currency: "INR",
-        maximumFractionDigits: 0,
-    }).format(paise / 100)
-}
 
 export const reportsApi = baseApi.injectEndpoints({
     endpoints: (builder) => ({

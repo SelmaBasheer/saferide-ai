@@ -55,6 +55,10 @@ builder.Services.AddProblemDetails();
 // as a 500 on the first report someone runs.
 DatabaseMigrator.Run(builder.Configuration);
 
+// QuestPDF is free under the Community licence below the revenue threshold, but
+// it refuses to render until the choice is stated explicitly.
+QuestPDF.Settings.License = QuestPDF.Infrastructure.LicenseType.Community;
+
 var app = builder.Build();
 
 if (app.Environment.IsDevelopment())

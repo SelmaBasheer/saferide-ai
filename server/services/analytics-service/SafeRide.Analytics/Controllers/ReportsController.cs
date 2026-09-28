@@ -39,9 +39,15 @@ public sealed class ReportsController(SuperAdminReportService superAdmin) : Cont
             return File(bytes, "text/csv", FileName(range, "csv"));
         }
 
+        if (string.Equals(format, "pdf", StringComparison.OrdinalIgnoreCase))
+        {
+            var pdf = SuperAdminReportPdf.Render(report);
+            return File(pdf, "application/pdf", FileName(range, "pdf"));
+        }
+
         throw AppException.BadRequest(
             "Report.UnknownFormat",
-            "Supported formats are json and csv."
+            "Supported formats are json, csv and pdf."
         );
     }
 
