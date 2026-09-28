@@ -6,6 +6,7 @@ using Microsoft.Extensions.Options;
 using SafeRide.Schools.Application.Abstractions;
 using SafeRide.Schools.Domain.Repositories;
 using SafeRide.Schools.Infrastructure.Jobs;
+using SafeRide.Schools.Infrastructure.Maintenance;
 using SafeRide.Schools.Infrastructure.Messaging;
 using SafeRide.Schools.Infrastructure.Payments;
 using SafeRide.Schools.Infrastructure.Persistence;
@@ -71,6 +72,7 @@ public static class DependencyInjection
         services.AddScoped<ISubscriptionRepository, SubscriptionRepository>();
         services.AddHostedService<SubscriptionExpiryWorker>();
         services.AddScoped<IPaymentRepository, PaymentRepository>();
+        services.AddScoped<IEventReplayer, EventReplayer>();
         services.AddScoped<IUnitOfWork, UnitOfWork>();
 
         return services;
