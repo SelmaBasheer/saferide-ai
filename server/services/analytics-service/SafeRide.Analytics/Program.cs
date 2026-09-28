@@ -5,6 +5,7 @@ using SafeRide.Analytics.Data.Repositories;
 using SafeRide.Analytics.Extensions;
 using SafeRide.Analytics.Messaging;
 using SafeRide.Analytics.Middleware;
+using SafeRide.Analytics.Services;
 using Serilog;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -28,12 +29,18 @@ builder.Services.AddHttpContextAccessor();
 // No AutoMapper. Dapper projects query results straight onto the report DTOs,
 // so a mapping layer would sit between two shapes that are already identical.
 builder.Services.AddSingleton<IDbConnectionFactory, SqlConnectionFactory>();
+builder.Services.AddSingleton<LocalDates>();
 
 builder.Services.Configure<RabbitMqSettings>(
     builder.Configuration.GetSection(RabbitMqSettings.SectionName)
 );
+
 builder.Services.AddScoped<IBusDimensionRepository, BusDimensionRepository>();
+builder.Services.AddScoped<ISchoolDimensionRepository, SchoolDimensionRepository>();
+builder.Services.AddScoped<IPaymentFactRepository, PaymentFactRepository>();
+
 builder.Services.AddHostedService<BusEventsConsumer>();
+builder.Services.AddHostedService<SchoolEventsConsumer>();
 
 builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
 builder.Services.AddProblemDetails();

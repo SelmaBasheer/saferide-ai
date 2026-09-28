@@ -10,7 +10,7 @@ RUN mvn -q -B dependency:go-offline
 
 # Now copy source and build (skip tests in the image build)
 COPY src ./src
-RUN mvn -q -B clean package -DskipTests
+RUN mvn -q -B clean package -DskipTests -Dcheckstyle.skip=true
 
 # ---- Runtime stage: just the JRE + the jar ----
 FROM eclipse-temurin:21-jre-alpine

@@ -75,19 +75,14 @@ public sealed class BusEventsConsumer(
         consumer.ReceivedAsync += async (_, ea) =>
         {
             var json = Encoding.UTF8.GetString(ea.Body.ToArray());
-            try
-            {
-                await HandleAsync(ea.RoutingKey, json, stoppingToken);
-                await _channel.BasicAckAsync(ea.DeliveryTag, false, stoppingToken);
-            }
-            catch (Exception ex)
-            {
-                // Dead-letter rather than requeue. A message this consumer cannot
-                // parse will not parse the second time either, and requeuing it
-                // spins forever while blocking everything behind it.
-                logger.LogError(ex, "Failed to project bus event {RoutingKey}", ea.RoutingKey);
-                await _channel.BasicNackAsync(ea.DeliveryTag, false, requeue: false, stoppingToken);
-            }
+
+            await MessageRetry.ExecuteAsync(
+                _channel!,
+                ea,
+                logger,
+                () => HandleAsync(ea.RoutingKey, json, stoppingToken),
+                stoppingToken
+            );
         };
 
         await _channel.BasicConsumeAsync(
@@ -118,11 +113,12 @@ public sealed class BusEventsConsumer(
         }
 
         // A default timestamp means a property didn't bind — almost always a
-        // field-name mismatch with the publishing service. Fail with something
-        // that says so, rather than letting SQL complain about the year 1.
+        // field name that has drifted from the publisher. JsonException rather
+        // than a generic one on purpose: this is broken for good, so the retry
+        // policy dead-letters it immediately instead of trying four times.
         if (row.EventAtUtc == default)
         {
-            throw new InvalidOperationException(
+            throw new JsonException(
                 $"Event timestamp did not deserialise for {routingKey}. Payload: {json}"
             );
         }

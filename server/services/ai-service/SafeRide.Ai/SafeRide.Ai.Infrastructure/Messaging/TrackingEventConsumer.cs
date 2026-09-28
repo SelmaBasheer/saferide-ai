@@ -23,7 +23,7 @@ public sealed class TrackingEventConsumer(
 {
     private const string DeadLetterExchange = "saferide.dlx";
 
-    private const int MaxAttempts = 3;
+    private const int MaxAttempts = 4;
 
     /// Every routing key this service knows how to turn into an anomaly. Adding a
     /// detector means adding a key here and a case in Parse — nothing else in the
@@ -34,13 +34,11 @@ public sealed class TrackingEventConsumer(
         TrackingRoutingKeys.StopsSkipped,
     ];
 
-    /// Short and increasing. Long enough for a connection blip or a database
-    /// failover, short enough that one bad message cannot block the queue.
-    private static readonly TimeSpan[] RetryDelays =
-    [
-        TimeSpan.FromSeconds(1),
-        TimeSpan.FromSeconds(3),
-    ];
+    private static readonly TimeSpan BaseDelay = TimeSpan.FromSeconds(1);
+
+    /// A ceiling matters more than it looks. Without one, a later attempt would
+    /// wait minutes while holding an unacknowledged message and a connection.
+    private static readonly TimeSpan MaxDelay = TimeSpan.FromSeconds(30);
 
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
@@ -208,11 +206,11 @@ public sealed class TrackingEventConsumer(
             }
             catch (Exception ex) when (attempt < MaxAttempts)
             {
-                var delay = RetryDelays[attempt - 1];
+                var delay = BackoffFor(attempt);
 
                 logger.LogWarning(
                     ex,
-                    "Attempt {Attempt} of {Max} failed for event {EventId}, retrying in {Seconds}s",
+                    "Attempt {Attempt} of {Max} failed for event {EventId}, retrying in {Seconds:0.0}s",
                     attempt,
                     MaxAttempts,
                     parsed.EventId,
@@ -237,6 +235,34 @@ public sealed class TrackingEventConsumer(
                 return;
             }
         }
+    }
+
+    /// <summary>
+    /// Exponential backoff with equal jitter — 1s, 2s, 4s, 8s, each randomised
+    /// across the upper half of its window.
+    ///
+    /// The jitter is the part worth explaining. When a shared dependency such as
+    /// the database fails, every in-flight message fails at the same instant. On
+    /// fixed delays they all retry at the same instant too, and knock it over
+    /// again the moment it recovers. Spreading them out is what turns a retry
+    /// storm back into a queue.
+    ///
+    /// Equal jitter rather than full jitter: half of each window is fixed, so a
+    /// retry can never fire almost immediately and waste an attempt on a
+    /// dependency that has had no time to recover.
+    /// </summary>
+    private static TimeSpan BackoffFor(int attempt)
+    {
+        var window = Math.Min(
+            BaseDelay.TotalMilliseconds * Math.Pow(2, attempt - 1),
+            MaxDelay.TotalMilliseconds
+        );
+
+        var half = window / 2;
+
+        // Random.Shared is thread-safe, so this needs no lock even with a
+        // prefetch of ten messages being handled concurrently.
+        return TimeSpan.FromMilliseconds(half + Random.Shared.NextDouble() * half);
     }
 
     /// One complete attempt. It takes a fresh scope every time on purpose: a

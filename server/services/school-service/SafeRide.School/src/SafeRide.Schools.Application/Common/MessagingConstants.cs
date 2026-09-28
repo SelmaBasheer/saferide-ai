@@ -21,4 +21,5 @@ public static class MessagingConstants
 
     public const string SchoolSubscriptionChangedKey = "school-subscription-changed";
     public const string SubscriptionExpiringKey = "subscription-expiring";
+    public const string PaymentCapturedKey = "payment-captured";
 }

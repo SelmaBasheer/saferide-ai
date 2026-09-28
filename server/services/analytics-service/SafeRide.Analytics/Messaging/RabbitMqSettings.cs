@@ -12,4 +12,6 @@ public sealed class RabbitMqSettings
     // exchange is owned by another service and its name is its contract.
     public string BusExchange { get; init; } = "bus.events";
     public string BusQueue { get; init; } = "analytics.bus-events";
+    public string SchoolExchange { get; init; } = "school.events";
+    public string SchoolQueue { get; init; } = "analytics.school-events";
 }

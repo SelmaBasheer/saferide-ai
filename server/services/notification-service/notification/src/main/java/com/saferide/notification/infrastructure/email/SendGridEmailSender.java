@@ -8,9 +8,11 @@ import com.sendgrid.helpers.mail.objects.Email;
 import java.io.IOException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
 
 @Component
+@ConditionalOnProperty(name = "email.provider", havingValue = "sendgrid", matchIfMissing = true)
 public class SendGridEmailSender implements EmailSender {
     private static final Logger log = LoggerFactory.getLogger(SendGridEmailSender.class);
     private final SendGridProperties props;

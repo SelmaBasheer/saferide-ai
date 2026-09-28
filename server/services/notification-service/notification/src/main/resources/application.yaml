@@ -14,8 +14,16 @@ spring:
           multiplier: 2
 
 sendgrid:
-  api-key: ${SENDGRID_API_KEY}       # "read from the env variable"
-  from-email: ${SENDGRID_FROM_EMAIL}
+  api-key: ${SENDGRID_API_KEY:}       # empty default: the trial ended, and an
+  from-email: ${SENDGRID_FROM_EMAIL:} # unresolvable placeholder stops startup
+  from-name: SafeRide AI              # even when the bean is not created
+
+email:
+  provider: ${EMAIL_PROVIDER:sendgrid}
+
+brevo:
+  api-key: ${BREVO_API_KEY:}
+  from-email: ${BREVO_FROM_EMAIL:}
   from-name: SafeRide AI
 
 whatsapp:
