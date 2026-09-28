@@ -20,7 +20,13 @@ public static class DatabaseMigrator
         // moment cannot race each other.
         var upgrader = DeployChanges
             .To.SqlDatabase(connectionString)
-            .WithScriptsEmbeddedInAssembly(Assembly.GetExecutingAssembly())
+            .WithScriptsEmbeddedInAssembly(
+                Assembly.GetExecutingAssembly(),
+                // Only the Migrations folder. The query scripts under Data\Sql
+                // are embedded in the same assembly, and without this filter
+                // DbUp would happily run an UPDATE statement as a migration.
+                name => name.Contains(".Migrations.", StringComparison.Ordinal)
+            )
             .WithTransactionPerScript()
             .LogToConsole()
             .Build();
