@@ -57,6 +57,7 @@ public sealed class CapturePaymentHandler(
             // only in memory and the row still reading Created — and Razorpay,
             // having had a 200, would never send it again.
             await unitOfWork.SaveChangesAsync(ct);
+            await AnnouncePaymentAsync(payment, planName: null, ct);
             return Outcome.CapturedWithoutSubscription;
         }
 
@@ -69,6 +70,7 @@ public sealed class CapturePaymentHandler(
         if (existing is not null)
         {
             await unitOfWork.SaveChangesAsync(ct);
+            await AnnouncePaymentAsync(payment, plan.Name, ct);
             return Outcome.CapturedWithoutSubscription;
         }
 
@@ -89,13 +91,45 @@ public sealed class CapturePaymentHandler(
                 subscription.Status.ToString(),
                 subscription.BusLimit,
                 subscription.EndsOn,
-                DateTime.UtcNow
+                DateTime.UtcNow,
+                plan.Name
             ),
             ct
         );
 
+        await AnnouncePaymentAsync(payment, plan.Name, ct);
+
         return Outcome.Activated;
     }
+
+    /// <summary>
+    /// Announced on every path where the capture succeeded, including the two
+    /// that sold nothing. A revenue report that only counted successful
+    /// subscriptions would hide exactly the payments that need refunding.
+    ///
+    /// Published after the save, so nothing is announced that was not committed.
+    /// The gap between the two is the known cost of having no outbox here.
+    /// </summary>
+    private async Task AnnouncePaymentAsync(
+        Payment payment,
+        string? planName,
+        CancellationToken ct
+    ) =>
+        await publisher.PublishAsync(
+            MessagingConstants.SchoolEventsExchange,
+            MessagingConstants.PaymentCapturedKey,
+            new PaymentCaptured(
+                payment.Id,
+                payment.SchoolId,
+                payment.SubscriptionId,
+                planName,
+                payment.AmountInPaise,
+                payment.Status.ToString(),
+                payment.CapturedAtUtc ?? DateTime.UtcNow,
+                DateTime.UtcNow
+            ),
+            ct
+        );
 
     public async Task MarkFailedAsync(
         string razorpayOrderId,

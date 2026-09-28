@@ -33,6 +33,7 @@ public sealed class ApproveSchoolHandler(
                 school.AdminUserId,
                 school.Name,
                 school.AdminEmail,
+                school.City,
                 DateTime.UtcNow
             ),
             ct

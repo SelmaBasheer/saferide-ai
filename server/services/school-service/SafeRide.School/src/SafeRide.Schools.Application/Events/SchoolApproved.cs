@@ -5,5 +5,6 @@ public sealed record SchoolApproved(
     Guid AdminUserId,
     string SchoolName,
     string AdminEmail,
+    string City,
     DateTime OccurredAtUtc
 );
