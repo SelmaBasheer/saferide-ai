@@ -10,6 +10,10 @@ using Serilog;
 
 var builder = WebApplication.CreateBuilder(args);
 
+// Registered before anything queries. Dapper caches deserialisers per type, so
+// a handler added later would not apply to a type already materialised once.
+Dapper.SqlMapper.AddTypeHandler(new SafeRide.Analytics.Data.DateOnlyTypeHandler());
+
 builder.AddSerilogLogging();
 
 builder
@@ -38,6 +42,8 @@ builder.Services.Configure<RabbitMqSettings>(
 builder.Services.AddScoped<IBusDimensionRepository, BusDimensionRepository>();
 builder.Services.AddScoped<ISchoolDimensionRepository, SchoolDimensionRepository>();
 builder.Services.AddScoped<IPaymentFactRepository, PaymentFactRepository>();
+builder.Services.AddScoped<ISuperAdminReportRepository, SuperAdminReportRepository>();
+builder.Services.AddScoped<SuperAdminReportService>();
 
 builder.Services.AddHostedService<BusEventsConsumer>();
 builder.Services.AddHostedService<SchoolEventsConsumer>();
