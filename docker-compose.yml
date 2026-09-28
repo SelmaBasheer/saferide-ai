@@ -29,6 +29,7 @@ services:
       ReverseProxy__Clusters__route__Destinations__d1__Address: http://route-service:8080/
       ReverseProxy__Clusters__tracking__Destinations__d1__Address: http://tracking-service:8080/
       ReverseProxy__Clusters__ai__Destinations__d1__Address: http://ai-service:8080/
+      ReverseProxy__Clusters__analytics__Destinations__d1__Address: http://host.docker.internal:5019/
     extra_hosts:
       - "host.docker.internal:host-gateway"
     depends_on:

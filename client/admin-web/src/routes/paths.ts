@@ -42,4 +42,7 @@ export const ROUTES = {
     schoolProfile: "/school-admin/profile",
     driverProfile: "/driver/profile",
     parentProfile: "/parent/profile",
+
+    //reports
+    superAdminReports: "/super-admin/reports",
 } as const

@@ -36,6 +36,7 @@ import SuperAdminSubscriptionsPage from "@/pages/SuperAdminSubscriptionsPage"
 import SchoolAdminProfilePage from "@/pages/SchoolAdminProfilePage"
 import SuperAdminProfilePage from "@/pages/SuperAdminProfilePage"
 import MobileProfilePage from "@/pages/MobileProfilePage"
+import SuperAdminReportsPage from "@/pages/superadmin/SuperAdminReportsPage"
 
 export default function AppRoutes() {
     return (
@@ -113,6 +114,7 @@ export default function AppRoutes() {
                 <ProtectedRoute roles={["SuperAdmin"]}><SuperAdminProfilePage /></ProtectedRoute>} />
             <Route path={ROUTES.schoolProfile} element={
                 <ProtectedRoute roles={["SchoolAdmin"]}><SchoolAdminProfilePage /></ProtectedRoute>} />
+            <Route path={ROUTES.superAdminReports} element={<SuperAdminReportsPage />} />
         </Routes>
     )
 }
