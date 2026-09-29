@@ -1,5 +1,4 @@
 using SafeRide.Analytics.Abstractions;
-using SafeRide.Analytics.Common;
 using SafeRide.Analytics.Models;
 
 namespace SafeRide.Analytics.Services;
@@ -9,38 +8,11 @@ public sealed class SuperAdminReportService(
     LocalDates localDates
 )
 {
-    /// A year, not ninety days. Revenue is naturally asked for annually, and a
-    /// cap exists only to stop an unbounded scan — from=1990 would pull every
-    /// payment ever into memory.
-    private const int MaxRangeDays = 366;
-
-    private const int DefaultRangeDays = 30;
-
-    public ReportRange ResolveRange(DateOnly? from, DateOnly? to)
-    {
-        var today = localDates.ToLocalDate(DateTime.UtcNow);
-
-        var end = to ?? today;
-        var start = from ?? end.AddDays(-DefaultRangeDays);
-
-        if (start > end)
-        {
-            throw AppException.BadRequest(
-                "Report.InvalidRange",
-                "The start date must be on or before the end date."
-            );
-        }
-
-        if (end.DayNumber - start.DayNumber > MaxRangeDays)
-        {
-            throw AppException.BadRequest(
-                "Report.RangeTooLarge",
-                $"The range cannot be longer than {MaxRangeDays} days."
-            );
-        }
-
-        return new ReportRange(start, end);
-    }
+    // The range rules live in ReportRanges, shared with the school report —
+    // two reports disagreeing about how long a range may be would be a bug
+    // nobody would think to look for.
+    public ReportRange ResolveRange(DateOnly? from, DateOnly? to) =>
+        ReportRanges.Resolve(from, to, localDates.ToLocalDate(DateTime.UtcNow));
 
     public Task<SuperAdminReport> BuildAsync(ReportRange range, CancellationToken ct) =>
         repository.BuildAsync(range, ct);

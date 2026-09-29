@@ -53,21 +53,7 @@ public sealed class EndTripHandler(
             throw AppException.Conflict("Trip is not active.");
         }
 
-        await events.PublishAsync(
-            MessagingConstants.TripEnded,
-            new TripEndedEvent(
-                ended.Id,
-                ended.SchoolId,
-                ended.RouteId,
-                ended.BusId,
-                ended.DriverId,
-                ended.Roster.Count(r => r.BoardingStatus == BoardingStatus.Boarded),
-                ended.Roster.Count(r => r.BoardingStatus == BoardingStatus.Absent),
-                ended.UnmarkedCount,
-                DateTime.UtcNow
-            ),
-            ct
-        );
+        await events.PublishAsync(MessagingConstants.TripEnded, ToEvent(ended), ct);
 
         await PublishSkippedStopsAsync(ended, ct);
 
@@ -93,6 +79,45 @@ public sealed class EndTripHandler(
         );
 
         return ended.ToResponse();
+    }
+
+    /// <summary>
+    /// Builds the event from the finished trip. The stop name is resolved here,
+    /// from the route already loaded on the trip, so the consumer never has to
+    /// know that a roster entry holds a stop id rather than a stop.
+    /// </summary>
+    private static TripEndedEvent ToEvent(Trip ended)
+    {
+        var stopNames = ended.Route.Stops.ToDictionary(s => s.StopId, s => s.Name);
+
+        var roster = ended
+            .Roster.Select(r => new TripRosterEntry(
+                r.StudentId,
+                r.Name,
+                r.PickupStopId,
+                stopNames.GetValueOrDefault(r.PickupStopId),
+                r.BoardingStatus.ToString(),
+                r.MarkedAt
+            ))
+            .ToList();
+
+        return new TripEndedEvent(
+            ended.Id,
+            ended.SchoolId,
+            ended.RouteId,
+            ended.BusId,
+            ended.DriverId,
+            ended.Route.Code,
+            ended.Route.Name,
+            ended.StartedAt,
+            ended.EndedAt!.Value,
+            ended.Roster.Count,
+            ended.Roster.Count(r => r.BoardingStatus == BoardingStatus.Boarded),
+            ended.Roster.Count(r => r.BoardingStatus == BoardingStatus.Absent),
+            ended.UnmarkedCount,
+            roster,
+            DateTime.UtcNow
+        );
     }
 
     /// A stop with no ReachedAt is one the geofence never matched, so the bus

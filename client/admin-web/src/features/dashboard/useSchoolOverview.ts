@@ -48,15 +48,14 @@ export function useSchoolOverview() {
     // hub connection dropped.
     const activeTrips = useGetActiveTripsQuery(undefined, { pollingInterval: 30_000 })
 
-    // Computed once at mount. A dashboard left open overnight will show a
-    // stale window, which is a fair trade for not refetching every render.
+    // Plain dates, because the endpoint takes DateOnly. Sending an ISO
+    // timestamp fails to bind, and converting local midnight to UTC would
+    // shift the whole window by the offset anyway.
     const window = useMemo(() => {
         const to = new Date()
-        to.setHours(23, 59, 59, 999)
         const from = new Date()
         from.setDate(from.getDate() - (DAYS - 1))
-        from.setHours(0, 0, 0, 0)
-        return { from: from.toISOString(), to: to.toISOString() }
+        return { from: dayKey(from), to: dayKey(to) }
     }, [])
 
     const history = useGetTripsQuery({
@@ -126,9 +125,9 @@ export function useSchoolOverview() {
 
         isLoading:
             allBuses.isLoading || students.isLoading || routes.isLoading ||
-            drivers.isLoading || activeTrips.isLoading,
+            drivers.isLoading || activeTrips.isLoading || history.isLoading,
         isError:
             allBuses.isError || students.isError || routes.isError ||
-            drivers.isError || activeTrips.isError,
+            drivers.isError || activeTrips.isError || history.isError,
     }
 }

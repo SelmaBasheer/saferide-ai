@@ -11,15 +11,47 @@ public sealed record TripStartedEvent(
     DateTime OccurredAtUtc
 );
 
+/// <summary>
+/// One student's outcome on one trip, snapshotted as the trip ended. Name and
+/// stop are copied rather than referenced: a child who changes route in October
+/// must not appear on the new route in September's report.
+/// </summary>
+public sealed record TripRosterEntry(
+    Guid StudentId,
+    string Name,
+    Guid? PickupStopId,
+    string? StopName,
+    string BoardingStatus,
+    DateTime? MarkedAt
+);
+
+/// <summary>
+/// A completed trip and everyone who was on it.
+///
+/// Deliberately fat. A consumer building a report must never have to call back
+/// for the route's name or the roster — that would reintroduce the coupling the
+/// event exists to avoid, and it would give the wrong answer once a route is
+/// renamed.
+///
+/// Carries the whole roster rather than relying on StudentBoardedEvent, because
+/// a student nobody marked produces no boarding event at all — and an unmarked
+/// child is exactly what an attendance report needs to show.
+/// </summary>
 public sealed record TripEndedEvent(
     Guid TripId,
     Guid SchoolId,
     Guid RouteId,
     Guid BusId,
     Guid DriverId,
+    string RouteCode,
+    string RouteName,
+    DateTime StartedAt,
+    DateTime EndedAt,
+    int StudentCount,
     int BoardedCount,
     int AbsentCount,
     int UnmarkedCount,
+    IReadOnlyList<TripRosterEntry> Roster,
     DateTime OccurredAtUtc
 );
 
