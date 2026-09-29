@@ -20,9 +20,12 @@ import com.saferide.bus.projection.SchoolStatuses;
 import com.saferide.bus.repository.BusRepository;
 import com.saferide.bus.repository.BusSpecifications;
 import java.time.Instant;
+import java.time.LocalDate;
+import java.time.ZoneId;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -35,28 +38,35 @@ public class BusService {
 
     private static final int MAX_PAGE_SIZE = 50;
 
+    /** Must match Subscription.GraceDays in the School service. */
+    private static final int GRACE_DAYS = 7;
+
     private final BusRepository busRepository;
     private final BusDocumentService busDocumentService;
     private final SchoolStatusRepository schoolStatusRepository;
     private final BusMapper busMapper;
     private final RabbitEventPublisher publisher;
+    private final ZoneId zone;
 
     public BusService(
             BusRepository busRepository,
             BusDocumentService busDocumentService,
             SchoolStatusRepository schoolStatusRepository,
             BusMapper busMapper,
-            RabbitEventPublisher publisher) {
+            RabbitEventPublisher publisher,
+            @Value("${saferide.timezone:Asia/Kolkata}") String timezone) {
         this.busRepository = busRepository;
         this.busDocumentService = busDocumentService;
         this.schoolStatusRepository = schoolStatusRepository;
         this.busMapper = busMapper;
         this.publisher = publisher;
+        this.zone = ZoneId.of(timezone);
     }
 
     @Transactional
     public BusResponse create(UUID schoolId, CreateBusRequest request) {
         requireApprovedSchool(schoolId);
+        requireActiveSubscription(schoolId);
         requireBusCapacity(schoolId);
 
         String registration = Bus.normalizeRegistrationNumber(request.registrationNumber());
@@ -133,6 +143,7 @@ public class BusService {
     @Transactional
     public BusResponse assignDriver(UUID schoolId, UUID id, AssignDriverRequest request) {
         requireApprovedSchool(schoolId);
+        requireActiveSubscription(schoolId);
         Bus bus = findOwned(schoolId, id);
 
         bus.assignDriver(request.driverId());
@@ -188,6 +199,39 @@ public class BusService {
     private void requireApprovedSchool(UUID schoolId) {
         if (!schoolStatusRepository.existsBySchoolIdAndStatus(schoolId, SchoolStatuses.APPROVED)) {
             throw new AppException.ForbiddenException(ResponseMessages.SCHOOL_NOT_APPROVED);
+        }
+    }
+
+    /**
+     * Refuses fleet changes once the subscription has lapsed.
+     *
+     * <p>Derived from the end date rather than trusting the status string. The
+     * status arrived on an event and is a snapshot — a subscription that expired
+     * this morning still reads "Active" here until the expiry job runs and its
+     * event lands. A date cannot go stale.
+     *
+     * <p>Grace counts as live, matching the School service: the service keeps
+     * working for seven days past the end date, and locking a school out earlier
+     * than their own subscription page tells them would be a contradiction.
+     *
+     * <p>A school with no subscription record at all is permitted, for the same
+     * reason requireBusCapacity permits a null limit — schools that predate
+     * billing keep working, and introducing subscriptions must not lock anyone
+     * out overnight.
+     */
+    private void requireActiveSubscription(UUID schoolId) {
+        SchoolStatus status = schoolStatusRepository.findById(schoolId).orElse(null);
+
+        if (status == null || status.getSubscriptionEndsOn() == null) {
+            return;
+        }
+
+        if ("Cancelled".equalsIgnoreCase(status.getSubscriptionStatus())) {
+            throw new AppException.ForbiddenException(ResponseMessages.SUBSCRIPTION_REQUIRED);
+        }
+
+        if (LocalDate.now(zone).isAfter(status.getSubscriptionEndsOn().plusDays(GRACE_DAYS))) {
+            throw new AppException.ForbiddenException(ResponseMessages.SUBSCRIPTION_REQUIRED);
         }
     }
 
