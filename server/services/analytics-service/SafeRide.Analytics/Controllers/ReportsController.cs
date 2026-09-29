@@ -83,9 +83,15 @@ public sealed class ReportsController(
             return File(bytes, "text/csv", SchoolFileName(range, section, "csv"));
         }
 
+        if (string.Equals(format, "pdf", StringComparison.OrdinalIgnoreCase))
+        {
+            var pdf = SchoolReportPdf.Render(report);
+            return File(pdf, "application/pdf", SchoolFileName(range, section, "pdf"));
+        }
+
         throw AppException.BadRequest(
             "Report.UnknownFormat",
-            "Supported formats are json and csv."
+            "Supported formats are json, csv and pdf."
         );
     }
 

@@ -29,7 +29,7 @@ services:
       ReverseProxy__Clusters__route__Destinations__d1__Address: http://route-service:8080/
       ReverseProxy__Clusters__tracking__Destinations__d1__Address: http://tracking-service:8080/
       ReverseProxy__Clusters__ai__Destinations__d1__Address: http://ai-service:8080/
-      ReverseProxy__Clusters__analytics__Destinations__d1__Address: http://host.docker.internal:5019/
+      ReverseProxy__Clusters__analytics__Destinations__d1__Address: http://analytics-service:8080/
     extra_hosts:
       - "host.docker.internal:host-gateway"
     depends_on:
@@ -37,6 +37,7 @@ services:
       - school-service
       - bus-service
       - ai-service
+      - analytics-service
 
   postgres:
     <<: *common
@@ -380,6 +381,31 @@ services:
       Gemini__ApiKey: ${GEMINI__APIKEY}
       Gemini__Model: "gemini-3.6-flash"
       Gemini__MaxTokens: "2048"
+    depends_on:
+      sqlserver:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+
+  analytics-service:
+    <<: *common
+    build:
+      context: server/services/analytics-service
+      dockerfile: Dockerfile
+    image: saferide/analytics-service:local
+    container_name: saferide-analytics
+    ports:
+      - "5019:8080"
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      ConnectionStrings__Analytics: "Server=sqlserver,1433;Database=SafeRide_Analytics_Db;User Id=sa;Password=${MSSQL_SA_PASSWORD};TrustServerCertificate=True"
+      RabbitMQ__Host: rabbitmq
+      RabbitMQ__Username: ${RABBITMQ_USER}
+      RabbitMQ__Password: ${RABBITMQ_PASSWORD}
+      JwtSettings__Secret: ${JWT_SECRET}
+      JwtSettings__Issuer: ${JWT_ISSUER}
+      JwtSettings__Audience: ${JWT_AUDIENCE}
+      Saferide__Timezone: ${SAFERIDE_TIMEZONE:-Asia/Kolkata}
     depends_on:
       sqlserver:
         condition: service_healthy
