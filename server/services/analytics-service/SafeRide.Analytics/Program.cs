@@ -1,4 +1,5 @@
 using SafeRide.Analytics.Abstractions;
+using SafeRide.Analytics.Common;
 using SafeRide.Analytics.Consumers;
 using SafeRide.Analytics.Data;
 using SafeRide.Analytics.Data.Repositories;
@@ -43,10 +44,16 @@ builder.Services.AddScoped<IBusDimensionRepository, BusDimensionRepository>();
 builder.Services.AddScoped<ISchoolDimensionRepository, SchoolDimensionRepository>();
 builder.Services.AddScoped<IPaymentFactRepository, PaymentFactRepository>();
 builder.Services.AddScoped<ISuperAdminReportRepository, SuperAdminReportRepository>();
+builder.Services.AddScoped<ITripFactRepository, TripFactRepository>();
+builder.Services.AddScoped<ITenantProvider, HttpContextTenantProvider>();
+builder.Services.AddScoped<ISchoolReportRepository, SchoolReportRepository>();
+
 builder.Services.AddScoped<SuperAdminReportService>();
+builder.Services.AddScoped<SchoolReportService>();
 
 builder.Services.AddHostedService<BusEventsConsumer>();
 builder.Services.AddHostedService<SchoolEventsConsumer>();
+builder.Services.AddHostedService<TrackingEventsConsumer>();
 
 builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
 builder.Services.AddProblemDetails();

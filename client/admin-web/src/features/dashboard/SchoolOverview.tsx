@@ -6,6 +6,7 @@ import {
 } from "lucide-react"
 import { ROUTES } from "@/routes/paths"
 import type { SchoolDetail } from "@/features/schools/schoolApi"
+import { useGetMySubscriptionQuery } from "@/features/subscriptions/subscriptionApi"
 import { useTrackingHub } from "@/features/tracking/useTrackingHub"
 import { useSchoolOverview } from "@/features/dashboard/useSchoolOverview"
 import SchoolFleetMap, { type FleetMarker } from "@/features/dashboard/SchoolFleetMap"
@@ -48,6 +49,14 @@ function StatCard({ icon, label, value, sub, to, tone = "slate" }: {
 
 export default function SchoolOverview({ school }: { school: SchoolDetail }) {
     const o = useSchoolOverview()
+
+    // The endpoint returns an error when no subscription exists, so data is
+    // simply undefined in that case — which is the state we want to show.
+    const { data: subscription } = useGetMySubscriptionQuery()
+
+    // Grace counts as a warning, not as healthy: the service still works, but
+    // it stops on a date the school needs to see before it arrives.
+    const subscriptionHealthy = subscription?.status === "Active"
 
     // Positions arriving over the hub, keyed by trip. The server's
     // lastPosition is the starting point; these overwrite it as they land.
@@ -158,11 +167,42 @@ export default function SchoolOverview({ school }: { school: SchoolDetail }) {
                 />
             </div>
 
-            {/* Shown, not hidden, so the gap is visible rather than forgotten. */}
-            <div className="mt-4 flex items-center gap-3 rounded-lg border border-dashed p-4 text-slate-400">
-                <CreditCard className="h-4 w-4" />
-                <span className="text-sm">Subscription and billing — not built yet.</span>
-            </div>
+            {/* ---------- Subscription ---------- */}
+
+            <Link to={ROUTES.schoolSubscription}>
+                <div
+                    className={`mt-4 flex flex-wrap items-center gap-3 rounded-lg border p-4 transition hover:border-sky-300
+                        ${subscriptionHealthy ? "bg-white" : "border-amber-200 bg-amber-50"}`}
+                >
+                    <CreditCard
+                        className={`h-4 w-4 ${subscriptionHealthy ? "text-slate-500" : "text-amber-700"}`}
+                    />
+
+                    {!subscription ? (
+                        <span className="text-sm text-amber-800">
+                            No active subscription — choose a plan to activate your school.
+                        </span>
+                    ) : (
+                        <span className="text-sm text-slate-600">
+                            <span className="font-medium text-slate-800">{subscription.planName}</span>
+                            {" · "}
+                            {subscription.status === "InGrace" ? "Grace period" : subscription.status}
+                            {" · ends "}
+                            {new Date(subscription.endsOn).toLocaleDateString(undefined, {
+                                day: "numeric",
+                                month: "short",
+                                year: "numeric",
+                            })}
+                            {subscription.status === "Active" && subscription.daysRemaining <= 7 && (
+                                <span className="ml-2 font-medium text-amber-700">
+                                    {subscription.daysRemaining}{" "}
+                                    {subscription.daysRemaining === 1 ? "day" : "days"} left
+                                </span>
+                            )}
+                        </span>
+                    )}
+                </div>
+            </Link>
 
             {/* ---------- Live fleet ---------- */}
 
@@ -263,7 +303,7 @@ export default function SchoolOverview({ school }: { school: SchoolDetail }) {
 
                 <div className="mt-6 flex h-32 items-end gap-3">
                     {o.tripsPerDay.map((d) => (
-                        <div key={d.date} className="flex flex-1 flex-col items-center justify-end">
+                        <div key={d.date} className="flex h-full flex-1 flex-col items-center justify-end">
                             <span className="mb-1 text-xs text-slate-500">{d.count}</span>
                             <div
                                 className={`w-full rounded-t ${d.count === 0 ? "bg-slate-200" : "bg-sky-600"}`}

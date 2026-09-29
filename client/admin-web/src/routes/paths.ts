@@ -45,4 +45,5 @@ export const ROUTES = {
 
     //reports
     superAdminReports: "/super-admin/reports",
+    schoolReports: "/school-admin/reports",
 } as const
