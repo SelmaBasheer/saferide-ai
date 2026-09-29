@@ -23,6 +23,8 @@ public final class ResponseMessages {
     public static final String BUS_NOT_ACTIVE = "This bus is not active.";
     public static final String BUS_LIMIT_REACHED =
             "Your subscription's bus limit has been reached. Upgrade your plan to add more buses.";
+    public static final String SUBSCRIPTION_REQUIRED =
+            "This school has no active subscription. Renew it to add or assign buses.";
 
     private ResponseMessages() {}
 }
