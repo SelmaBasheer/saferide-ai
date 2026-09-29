@@ -69,14 +69,14 @@ export default function SchoolAdminReportsPage() {
     const [download, { isLoading: isDownloading, error: downloadError, reset }] =
         useDownloadSchoolReportMutation()
 
-    const save = async () => {
+    const save = async (format: "csv" | "pdf") => {
         try {
-            const blob = await download({ ...range, section, format: "csv" }).unwrap()
+            const blob = await download({ ...range, section, format }).unwrap()
 
             const url = URL.createObjectURL(blob)
             const link = document.createElement("a")
             link.href = url
-            link.download = `saferide-${section.toLowerCase()}-${range.from}-to-${range.to}.csv`
+            link.download = `saferide-${section.toLowerCase()}-${range.from}-to-${range.to}.${format}`
             link.click()
 
             URL.revokeObjectURL(url)
@@ -149,14 +149,16 @@ export default function SchoolAdminReportsPage() {
                     Apply
                 </Button>
 
-                <Button
-                    type="button"
-                    variant="outline"
-                    disabled={!data || isDownloading}
-                    onClick={save}
-                >
+                <Button type="button" variant="outline" disabled={!data || isDownloading}
+                    onClick={() => save("csv")}>
                     <Download className="mr-1 h-4 w-4" />
-                    {isDownloading ? "Preparing…" : "Download CSV"}
+                    CSV
+                </Button>
+
+                <Button type="button" variant="outline" disabled={!data || isDownloading}
+                    onClick={() => save("pdf")}>
+                    <Download className="mr-1 h-4 w-4" />
+                    PDF
                 </Button>
             </form>
 
