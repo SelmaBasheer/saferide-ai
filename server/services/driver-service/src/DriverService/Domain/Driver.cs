@@ -26,6 +26,15 @@ public class Driver
         DateOnly licenseExpiryDate
     )
     {
+        var today = DateOnly.FromDateTime(DateTime.UtcNow);
+
+        if (licenseExpiryDate < today.AddDays(5))
+        {
+            throw new ArgumentException(
+                "The licence must have at least 5 days remaining.",
+                nameof(licenseExpiryDate)
+            );
+        }
         return new Driver
         {
             Id = Guid.NewGuid(),

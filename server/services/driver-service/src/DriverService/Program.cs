@@ -17,7 +17,7 @@ builder.Services.AddDbContext<DriverDbContext>(o =>
 );
 
 // ---------- AuthN / AuthZ ----------
-builder.Services.AddJwtAuthentication(builder.Configuration);
+builder.Services.AddGatewayAuthentication();
 builder
     .Services.AddAuthorizationBuilder()
     .AddPolicy("SchoolAdmin", p => p.RequireRole("SchoolAdmin"));
