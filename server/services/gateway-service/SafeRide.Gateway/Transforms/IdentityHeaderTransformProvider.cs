@@ -34,6 +34,16 @@ public sealed class IdentityHeaderTransformProvider : ITransformProvider
                 request.Headers.Remove(header);
             }
 
+            // No service validates tokens any more, so none should see one.
+            // This limits the blast radius of a compromised service: it cannot
+            // replay the caller's token against anything else.
+            request.Headers.Remove("Authorization");
+
+            // SignalR sends its token in the query string, which would otherwise
+            // end up in the proxied URL and in Tracking's request log. A token
+            // in a log file is a token someone can use.
+            transform.Query.Collection.Remove("access_token");
+
             var user = transform.HttpContext.User;
 
             if (user?.Identity?.IsAuthenticated != true)
@@ -43,7 +53,7 @@ public sealed class IdentityHeaderTransformProvider : ITransformProvider
 
             // sub carries the user id. .NET's inbound claim mapping renames it
             // to NameIdentifier; the fallback covers the case where someone
-            // turns that mapping off, which is a reasonable thing to do.
+            // turns that mapping off.
             Add(
                 IdentityHeaders.UserId,
                 user.FindFirstValue(ClaimTypes.NameIdentifier) ?? user.FindFirstValue("sub")
