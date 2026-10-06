@@ -32,7 +32,7 @@ public class GatewayAuthenticationFilter extends OncePerRequestFilter {
 
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain chain)
-        throws ServletException, IOException {
+            throws ServletException, IOException {
 
         String userId = request.getHeader(USER_ID);
 
@@ -40,11 +40,11 @@ public class GatewayAuthenticationFilter extends OncePerRequestFilter {
         // through it unauthenticated. The entry point below reports it.
         if (userId != null && !userId.isBlank()) {
             var principal = new GatewayUser(
-                uuidOrNull(userId), request.getHeader(EMAIL), uuidOrNull(request.getHeader(SCHOOL_ID)));
+                    uuidOrNull(userId), request.getHeader(EMAIL), uuidOrNull(request.getHeader(SCHOOL_ID)));
 
             SecurityContextHolder.getContext()
-                .setAuthentication(new UsernamePasswordAuthenticationToken(
-                    principal, null, authorities(request.getHeader(ROLES))));
+                    .setAuthentication(new UsernamePasswordAuthenticationToken(
+                            principal, null, authorities(request.getHeader(ROLES))));
         }
 
         chain.doFilter(request, response);
@@ -58,10 +58,10 @@ public class GatewayAuthenticationFilter extends OncePerRequestFilter {
         if (roles == null || roles.isBlank()) return List.of();
 
         return Arrays.stream(roles.split(","))
-            .map(String::trim)
-            .filter(r -> !r.isEmpty())
-            .map(r -> (GrantedAuthority) new SimpleGrantedAuthority("ROLE_" + r))
-            .toList();
+                .map(String::trim)
+                .filter(r -> !r.isEmpty())
+                .map(r -> (GrantedAuthority) new SimpleGrantedAuthority("ROLE_" + r))
+                .toList();
     }
 
     /** A malformed id is treated as absent; requireSchoolId reports it. */

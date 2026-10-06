@@ -25,18 +25,18 @@ public class SecurityConfig {
     @Bean
     AuthenticationEntryPoint apiAuthenticationEntryPoint(ObjectMapper mapper) {
         return (request, response, ex) ->
-            writeError(mapper, response, 401, "Auth.Unauthorized", "Authentication is required.");
+                writeError(mapper, response, 401, "Auth.Unauthorized", "Authentication is required.");
     }
 
     @Bean
     AccessDeniedHandler apiAccessDeniedHandler(ObjectMapper mapper) {
         return (request, response, ex) ->
-            writeError(mapper, response, 403, "Auth.Forbidden", "You do not have access to this resource.");
+                writeError(mapper, response, 403, "Auth.Forbidden", "You do not have access to this resource.");
     }
 
     private static void writeError(
-        ObjectMapper mapper, HttpServletResponse response, int status, String code, String message)
-        throws IOException {
+            ObjectMapper mapper, HttpServletResponse response, int status, String code, String message)
+            throws IOException {
         response.setStatus(status);
         response.setContentType(MediaType.APPLICATION_JSON_VALUE);
         response.setCharacterEncoding(StandardCharsets.UTF_8.name());
@@ -45,26 +45,26 @@ public class SecurityConfig {
 
     @Bean
     SecurityFilterChain filterChain(
-        HttpSecurity http,
-        AuthenticationEntryPoint apiAuthenticationEntryPoint,
-        AccessDeniedHandler apiAccessDeniedHandler)
-        throws Exception {
+            HttpSecurity http,
+            AuthenticationEntryPoint apiAuthenticationEntryPoint,
+            AccessDeniedHandler apiAccessDeniedHandler)
+            throws Exception {
         http.csrf(csrf -> csrf.disable())
-            .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-            .authorizeHttpRequests(
-                auth -> auth.requestMatchers("/actuator/health", "/swagger-ui/**", "/v3/api-docs/**")
-                    .permitAll()
-                    .requestMatchers(HttpMethod.GET, "/api/routes", "/api/routes/*")
-                    .hasAnyRole("SchoolAdmin", "Driver")
-                    .requestMatchers("/api/routes/**")
-                    .hasRole("SchoolAdmin")
-                    .anyRequest()
-                    .authenticated())
-            .exceptionHandling(e -> e.authenticationEntryPoint(apiAuthenticationEntryPoint)
-                .accessDeniedHandler(apiAccessDeniedHandler))
-            // Identity comes from the gateway's headers; this service no
-            // longer validates tokens.
-            .addFilterBefore(new GatewayAuthenticationFilter(), UsernamePasswordAuthenticationFilter.class);
+                .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                .authorizeHttpRequests(
+                        auth -> auth.requestMatchers("/actuator/health", "/swagger-ui/**", "/v3/api-docs/**")
+                                .permitAll()
+                                .requestMatchers(HttpMethod.GET, "/api/routes", "/api/routes/*")
+                                .hasAnyRole("SchoolAdmin", "Driver")
+                                .requestMatchers("/api/routes/**")
+                                .hasRole("SchoolAdmin")
+                                .anyRequest()
+                                .authenticated())
+                .exceptionHandling(e -> e.authenticationEntryPoint(apiAuthenticationEntryPoint)
+                        .accessDeniedHandler(apiAccessDeniedHandler))
+                // Identity comes from the gateway's headers; this service no
+                // longer validates tokens.
+                .addFilterBefore(new GatewayAuthenticationFilter(), UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
     }

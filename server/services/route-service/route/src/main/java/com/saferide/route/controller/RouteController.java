@@ -31,18 +31,18 @@ public class RouteController {
 
     @PostMapping
     public ResponseEntity<ApiResponse<RouteResponse>> create(
-        @AuthenticationPrincipal GatewayUser caller, @Valid @RequestBody CreateRouteRequest request) {
+            @AuthenticationPrincipal GatewayUser caller, @Valid @RequestBody CreateRouteRequest request) {
         RouteResponse created = routeService.create(caller.requireSchoolId(), request);
         return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.ok(created, ResponseMessages.ROUTE_CREATED));
     }
 
     @GetMapping
     public ApiResponse<PagedResult<RouteResponse>> list(
-        @AuthenticationPrincipal GatewayUser caller,
-        @RequestParam(required = false) String search,
-        @RequestParam(defaultValue = "false") boolean includeInactive,
-        @RequestParam(defaultValue = "1") int page,
-        @RequestParam(defaultValue = "10") int pageSize) {
+            @AuthenticationPrincipal GatewayUser caller,
+            @RequestParam(required = false) String search,
+            @RequestParam(defaultValue = "false") boolean includeInactive,
+            @RequestParam(defaultValue = "1") int page,
+            @RequestParam(defaultValue = "10") int pageSize) {
         return ApiResponse.ok(routeService.list(caller.requireSchoolId(), search, includeInactive, page, pageSize));
     }
 
@@ -53,10 +53,11 @@ public class RouteController {
 
     @PutMapping("/{id}")
     public ApiResponse<RouteResponse> update(
-        @AuthenticationPrincipal GatewayUser caller,
-        @PathVariable UUID id,
-        @Valid @RequestBody UpdateRouteRequest request) {
-        return ApiResponse.ok(routeService.update(caller.requireSchoolId(), id, request), ResponseMessages.ROUTE_UPDATED);
+            @AuthenticationPrincipal GatewayUser caller,
+            @PathVariable UUID id,
+            @Valid @RequestBody UpdateRouteRequest request) {
+        return ApiResponse.ok(
+                routeService.update(caller.requireSchoolId(), id, request), ResponseMessages.ROUTE_UPDATED);
     }
 
     @DeleteMapping("/{id}")
@@ -67,33 +68,33 @@ public class RouteController {
 
     @PutMapping("/{id}/stops")
     public ApiResponse<RouteResponse> replaceStops(
-        @AuthenticationPrincipal GatewayUser caller,
-        @PathVariable UUID id,
-        @Valid @RequestBody ReplaceStopsRequest request) {
+            @AuthenticationPrincipal GatewayUser caller,
+            @PathVariable UUID id,
+            @Valid @RequestBody ReplaceStopsRequest request) {
         return ApiResponse.ok(
-            routeService.replaceStops(caller.requireSchoolId(), id, request), ResponseMessages.STOPS_UPDATED);
+                routeService.replaceStops(caller.requireSchoolId(), id, request), ResponseMessages.STOPS_UPDATED);
     }
 
     @PutMapping("/{id}/path")
     public ApiResponse<RouteResponse> replacePath(
-        @AuthenticationPrincipal GatewayUser caller,
-        @PathVariable UUID id,
-        @Valid @RequestBody ReplacePathRequest request) {
+            @AuthenticationPrincipal GatewayUser caller,
+            @PathVariable UUID id,
+            @Valid @RequestBody ReplacePathRequest request) {
         return ApiResponse.ok(
-            routeService.replacePath(caller.requireSchoolId(), id, request), ResponseMessages.PATH_UPDATED);
+                routeService.replacePath(caller.requireSchoolId(), id, request), ResponseMessages.PATH_UPDATED);
     }
 
     @PutMapping("/{id}/bus")
     public ApiResponse<RouteResponse> assignBus(
-        @AuthenticationPrincipal GatewayUser caller,
-        @PathVariable UUID id,
-        @Valid @RequestBody AssignBusRequest request) {
-        return ApiResponse.ok(routeService.assignBus(caller.requireSchoolId(), id, request), ResponseMessages.BUS_ASSIGNED);
+            @AuthenticationPrincipal GatewayUser caller,
+            @PathVariable UUID id,
+            @Valid @RequestBody AssignBusRequest request) {
+        return ApiResponse.ok(
+                routeService.assignBus(caller.requireSchoolId(), id, request), ResponseMessages.BUS_ASSIGNED);
     }
 
     @PostMapping("/{id}/path/generate")
-    public ApiResponse<RouteResponse> generatePath(
-        @AuthenticationPrincipal GatewayUser caller, @PathVariable UUID id) {
+    public ApiResponse<RouteResponse> generatePath(@AuthenticationPrincipal GatewayUser caller, @PathVariable UUID id) {
         return ApiResponse.ok(routeService.generatePath(caller.requireSchoolId(), id), ResponseMessages.PATH_GENERATED);
     }
 }
