@@ -1,10 +1,10 @@
 package com.saferide.student.infrastructure.adapter.in.web;
 
-import com.saferide.student.application.exception.AppException.ForbiddenException;
 import com.saferide.student.application.service.StudentLeaveService;
 import com.saferide.student.application.service.StudentService;
 import com.saferide.student.domain.Student;
 import com.saferide.student.infrastructure.adapter.in.web.dto.*;
+import com.saferide.student.infrastructure.config.GatewayUser;
 import jakarta.validation.Valid;
 import java.time.LocalDate;
 import java.util.List;
@@ -15,7 +15,6 @@ import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -25,13 +24,6 @@ public class StudentController {
     public static final String STUDENT_CREATED_MSG = "Student created successfully.";
     public static final String LEAVE_MARKED_MSG = "Leave recorded.";
     public static final String LEAVE_CANCELLED_MSG = "Leave cancelled.";
-
-    /** .NET emits the long schema URIs; a hand-built token uses the short names. */
-    private static final String DOTNET_EMAIL_CLAIM =
-            "http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress";
-
-    private static final String DOTNET_NAMEID_CLAIM =
-            "http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier";
 
     private final StudentService service;
     private final StudentLeaveService leaveService;
@@ -43,41 +35,12 @@ public class StudentController {
         this.mapper = mapper;
     }
 
-    private static UUID schoolId(Jwt jwt) {
-        var claim = jwt.getClaimAsString("schoolId");
-        if (claim == null) throw new ForbiddenException("No school context on this account.");
-        try {
-            return UUID.fromString(claim);
-        } catch (IllegalArgumentException e) {
-            throw new ForbiddenException("No school context on this account.");
-        }
-    }
-
-    /** What links a parent to their children — a student record carries the email. */
-    private static String email(Jwt jwt) {
-        var claim = jwt.getClaimAsString("email");
-        if (claim == null) claim = jwt.getClaimAsString(DOTNET_EMAIL_CLAIM);
-        if (claim == null || claim.isBlank()) throw new ForbiddenException("No email on this account.");
-        return claim;
-    }
-
-    private static UUID userId(Jwt jwt) {
-        var claim = jwt.getSubject();
-        if (claim == null) claim = jwt.getClaimAsString(DOTNET_NAMEID_CLAIM);
-        if (claim == null) throw new ForbiddenException("No user id on this account.");
-        try {
-            return UUID.fromString(claim);
-        } catch (IllegalArgumentException e) {
-            throw new ForbiddenException("No user id on this account.");
-        }
-    }
-
     @PostMapping
     public ResponseEntity<ApiResponse<StudentResponse>> create(
-            @AuthenticationPrincipal Jwt jwt, @Valid @RequestBody CreateStudentRequest req) {
+            @AuthenticationPrincipal GatewayUser user, @Valid @RequestBody CreateStudentRequest req) {
 
         var student = service.create(
-                schoolId(jwt),
+                user.requireSchoolId(),
                 req.firstName(),
                 req.lastName(),
                 req.admissionNumber(),
@@ -93,7 +56,7 @@ public class StudentController {
 
     @GetMapping
     public ApiResponse<PagedResult<StudentResponse>> list(
-            @AuthenticationPrincipal Jwt jwt,
+            @AuthenticationPrincipal GatewayUser user,
             @RequestParam(required = false) String search,
             @RequestParam(defaultValue = "1") int page,
             @RequestParam(defaultValue = "10") int pageSize) {
@@ -102,7 +65,9 @@ public class StudentController {
         pageSize = Math.clamp(pageSize, 1, 50);
 
         var result = service.list(
-                schoolId(jwt), search, PageRequest.of(page - 1, pageSize, Sort.by(Sort.Direction.DESC, "createdAt")));
+                user.requireSchoolId(),
+                search,
+                PageRequest.of(page - 1, pageSize, Sort.by(Sort.Direction.DESC, "createdAt")));
 
         var items = result.getContent().stream().map(mapper::toResponse).toList();
         return ApiResponse.ok(new PagedResult<>(items, result.getTotalElements(), page, pageSize));
@@ -110,14 +75,18 @@ public class StudentController {
 
     @PutMapping("/{id}/route")
     public ApiResponse<StudentResponse> assignRoute(
-            @AuthenticationPrincipal Jwt jwt, @PathVariable UUID id, @Valid @RequestBody AssignRouteRequest req) {
-        var student = service.assignRoute(schoolId(jwt), id, req.routeId(), req.pickupStopId(), req.dropStopId());
+            @AuthenticationPrincipal GatewayUser user,
+            @PathVariable UUID id,
+            @Valid @RequestBody AssignRouteRequest req) {
+        var student =
+                service.assignRoute(user.requireSchoolId(), id, req.routeId(), req.pickupStopId(), req.dropStopId());
         return ApiResponse.ok(mapper.toResponse(student), "Route assigned successfully.");
     }
 
     @GetMapping("/roster")
-    public ApiResponse<List<RosterEntryResponse>> roster(@AuthenticationPrincipal Jwt jwt, @RequestParam UUID routeId) {
-        var students = service.roster(schoolId(jwt), routeId);
+    public ApiResponse<List<RosterEntryResponse>> roster(
+            @AuthenticationPrincipal GatewayUser user, @RequestParam UUID routeId) {
+        var students = service.roster(user.requireSchoolId(), routeId);
 
         // One query for the whole route rather than one per child.
         var onLeave = leaveService.idsOnLeaveToday(
@@ -137,8 +106,8 @@ public class StudentController {
     }
 
     @GetMapping("/{id}")
-    public ApiResponse<StudentResponse> get(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID id) {
-        return ApiResponse.ok(mapper.toResponse(service.getById(schoolId(jwt), id)));
+    public ApiResponse<StudentResponse> get(@AuthenticationPrincipal GatewayUser user, @PathVariable UUID id) {
+        return ApiResponse.ok(mapper.toResponse(service.getById(user.requireSchoolId(), id)));
     }
 
     // ----- parent endpoints -----
@@ -148,8 +117,8 @@ public class StudentController {
     // /mine gets an empty list rather than an error.
 
     @GetMapping("/mine")
-    public ApiResponse<List<MyChildResponse>> myChildren(@AuthenticationPrincipal Jwt jwt) {
-        var items = leaveService.myChildren(email(jwt)).stream()
+    public ApiResponse<List<MyChildResponse>> myChildren(@AuthenticationPrincipal GatewayUser user) {
+        var items = leaveService.myChildren(user.requireEmail()).stream()
                 .map(c -> new MyChildResponse(
                         c.student().getId(),
                         c.student().getFirstName(),
@@ -165,19 +134,21 @@ public class StudentController {
 
     @PostMapping("/{id}/leave")
     public ApiResponse<Void> markLeave(
-            @AuthenticationPrincipal Jwt jwt, @PathVariable UUID id, @Valid @RequestBody MarkLeaveRequest req) {
+            @AuthenticationPrincipal GatewayUser user,
+            @PathVariable UUID id,
+            @Valid @RequestBody MarkLeaveRequest req) {
 
-        leaveService.mark(email(jwt), id, req.date(), req.reason(), userId(jwt));
+        leaveService.mark(user.requireEmail(), id, req.date(), req.reason(), user.requireUserId());
         return ApiResponse.ok(null, LEAVE_MARKED_MSG);
     }
 
     @DeleteMapping("/{id}/leave/{date}")
     public ApiResponse<Void> cancelLeave(
-            @AuthenticationPrincipal Jwt jwt,
+            @AuthenticationPrincipal GatewayUser user,
             @PathVariable UUID id,
             @PathVariable @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
 
-        leaveService.cancel(email(jwt), id, date);
+        leaveService.cancel(user.requireEmail(), id, date);
         return ApiResponse.ok(null, LEAVE_CANCELLED_MSG);
     }
 }
