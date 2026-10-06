@@ -109,7 +109,8 @@ services:
       test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
       interval: 10s
       timeout: 5s
-      retries: 5
+      retries: 10
+      start_period: 30s
 
   rabbitmq:
     <<: *common
@@ -137,8 +138,6 @@ services:
       dockerfile: server/services/identity-service/SafeRide.Identity/Dockerfile
     image: saferide/identity-service:local
     container_name: saferide-identity
-    ports:
-      - "${IDENTITY_PORT:-5001}:8080"
     environment:
       ASPNETCORE_ENVIRONMENT: Development
       ConnectionStrings__Default: "Host=postgres;Port=5432;Database=${POSTGRES_DB};Username=${POSTGRES_USER};Password=${POSTGRES_PASSWORD}"
@@ -171,17 +170,12 @@ services:
       dockerfile: server/services/school-service/SafeRide.School/Dockerfile
     image: saferide/school-service:local
     container_name: saferide-school
-    ports:
-      - "5003:8080"
     environment:
       ASPNETCORE_ENVIRONMENT: Development
       ConnectionStrings__Default: "Server=sqlserver,1433;Database=SafeRide_School_Db;User Id=sa;Password=${MSSQL_SA_PASSWORD};TrustServerCertificate=True"
       RabbitMQ__Host: rabbitmq
       RabbitMQ__Username: ${RABBITMQ_USER}
       RabbitMQ__Password: ${RABBITMQ_PASSWORD}
-      JwtSettings__Secret: ${JWT_SECRET}
-      JwtSettings__Issuer: ${JWT_ISSUER}
-      JwtSettings__Audience: ${JWT_AUDIENCE}
       AzureStorage__ConnectionString: "DefaultEndpointsProtocol=http;AccountName=devstoreaccount1;AccountKey=Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw==;BlobEndpoint=http://azurite:10000/devstoreaccount1;"  
       Razorpay__KeyId: ${RAZORPAY__KEYID}
       Razorpay__KeySecret: ${RAZORPAY__KEYSECRET}
@@ -201,8 +195,6 @@ services:
       dockerfile: Dockerfile
     image: saferide/notification-service:local
     container_name: saferide-notification
-    ports:
-      - "${NOTIFICATION_PORT:-5005}:8080"
     environment:
       SPRING_RABBITMQ_HOST: rabbitmq
       SPRING_RABBITMQ_PORT: "5672"
@@ -231,17 +223,12 @@ services:
       dockerfile: Dockerfile
     image: saferide/bus-service:local
     container_name: saferide-bus
-    ports:
-      - "5011:8080"
     environment:
       SPRING_DATASOURCE_URL: "jdbc:mysql://mysql:3306/saferide_bus?createDatabaseIfNotExist=true&allowPublicKeyRetrieval=true&useSSL=false"
       MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
       SPRING_RABBITMQ_HOST: rabbitmq
       SPRING_RABBITMQ_USERNAME: ${RABBITMQ_USER}
       SPRING_RABBITMQ_PASSWORD: ${RABBITMQ_PASSWORD}
-      JWT_SECRET: ${JWT_SECRET}
-      JWT_ISSUER: ${JWT_ISSUER}
-      JWT_AUDIENCE: ${JWT_AUDIENCE}
       AZURE_STORAGE_CONNECTION_STRING: "DefaultEndpointsProtocol=http;AccountName=devstoreaccount1;AccountKey=Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw==;BlobEndpoint=http://host.docker.internal:10000/devstoreaccount1;"
       AZURE_STORAGE_PUBLIC_ENDPOINT: "http://localhost:10000/devstoreaccount1"
     extra_hosts:
@@ -261,8 +248,6 @@ services:
       dockerfile: Dockerfile
     image: saferide/route-service:local
     container_name: saferide-route
-    ports:
-      - "5013:8080"
     environment:
       MONGO_HOST: mongodb
       MONGO_PORT: "27017"
@@ -271,9 +256,6 @@ services:
       SPRING_RABBITMQ_HOST: rabbitmq
       SPRING_RABBITMQ_USERNAME: ${RABBITMQ_USER}
       SPRING_RABBITMQ_PASSWORD: ${RABBITMQ_PASSWORD}
-      JWT_SECRET: ${JWT_SECRET}
-      JWT_ISSUER: ${JWT_ISSUER}
-      JWT_AUDIENCE: ${JWT_AUDIENCE}
       ROUTING_BASE_URL: ${ROUTING_BASE_URL:-https://router.project-osrm.org}
     depends_on:
       mongodb:
@@ -288,17 +270,12 @@ services:
       dockerfile: Dockerfile
     image: saferide/student-service:local
     container_name: saferide-student
-    ports:
-      - "5009:8080"
     environment:
       SPRING_DATASOURCE_URL: "jdbc:mysql://mysql:3306/saferide_student?createDatabaseIfNotExist=true&allowPublicKeyRetrieval=true&useSSL=false"
       MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
       SPRING_RABBITMQ_HOST: rabbitmq
       SPRING_RABBITMQ_USERNAME: ${RABBITMQ_USER}
       SPRING_RABBITMQ_PASSWORD: ${RABBITMQ_PASSWORD}
-      JWT_SECRET: ${JWT_SECRET}
-      JWT_ISSUER: ${JWT_ISSUER}
-      JWT_AUDIENCE: ${JWT_AUDIENCE}
     depends_on:
       mysql:
         condition: service_healthy
@@ -312,17 +289,12 @@ services:
       dockerfile: server/services/driver-service/Dockerfile
     image: saferide/driver-service:local
     container_name: saferide-driver
-    ports:
-      - "5007:8080"
     environment:
       ASPNETCORE_ENVIRONMENT: Development
       ConnectionStrings__DriverDb: "Host=postgres;Port=5432;Database=saferide_driver;Username=${POSTGRES_USER};Password=${POSTGRES_PASSWORD}"
       RabbitMQ__Host: rabbitmq
       RabbitMQ__Username: ${RABBITMQ_USER}
       RabbitMQ__Password: ${RABBITMQ_PASSWORD}
-      JwtSettings__Secret: ${JWT_SECRET}
-      JwtSettings__Issuer: ${JWT_ISSUER}
-      JwtSettings__Audience: ${JWT_AUDIENCE}
     depends_on:
       postgres:
         condition: service_healthy
@@ -336,17 +308,12 @@ services:
       dockerfile: server/services/tracking-service/Dockerfile
     image: saferide/tracking-service:local
     container_name: saferide-tracking
-    ports:
-      - "5015:8080"
     environment:
       ASPNETCORE_ENVIRONMENT: Development
       Mongo__Host: mongodb
       Mongo__Port: "27017"
       Mongo__Username: ${MONGO_ROOT_USERNAME}
       Mongo__Password: ${MONGO_ROOT_PASSWORD}
-      JwtSettings__Secret: ${JWT_SECRET}
-      JwtSettings__Issuer: ${JWT_ISSUER}
-      JwtSettings__Audience: ${JWT_AUDIENCE}
       RabbitMQ__Host: rabbitmq
       RabbitMQ__Username: ${RABBITMQ_USER}
       RabbitMQ__Password: ${RABBITMQ_PASSWORD}
@@ -367,17 +334,12 @@ services:
       dockerfile: server/services/ai-service/SafeRide.Ai/Dockerfile
     image: saferide/ai-service:local
     container_name: saferide-ai
-    ports:
-      - "5017:8080"
     environment:
       ASPNETCORE_ENVIRONMENT: Development
       ConnectionStrings__AiDb: "Server=sqlserver,1433;Database=SafeRide_Ai_Db;User Id=sa;Password=${MSSQL_SA_PASSWORD};TrustServerCertificate=True"
       RabbitMQ__Host: rabbitmq
       RabbitMQ__Username: ${RABBITMQ_USER}
       RabbitMQ__Password: ${RABBITMQ_PASSWORD}
-      JwtSettings__Secret: ${JWT_SECRET}
-      JwtSettings__Issuer: ${JWT_ISSUER}
-      JwtSettings__Audience: ${JWT_AUDIENCE}
       Gemini__ApiKey: ${GEMINI__APIKEY}
       Gemini__Model: "gemini-3.6-flash"
       Gemini__MaxTokens: "2048"
@@ -394,17 +356,12 @@ services:
       dockerfile: Dockerfile
     image: saferide/analytics-service:local
     container_name: saferide-analytics
-    ports:
-      - "5019:8080"
     environment:
       ASPNETCORE_ENVIRONMENT: Development
       ConnectionStrings__Analytics: "Server=sqlserver,1433;Database=SafeRide_Analytics_Db;User Id=sa;Password=${MSSQL_SA_PASSWORD};TrustServerCertificate=True"
       RabbitMQ__Host: rabbitmq
       RabbitMQ__Username: ${RABBITMQ_USER}
       RabbitMQ__Password: ${RABBITMQ_PASSWORD}
-      JwtSettings__Secret: ${JWT_SECRET}
-      JwtSettings__Issuer: ${JWT_ISSUER}
-      JwtSettings__Audience: ${JWT_AUDIENCE}
       Saferide__Timezone: ${SAFERIDE_TIMEZONE:-Asia/Kolkata}
     depends_on:
       sqlserver:

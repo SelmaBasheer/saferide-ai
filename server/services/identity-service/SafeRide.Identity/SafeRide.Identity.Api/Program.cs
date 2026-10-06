@@ -1,6 +1,6 @@
 using Microsoft.EntityFrameworkCore;
+using SafeRide.Identity.Api.Common;
 using SafeRide.Identity.Api.Extensions;
-using SafeRide.Identity.Api.Mapping;
 using SafeRide.Identity.Api.Middleware;
 using SafeRide.Identity.Application;
 using SafeRide.Identity.Infrastructure;
@@ -15,7 +15,7 @@ builder.AddSerilogLogging();
 builder.Services.AddControllers();
 builder.Services.AddRouteOptions();
 builder.Services.AddSwaggerWithJwt();
-builder.Services.AddJwtAuthentication(builder.Configuration);
+builder.Services.AddGatewayAuthentication();
 builder.Services.AddAuthorizationPolicies();
 builder.Services.AddInfrastructure(builder.Configuration);
 builder.Services.AddApplication();

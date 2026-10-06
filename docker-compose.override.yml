@@ -1,0 +1,25 @@
+# Local development only. Compose merges this automatically when we run
+# `docker compose` from this directory, so Swagger and curl still work against
+# each service. Deployment uses docker-compose.yml on its own, where the
+# gateway is the only way in.
+services:
+  identity-service:
+    ports: ["5001:8080"]
+  school-service:
+    ports: ["5003:8080"]
+  notification-service:
+    ports: ["5005:8080"]
+  driver-service:
+    ports: ["5007:8080"]
+  student-service:
+    ports: ["5009:8080"]
+  bus-service:
+    ports: ["5011:8080"]
+  route-service:
+    ports: ["5013:8080"]
+  tracking-service:
+    ports: ["5015:8080"]
+  ai-service:
+    ports: ["5017:8080"]
+  analytics-service:
+    ports: ["5019:8080"]

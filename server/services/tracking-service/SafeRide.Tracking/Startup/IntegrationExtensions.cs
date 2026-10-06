@@ -11,19 +11,19 @@ public static class IntegrationExtensions
     )
     {
         services.AddHttpContextAccessor();
-        services.AddTransient<ForwardAuthHandler>();
+        services.AddTransient<ForwardIdentityHandler>();
 
         services
             .AddHttpClient<RouteClient>(c =>
                 c.BaseAddress = new Uri(configuration["Services:Route"]!)
             )
-            .AddHttpMessageHandler<ForwardAuthHandler>();
+            .AddHttpMessageHandler<ForwardIdentityHandler>();
 
         services
             .AddHttpClient<StudentClient>(c =>
                 c.BaseAddress = new Uri(configuration["Services:Student"]!)
             )
-            .AddHttpMessageHandler<ForwardAuthHandler>();
+            .AddHttpMessageHandler<ForwardIdentityHandler>();
 
         services.Configure<RabbitMqSettings>(configuration.GetSection("RabbitMQ"));
         services.AddSingleton<IEventPublisher, RabbitMqEventPublisher>();
