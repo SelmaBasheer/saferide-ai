@@ -48,6 +48,7 @@ builder.Services.AddScoped<IPaymentFactRepository, PaymentFactRepository>();
 builder.Services.AddScoped<ITripFactRepository, TripFactRepository>();
 builder.Services.AddScoped<ISuperAdminReportRepository, SuperAdminReportRepository>();
 builder.Services.AddScoped<ISchoolReportRepository, SchoolReportRepository>();
+builder.Services.AddScoped<ISuperAdminDashboardRepository, SuperAdminDashboardRepository>();
 
 // ---------- Reporting ----------
 // No AutoMapper. Dapper projects query results straight onto the report DTOs,
