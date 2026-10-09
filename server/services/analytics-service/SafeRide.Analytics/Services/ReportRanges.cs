@@ -34,4 +34,20 @@ public static class ReportRanges
 
         return new ReportRange(start, end);
     }
+
+    /// <summary>
+    /// The dashboard's default is a year rather than a month, because its charts
+    /// are about trend: thirty days of bars shows noise, twelve months shows a
+    /// shape. Starting at the first of the month keeps the first bar whole.
+    /// </summary>
+    public static ReportRange ResolveDashboard(DateOnly? from, DateOnly? to, DateOnly today)
+    {
+        if (from is null && to is null)
+        {
+            var start = new DateOnly(today.Year, today.Month, 1).AddMonths(-11);
+            return new ReportRange(start, today);
+        }
+
+        return Resolve(from, to, today);
+    }
 }
