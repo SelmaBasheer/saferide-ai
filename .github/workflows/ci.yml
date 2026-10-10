@@ -2,7 +2,7 @@ name: CI
 
 on:
   push:
-    branches: [main, master]   
+    branches: [main, master]
   pull_request:
 
 permissions:
@@ -29,6 +29,7 @@ jobs:
             exit 1
           fi
           echo "Branch name OK"
+
   dotnet:
     name: .NET build & check
     runs-on: ubuntu-latest
@@ -58,6 +59,7 @@ jobs:
 
       - name: Check formatting (CSharpier)
         run: dotnet csharpier check .
+
   java:
     name: Java build & check
     runs-on: ubuntu-latest
@@ -83,6 +85,40 @@ jobs:
         working-directory: ${{ matrix.service.path }}
         run: ./mvnw -B spotless:check
 
+      # Tests are skipped deliberately. The generated contextLoads test is a
+      # @SpringBootTest: it boots the whole context, which connects to Mongo and
+      # creates indexes, so it needs live infrastructure and Doppler-injected
+      # credentials. Neither exists on a runner. Making it run here means giving
+      # each service a Testcontainers-backed database — worth doing, tracked
+      # separately, not a one-line change.
       - name: Compile
         working-directory: ${{ matrix.service.path }}
         run: ./mvnw -B -DskipTests compile
+
+  web:
+    name: Web build & typecheck
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: client/admin-web/package-lock.json
+
+      - name: Install
+        working-directory: client/admin-web
+        run: npm ci
+
+      # npm run build is already "tsc -b && vite build", so this step is the
+      # same check run on its own. Kept separate so a red X says which half
+      # broke — types or bundling — without opening the log.
+      - name: Typecheck
+        working-directory: client/admin-web
+        run: npx tsc --noEmit
+
+      - name: Build
+        working-directory: client/admin-web
+        run: npm run build
