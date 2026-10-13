@@ -1,0 +1,10 @@
+apiVersion: v2
+name: saferide-service
+description: One deployment template shared by every SafeRide microservice
+type: application
+
+# The chart's own version. Bump when you change the template.
+version: 0.1.0
+
+# The app version this chart defaults to deploying.
+appVersion: "1.0.0"

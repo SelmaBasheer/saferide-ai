@@ -1,0 +1,68 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  # .Release.Name is what you type in `helm install <name>`. So installing as
+  # "identity-service" names the deployment identity-service.
+  name: {{ .Release.Name }}
+  labels:
+    app: {{ .Release.Name }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+
+  # How the Deployment knows which pods are its own.
+  selector:
+    matchLabels:
+      app: {{ .Release.Name }}
+
+  template:
+    metadata:
+      labels:
+        app: {{ .Release.Name }}
+    spec:
+      containers:
+        - name: {{ .Chart.Name }}
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+
+          ports:
+            - containerPort: {{ .Values.containerPort }}
+
+          {{- if .Values.env }}
+          env:
+            {{- range $key, $value := .Values.env }}
+            - name: {{ $key }}
+              value: {{ $value | quote }}
+            {{- end }}
+          {{- end }}
+
+          {{- if .Values.envFromSecrets }}
+          envFrom:
+            {{- range .Values.envFromSecrets }}
+            - secretRef:
+                name: {{ . }}
+            {{- end }}
+          {{- end }}
+
+          {{- if .Values.probes.enabled }}
+          # Readiness: is this pod ready for traffic? Fails, and the Service
+          # stops sending requests to it — but the pod is left alone.
+          readinessProbe:
+            httpGet:
+              path: {{ .Values.probes.path }}
+              port: {{ .Values.containerPort }}
+            initialDelaySeconds: {{ .Values.probes.initialDelaySeconds }}
+            periodSeconds: 10
+
+          # Liveness: is this pod still alive? Fails repeatedly, and Kubernetes
+          # restarts the container. Slower period so a brief hiccup doesn't
+          # trigger a restart loop.
+          livenessProbe:
+            httpGet:
+              path: {{ .Values.probes.path }}
+              port: {{ .Values.containerPort }}
+            initialDelaySeconds: {{ .Values.probes.initialDelaySeconds }}
+            periodSeconds: 20
+          {{- end }}
+
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}

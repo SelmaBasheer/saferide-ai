@@ -1,0 +1,64 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: rabbitmq
+  namespace: saferide
+spec:
+  serviceName: rabbitmq
+  replicas: 1
+  selector:
+    matchLabels:
+      app: rabbitmq
+  template:
+    metadata:
+      labels:
+        app: rabbitmq
+    spec:
+      containers:
+        - name: rabbitmq
+          image: rabbitmq:4-management-alpine
+          ports:
+            # Where services publish and consume.
+            - name: amqp
+              containerPort: 5672
+            # The management UI, same one you open on localhost:15672.
+            - name: management
+              containerPort: 15672
+          envFrom:
+            - secretRef:
+                name: rabbitmq-secret
+          volumeMounts:
+            - name: data
+              mountPath: /var/lib/rabbitmq
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+  volumeClaimTemplates:
+    - metadata:
+        name: data
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        resources:
+          requests:
+            storage: 8Gi
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: rabbitmq
+  namespace: saferide
+spec:
+  selector:
+    app: rabbitmq
+  ports:
+    - name: amqp
+      port: 5672
+      targetPort: 5672
+    - name: management
+      port: 15672
+      targetPort: 15672

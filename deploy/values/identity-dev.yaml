@@ -1,0 +1,32 @@
+# Everything that makes identity-service different from the other ten.
+# The chart supplies the rest.
+
+image:
+  repository: saferidedevacr30.azurecr.io/identity-service
+  tag: v1
+
+# Non-secret configuration. This file is in Git, so nothing sensitive here.
+env:
+  ASPNETCORE_ENVIRONMENT: Development
+
+  # Service names inside the cluster, same as compose container names.
+  RabbitMQ__Host: rabbitmq
+
+  JwtSettings__Issuer: saferide-ai
+  JwtSettings__Audience: saferide-ai-clients
+  JwtSettings__AccessTokenMinutes: "15"
+  JwtSettings__RefreshTokenDays: "7"
+
+  Seed__SuperAdminEmail: selmabasheer30@gmail.com
+  Seed__SuperAdminPhone: "918848958139"
+
+  # Azurite is not deployed to the cluster — in Azure the real Storage Account
+  # replaces it. Left pointing at a host that does not resolve, so the service
+  # starts fine and only profile photo upload fails. Fixed in a later step.
+  AzureStorage__ConnectionString: "DefaultEndpointsProtocol=http;AccountName=devstoreaccount1;AccountKey=Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw==;BlobEndpoint=http://azurite:10000/devstoreaccount1;"
+  AzureStorage__Container: profile-images
+  AzureStorage__PublicEndpoint: "http://localhost:10000"
+
+# Passwords and the connection string come from here, not from this file.
+envFromSecrets:
+  - identity-secret

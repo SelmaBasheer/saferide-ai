@@ -1,0 +1,17 @@
+# A Deployment runs pods, but pods get new IP addresses when they restart. A
+# Service is a stable name in front of them. This is what makes
+# http://identity-service reachable from the gateway.
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .Release.Name }}
+  labels:
+    app: {{ .Release.Name }}
+spec:
+  type: {{ .Values.service.type }}
+  selector:
+    app: {{ .Release.Name }}
+  ports:
+    - port: {{ .Values.service.port }}
+      targetPort: {{ .Values.containerPort }}
+      protocol: TCP

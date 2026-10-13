@@ -17,6 +17,17 @@ terraform {
       version = "~> 4.0"
     }
   }
+
+  # Where Terraform keeps its record of what it has built. Remote rather than
+  # local because the file holds secrets in plain text, and because blob
+  # leasing stops two applies running at once.
+  backend "azurerm" {
+    resource_group_name  = "rg-saferide-tfstate"
+    storage_account_name = "saferidetfstate30"
+    container_name       = "tfstate"
+    key                  = "saferide-dev.tfstate"
+    use_azuread_auth     = true
+  }
 }
 
 # Configure the Azure provider so Terraform can manage Azure resources.

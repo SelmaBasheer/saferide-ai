@@ -1,0 +1,72 @@
+# A StatefulSet, not a Deployment. Deployments assume their pods are
+# interchangeable and have no identity. A database has state on disk, so it
+# gets a stable name and a disk that survives restarts.
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: postgres
+  namespace: saferide
+spec:
+  serviceName: postgres
+  replicas: 1
+  selector:
+    matchLabels:
+      app: postgres
+  template:
+    metadata:
+      labels:
+        app: postgres
+    spec:
+      containers:
+        - name: postgres
+          # Same image as docker-compose.
+          image: postgres:17-alpine
+          ports:
+            - containerPort: 5432
+          envFrom:
+            # Pulls every key in the secret in as an environment variable.
+            - secretRef:
+                name: postgres-secret
+          volumeMounts:
+            - name: data
+              mountPath: /var/lib/postgresql/data
+              # Postgres refuses to start if its data directory is not empty,
+              # and Azure disks arrive with a lost+found folder. subPath puts
+              # the data one level down, in its own clean directory.
+              subPath: pgdata
+          resources:
+            # requests is what Kubernetes reserves when choosing a node.
+            # limits is the ceiling before the container is throttled or killed.
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+
+  # Kubernetes creates an Azure managed disk from this and attaches it. The
+  # disk outlives the pod, so a restart keeps the data.
+  volumeClaimTemplates:
+    - metadata:
+        name: data
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        resources:
+          requests:
+            storage: 8Gi
+
+---
+# A Service gives the pod a stable name on the cluster network. Other pods
+# reach it at http://postgres:5432 — exactly the hostname docker-compose used,
+# so no connection string changes.
+apiVersion: v1
+kind: Service
+metadata:
+  name: postgres
+  namespace: saferide
+spec:
+  selector:
+    app: postgres
+  ports:
+    - port: 5432
+      targetPort: 5432

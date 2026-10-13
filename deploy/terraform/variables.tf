@@ -47,3 +47,13 @@ variable "node_vm_size" {
   type        = string
   default     = "Standard_D2s_v4"
 }
+
+variable "unique_suffix" {
+  description = <<-EOT
+    Container registry names must be globally unique across all of Azure, the
+    same way storage account names are. This suffix makes ours unlikely to
+    collide with someone else's.
+  EOT
+  type        = string
+  default     = "30"
+}
