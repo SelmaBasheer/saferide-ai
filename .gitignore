@@ -25,3 +25,11 @@ dev-env.ps1
 # IntelliJ IDEA
 .idea/
 *.iml
+
+# Terraform
+**/.terraform/*
+*.tfstate
+*.tfstate.*
+*.tfplan
+terraform.tfvars
+crash.log
