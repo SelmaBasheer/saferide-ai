@@ -111,3 +111,19 @@ resource "azurerm_role_assignment" "aks_acr_pull" {
   principal_id                     = azurerm_kubernetes_cluster.main.kubelet_identity[0].object_id
   skip_service_principal_aad_check = true
 }
+
+# Replaces Azurite. Azurite is the local emulator; in Azure you use the real
+# service, so the connection string changes and nothing else does.
+resource "azurerm_storage_account" "media" {
+  name                     = "${var.project_name}${var.environment}sa${var.unique_suffix}"
+  resource_group_name      = azurerm_resource_group.main.name
+  location                 = azurerm_resource_group.main.location
+  account_tier             = "Standard"
+  account_replication_type = "LRS"
+
+  # Profile photos and bus documents are served directly to the browser by
+  # URL, so the containers holding them must be publicly readable.
+  allow_nested_items_to_be_public = true
+
+  tags = local.tags
+}

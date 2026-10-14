@@ -20,3 +20,8 @@ output "aks_cluster_name" {
   description = "Cluster name, for `az aks get-credentials`"
   value       = azurerm_kubernetes_cluster.main.name
 }
+
+output "storage_account_name" {
+  description = "Storage account replacing Azurite"
+  value       = azurerm_storage_account.media.name
+}

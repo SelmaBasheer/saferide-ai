@@ -1,0 +1,12 @@
+image:
+  repository: saferidedevacr30.azurecr.io/ai-service
+  tag: v1
+
+env:
+  ASPNETCORE_ENVIRONMENT: Development
+  RabbitMQ__Host: rabbitmq
+  Gemini__Model: "gemini-3.6-flash"
+  Gemini__MaxTokens: "2048"
+
+envFromSecrets:
+  - ai-secret

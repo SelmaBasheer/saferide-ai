@@ -1,0 +1,14 @@
+image:
+  repository: saferidedevacr30.azurecr.io/student-service
+  tag: v1
+
+probes:
+  path: /actuator/health
+  initialDelaySeconds: 40
+
+env:
+  SPRING_DATASOURCE_URL: "jdbc:mysql://mysql:3306/saferide_student?createDatabaseIfNotExist=true&allowPublicKeyRetrieval=true&useSSL=false"
+  SPRING_RABBITMQ_HOST: rabbitmq
+
+envFromSecrets:
+  - student-secret

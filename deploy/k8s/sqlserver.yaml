@@ -1,0 +1,68 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: sqlserver
+  namespace: saferide
+spec:
+  serviceName: sqlserver
+  replicas: 1
+  selector:
+    matchLabels:
+      app: sqlserver
+  template:
+    metadata:
+      labels:
+        app: sqlserver
+    spec:
+      # The SQL Server image runs as uid 10001, but an Azure disk arrives owned
+      # by root. fsGroup tells the kubelet to chown the mounted volume to this
+      # group before the container starts, which is what makes the data
+      # directory writable.
+      securityContext:
+        runAsUser: 10001
+        runAsGroup: 10001
+        fsGroup: 10001
+      containers:
+        - name: sqlserver
+          image: mcr.microsoft.com/mssql/server:2022-latest
+          ports:
+            - containerPort: 1433
+          env:
+            - name: ACCEPT_EULA
+              value: "Y"
+          envFrom:
+            - secretRef:
+                name: sqlserver-secret
+          volumeMounts:
+            - name: data
+              mountPath: /var/opt/mssql
+          resources:
+            # SQL Server refuses to start with less than 2 GiB and the error it
+            # gives is unhelpful. This is the single largest pod in the cluster.
+            requests:
+              cpu: 250m
+              memory: 2Gi
+            limits:
+              cpu: 1000m
+              memory: 3Gi
+  volumeClaimTemplates:
+    - metadata:
+        name: data
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        resources:
+          requests:
+            storage: 8Gi
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: sqlserver
+  namespace: saferide
+spec:
+  selector:
+    app: sqlserver
+  ports:
+    - port: 1433
+      targetPort: 1433

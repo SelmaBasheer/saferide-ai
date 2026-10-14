@@ -1,0 +1,21 @@
+image:
+  repository: saferidedevacr30.azurecr.io/tracking-service
+  tag: v1
+
+# Must stay at 1. SignalR keeps WebSocket connections in memory, so a parent
+# connected to one pod would not receive a broadcast sent from another.
+# Scaling this needs a Redis backplane or Azure SignalR Service.
+replicaCount: 1
+
+env:
+  ASPNETCORE_ENVIRONMENT: Development
+  Mongo__Host: mongodb
+  Mongo__Port: "27017"
+  RabbitMQ__Host: rabbitmq
+
+  # Tracking calls these directly on trip start.
+  Services__Route: "http://route-service"
+  Services__Student: "http://student-service"
+
+envFromSecrets:
+  - tracking-secret

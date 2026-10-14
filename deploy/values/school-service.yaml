@@ -1,0 +1,10 @@
+image:
+  repository: saferidedevacr30.azurecr.io/school-service
+  tag: v1
+
+env:
+  ASPNETCORE_ENVIRONMENT: Development
+  RabbitMQ__Host: rabbitmq
+
+envFromSecrets:
+  - school-secret

@@ -1,0 +1,57 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: mongodb
+  namespace: saferide
+spec:
+  serviceName: mongodb
+  replicas: 1
+  selector:
+    matchLabels:
+      app: mongodb
+  template:
+    metadata:
+      labels:
+        app: mongodb
+    spec:
+      containers:
+        - name: mongodb
+          image: mongo:8
+          ports:
+            - containerPort: 27017
+          envFrom:
+            - secretRef:
+                name: mongodb-secret
+          volumeMounts:
+            - name: data
+              mountPath: /data/db
+          resources:
+            requests:
+              cpu: 100m
+              memory: 512Mi
+            limits:
+              cpu: 500m
+              memory: 1Gi
+  volumeClaimTemplates:
+    - metadata:
+        name: data
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        resources:
+          requests:
+            storage: 8Gi
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mongodb
+  namespace: saferide
+spec:
+  selector:
+    app: mongodb
+  ports:
+    # 27017 inside the cluster, not 27018 — the 27018 in compose was only to
+    # avoid clashing with a local Mongo on your laptop.
+    - port: 27017
+      targetPort: 27017

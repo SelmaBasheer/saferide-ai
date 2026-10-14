@@ -34,7 +34,15 @@ terraform {
 provider "azurerm" {
   # Required configuration block for the Azure provider.
   # Additional Azure provider settings can be added here.
-  features {}
+  features {
+    resource_group {
+      # Enabling container insights makes Azure create a "solution" resource
+      # that Terraform never declared. By default Terraform refuses to delete a
+      # resource group holding resources it does not manage. Everything in
+      # rg-saferide-dev is ours, so let destroy clear it out.
+      prevent_deletion_if_contains_resources = false
+    }
+  }
 
   # Terraform uses your Azure CLI login to authenticate with Azure.
   # Run 'az login' before running Terraform.

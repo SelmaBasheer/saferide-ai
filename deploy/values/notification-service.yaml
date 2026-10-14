@@ -1,0 +1,21 @@
+image:
+  repository: saferidedevacr30.azurecr.io/notification-service
+  tag: v1
+
+probes:
+  # Spring Boot Actuator, not the .NET HealthController.
+  path: /actuator/health
+  # The JVM plus Spring context startup is slower than .NET.
+  initialDelaySeconds: 40
+
+env:
+  SPRING_RABBITMQ_HOST: rabbitmq
+  SPRING_RABBITMQ_PORT: "5672"
+  WHATSAPP_PROVIDER: twilio
+  EMAIL_PROVIDER: brevo
+  # Updated to the public URL once ingress exists — this is what appears in
+  # verification and password-reset emails.
+  APP_BASE_URL: "http://localhost:5173"
+
+envFromSecrets:
+  - notification-secret
