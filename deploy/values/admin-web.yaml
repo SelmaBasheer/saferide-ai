@@ -1,0 +1,17 @@
+image:
+  repository: saferidedevacr30.azurecr.io/admin-web
+  tag: v1
+
+probes:
+  # nginx serves index.html at /, which returns 200. No health endpoint needed.
+  path: /
+  initialDelaySeconds: 5
+
+resources:
+  # Static files from nginx. Nothing like a .NET service's footprint.
+  requests:
+    cpu: 50m
+    memory: 64Mi
+  limits:
+    cpu: 200m
+    memory: 128Mi

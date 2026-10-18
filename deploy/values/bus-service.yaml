@@ -1,0 +1,15 @@
+image:
+  repository: saferidedevacr30.azurecr.io/bus-service
+  tag: v1
+
+probes:
+  path: /actuator/health
+  initialDelaySeconds: 40
+
+env:
+  SPRING_DATASOURCE_URL: "jdbc:mysql://mysql:3306/saferide_bus?createDatabaseIfNotExist=true&allowPublicKeyRetrieval=true&useSSL=false"
+  SPRING_RABBITMQ_HOST: rabbitmq
+  AZURE_STORAGE_PUBLIC_ENDPOINT: "https://saferidedevsa30.blob.core.windows.net"
+
+envFromSecrets:
+  - bus-secret

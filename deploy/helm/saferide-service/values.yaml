@@ -1,0 +1,54 @@
+# How many copies of the pod to run.
+replicaCount: 1
+
+image:
+  # Set per service — the full registry path, without the tag.
+  repository: ""
+  tag: "v1"
+  # IfNotPresent reuses a cached image. Always re-pulls every start, which
+  # matters when a tag like "latest" is overwritten in place.
+  pullPolicy: IfNotPresent
+
+# Every SafeRide service listens on 8080 inside the container.
+containerPort: 8080
+
+service:
+  # ClusterIP means reachable from inside the cluster only. The gateway will
+  # override this later; the other ten never should.
+  type: ClusterIP
+  port: 80
+
+# Plain configuration. Goes into Git, so nothing secret here.
+env: {}
+
+# Names of Kubernetes Secrets to pull environment variables from. Passwords
+# and connection strings live here instead.
+envFromSecrets: []
+
+probes:
+  enabled: true
+  # Every service has a HealthController at this path.
+  path: /health
+  # .NET services run database migrations on startup, so give them time before
+  # the first check. Too short and Kubernetes kills a pod that was only busy.
+  initialDelaySeconds: 20
+
+resources:
+  # requests is what Kubernetes reserves when deciding which node has room.
+  requests:
+    cpu: 50m
+    memory: 192Mi
+  # limits is the ceiling. Exceed memory and the container is killed.
+  limits:
+    cpu: 500m
+    memory: 512Mi
+
+# RollingUpdate (the default) starts the new pod before retiring the old one,
+# so a single-replica service momentarily needs two pods' worth of room. With
+# twelve services on two nodes there is none, and the new pod sits Pending
+# forever while the old one keeps serving.
+#
+# Recreate stops the old pod first. The cost is a few seconds of downtime per
+# deploy, which is the right trade for a dev cluster. Services running more
+# than one replica should override this back to RollingUpdate.
+strategy: Recreate

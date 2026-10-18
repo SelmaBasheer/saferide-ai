@@ -1,0 +1,16 @@
+image:
+  repository: saferidedevacr30.azurecr.io/route-service
+  tag: v1
+
+probes:
+  path: /actuator/health
+  initialDelaySeconds: 40
+
+env:
+  MONGO_HOST: mongodb
+  MONGO_PORT: "27017"
+  SPRING_RABBITMQ_HOST: rabbitmq
+  ROUTING_BASE_URL: "https://router.project-osrm.org"
+
+envFromSecrets:
+  - route-secret
