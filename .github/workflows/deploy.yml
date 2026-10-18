@@ -1,0 +1,109 @@
+name: Deploy
+
+on:
+  push:
+    branches: [master]
+  # Lets you re-run a deploy from the Actions tab without pushing a commit.
+  workflow_dispatch:
+
+permissions:
+  # Required for OIDC — this is what lets the runner request a token that
+  # Azure will trust. Without it, azure/login fails with no useful message.
+  id-token: write
+  contents: read
+
+env:
+  REGISTRY: saferidedevacr30.azurecr.io
+  RESOURCE_GROUP: rg-saferide-dev
+  CLUSTER: aks-saferide-dev
+  NAMESPACE: saferide
+
+jobs:
+  build:
+    name: Build ${{ matrix.service.name }}
+    runs-on: ubuntu-latest
+    strategy:
+      # One service failing should not cancel the other eleven — you want to
+      # see every failure in one run, not the first one.
+      fail-fast: false
+      matrix:
+        service:
+          - { name: gateway,              context: server/services/gateway-service/SafeRide.Gateway, dockerfile: server/services/gateway-service/SafeRide.Gateway/Dockerfile }
+          - { name: identity-service,     context: ".",                                              dockerfile: server/services/identity-service/SafeRide.Identity/Dockerfile }
+          - { name: school-service,       context: ".",                                              dockerfile: server/services/school-service/SafeRide.School/Dockerfile }
+          - { name: driver-service,       context: ".",                                              dockerfile: server/services/driver-service/Dockerfile }
+          - { name: tracking-service,     context: ".",                                              dockerfile: server/services/tracking-service/Dockerfile }
+          - { name: ai-service,           context: ".",                                              dockerfile: server/services/ai-service/SafeRide.Ai/Dockerfile }
+          - { name: analytics-service,    context: server/services/analytics-service,                dockerfile: server/services/analytics-service/Dockerfile }
+          - { name: notification-service, context: server/services/notification-service/notification, dockerfile: server/services/notification-service/notification/Dockerfile }
+          - { name: bus-service,          context: server/services/bus-service/bus,                  dockerfile: server/services/bus-service/bus/Dockerfile }
+          - { name: route-service,        context: server/services/route-service/route,              dockerfile: server/services/route-service/route/Dockerfile }
+          - { name: student-service,      context: server/services/student-service/student,          dockerfile: server/services/student-service/student/Dockerfile }
+          - { name: admin-web,            context: client/admin-web,                                 dockerfile: client/admin-web/Dockerfile }
+
+    steps:
+      - uses: actions/checkout@v4
+
+      # No password anywhere. GitHub presents a short-lived OIDC token; Azure
+      # checks it came from this repo on this branch and issues credentials.
+      - name: Sign in to Azure
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Sign in to the registry
+        run: az acr login --name saferidedevacr30
+
+      # Tagged with the commit SHA, not "v1". Every deploy is traceable to a
+      # commit, and rolling back is deploying an earlier tag rather than
+      # rebuilding. Also tagged latest for convenience.
+      - name: Build and push
+        run: |
+          IMAGE=$REGISTRY/${{ matrix.service.name }}
+          docker build -t $IMAGE:${{ github.sha }} -t $IMAGE:latest \
+            -f ${{ matrix.service.dockerfile }} ${{ matrix.service.context }}
+          docker push $IMAGE:${{ github.sha }}
+          docker push $IMAGE:latest
+
+  deploy:
+    name: Deploy to AKS
+    needs: build
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Sign in to Azure
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Get cluster credentials
+        run: az aks get-credentials -g $RESOURCE_GROUP -n $CLUSTER --overwrite-existing
+
+      # Each file in deploy/values is one service, and its filename is the
+      # release name. Adding a thirteenth service needs no change here.
+      #
+      # --set image.tag overrides the v1 in the values file with this commit.
+      # --wait makes the step fail if a pod never becomes ready, so a broken
+      # deploy shows as a red build rather than silently sitting in the cluster.
+      - name: Deploy every service
+        run: |
+          for f in deploy/values/*.yaml; do
+            release=$(basename "$f" .yaml)
+            echo "::group::$release"
+            helm upgrade --install "$release" deploy/helm/saferide-service \
+              --namespace $NAMESPACE \
+              -f "$f" \
+              --set image.tag=${{ github.sha }} \
+              --wait --timeout 5m
+            echo "::endgroup::"
+          done
+
+      - name: Show the result
+        if: always()
+        run: kubectl get pods -n $NAMESPACE
