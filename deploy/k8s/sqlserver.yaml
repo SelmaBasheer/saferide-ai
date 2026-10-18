@@ -40,7 +40,7 @@ spec:
             # SQL Server refuses to start with less than 2 GiB and the error it
             # gives is unhelpful. This is the single largest pod in the cluster.
             requests:
-              cpu: 250m
+              cpu: 150m
               memory: 2Gi
             limits:
               cpu: 1000m

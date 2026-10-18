@@ -9,6 +9,9 @@ metadata:
 spec:
   replicas: {{ .Values.replicaCount }}
 
+  strategy:
+    type: {{ .Values.strategy }}
+
   # How the Deployment knows which pods are its own.
   selector:
     matchLabels:

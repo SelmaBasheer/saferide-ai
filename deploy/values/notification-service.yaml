@@ -15,7 +15,7 @@ env:
   EMAIL_PROVIDER: brevo
   # Updated to the public URL once ingress exists — this is what appears in
   # verification and password-reset emails.
-  APP_BASE_URL: "http://localhost:5173"
+  APP_BASE_URL: "https://saferide-ai.centralindia.cloudapp.azure.com"
 
 envFromSecrets:
   - notification-secret

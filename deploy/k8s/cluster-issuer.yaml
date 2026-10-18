@@ -1,0 +1,28 @@
+# Tells cert-manager how to get certificates. "Cluster" issuer means it works
+# for any namespace, rather than just one.
+apiVersion: cert-manager.io/v1
+kind: ClusterIssuer
+metadata:
+  name: letsencrypt-prod
+spec:
+  acme:
+    # Let's Encrypt's production endpoint. There is also a staging one with
+    # looser rate limits, useful if you expect to fail repeatedly — its certs
+    # are not trusted by browsers, so only for testing the plumbing.
+    server: https://acme-v02.api.letsencrypt.org/directory
+
+    # Expiry warnings go here.
+    email: selmabasheer30@gmail.com
+
+    # cert-manager stores its Let's Encrypt account key under this name.
+    privateKeySecretRef:
+      name: letsencrypt-prod-account-key
+
+    solvers:
+      # HTTP-01 challenge: Let's Encrypt asks for a specific file at
+      # http://<host>/.well-known/acme-challenge/<token>. cert-manager creates
+      # a temporary Ingress rule to serve it, which proves you control the
+      # hostname. This is why the DNS had to resolve first.
+      - http01:
+          ingress:
+            class: nginx

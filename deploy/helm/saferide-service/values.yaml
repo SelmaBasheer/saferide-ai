@@ -36,9 +36,19 @@ probes:
 resources:
   # requests is what Kubernetes reserves when deciding which node has room.
   requests:
-    cpu: 100m
-    memory: 256Mi
+    cpu: 50m
+    memory: 192Mi
   # limits is the ceiling. Exceed memory and the container is killed.
   limits:
     cpu: 500m
     memory: 512Mi
+
+# RollingUpdate (the default) starts the new pod before retiring the old one,
+# so a single-replica service momentarily needs two pods' worth of room. With
+# twelve services on two nodes there is none, and the new pod sits Pending
+# forever while the old one keeps serving.
+#
+# Recreate stops the old pod first. The cost is a few seconds of downtime per
+# deploy, which is the right trade for a dev cluster. Services running more
+# than one replica should override this back to RollingUpdate.
+strategy: Recreate

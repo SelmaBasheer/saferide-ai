@@ -32,6 +32,7 @@ $services = @(
     @{ name = "bus-service";          context = "server/services/bus-service/bus";                  dockerfile = "server/services/bus-service/bus/Dockerfile" }
     @{ name = "route-service";        context = "server/services/route-service/route";              dockerfile = "server/services/route-service/route/Dockerfile" }
     @{ name = "student-service";      context = "server/services/student-service/student";          dockerfile = "server/services/student-service/student/Dockerfile" }
+    @{ name = "admin-web"; context = "client/admin-web"; dockerfile = "client/admin-web/Dockerfile" }
 )
 
 if ($Only.Count -gt 0) {

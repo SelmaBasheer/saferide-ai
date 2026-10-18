@@ -1,0 +1,55 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: saferide
+  namespace: saferide
+  annotations:
+    # cert-manager watches for this. It sees the tls block below, requests a
+    # certificate for that hostname, and stores it in the named secret.
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+
+    # SignalR holds a WebSocket open for the length of a trip. NGINX's default
+    # 60-second timeout would cut the parent's live map every minute.
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "3600"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "3600"
+
+spec:
+  ingressClassName: nginx
+
+  tls:
+    - hosts:
+        - saferide-ai.centralindia.cloudapp.azure.com
+      # cert-manager creates this secret. You never touch it.
+      secretName: saferide-tls
+
+  rules:
+    - host: saferide-ai.centralindia.cloudapp.azure.com
+      http:
+        paths:
+          # API calls to the gateway, which routes on to the right service.
+          - path: /api
+            pathType: Prefix
+            backend:
+              service:
+                name: gateway
+                port:
+                  number: 80
+
+          # SignalR. The long proxy timeouts in the annotations keep these open.
+          - path: /hubs
+            pathType: Prefix
+            backend:
+              service:
+                name: gateway
+                port:
+                  number: 80
+
+          # Everything else is the React app. NGINX matches longest prefix
+          # first, so /api and /hubs win over / regardless of order here.
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: admin-web
+                port:
+                  number: 80
