@@ -14,3 +14,16 @@ probes:
   # Analytics has no HealthController yet. Disabled rather than pointed at a
   # path that 404s, which makes Kubernetes kill a perfectly healthy pod.
   enabled: false
+
+# Load testing at 200 req/s showed this pinned at 448m against a 500m limit,
+# with p95 rising from 113ms to 552ms while errors stayed at zero — the
+# signature of CPU throttling rather than failure. The dashboard endpoint runs
+# seven queries per request, so it is genuinely the most CPU-hungry service.
+# Limits are not reserved at scheduling time, so raising this costs no capacity.
+resources:
+  requests:
+    cpu: 50m
+    memory: 192Mi
+  limits:
+    cpu: 1500m
+    memory: 512Mi
