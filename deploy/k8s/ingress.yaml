@@ -13,6 +13,11 @@ metadata:
     nginx.ingress.kubernetes.io/proxy-read-timeout: "3600"
     nginx.ingress.kubernetes.io/proxy-send-timeout: "3600"
 
+    # The UI advertises 5 MB documents, but NGINX defaults to a 1 MB request
+    # body and rejects anything larger with 413 before it reaches the gateway.
+    # The service never sees the request, so its logs show nothing at all.
+    nginx.ingress.kubernetes.io/proxy-body-size: "6m"
+
 spec:
   ingressClassName: nginx
 

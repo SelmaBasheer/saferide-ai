@@ -2,7 +2,7 @@ import { useState } from "react"
 import { useNavigate, useParams } from "react-router-dom"
 import { ArrowLeft, FileText, ExternalLink, CheckCircle2, XCircle, Ban } from "lucide-react"
 import DashboardLayout from "@/components/layout/DashboardLayout"
-import { School as SchoolIcon, Users, BarChart3 } from "lucide-react"
+import { superAdminNav } from "@/components/layout/superAdminNav"
 import { Button } from "@/components/ui/button"
 import { ROUTES } from "@/routes/paths"
 import {
@@ -57,12 +57,8 @@ export default function SchoolDetailPage() {
     }
 
     return (
-        <DashboardLayout roleLabel="Super Admin" nav={[
-            { label: "Schools", icon: SchoolIcon, active: true },
-            { label: "Users", icon: Users },
-            { label: "Reports", icon: BarChart3 },
-        ]}>
-            <button onClick={() => navigate(ROUTES.superAdmin)}
+        <DashboardLayout roleLabel="Super Admin" nav={superAdminNav("Schools")}>
+            <button onClick={() => navigate(ROUTES.superAdminSchools)}
                 className="mb-4 flex items-center gap-1 text-sm text-slate-500">
                 <ArrowLeft className="h-4 w-4" /> Back to schools
             </button>
