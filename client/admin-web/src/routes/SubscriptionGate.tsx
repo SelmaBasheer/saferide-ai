@@ -1,5 +1,6 @@
 import { Navigate } from "react-router-dom"
 import { ROUTES } from "@/routes/paths"
+import { useGetMySchoolQuery } from "@/features/schools/schoolApi"
 import { useGetMySubscriptionQuery } from "@/features/subscriptions/subscriptionApi"
 
 /**
@@ -15,12 +16,21 @@ import { useGetMySubscriptionQuery } from "@/features/subscriptions/subscription
  * their own subscription page tells them.
  */
 export default function SubscriptionGate({ children }: { children: React.ReactNode }) {
+    const { data: school, isLoading: schoolLoading } = useGetMySchoolQuery()
     const { data: subscription, isLoading, isError } = useGetMySubscriptionQuery()
 
     // Render nothing rather than the page while we find out. Showing a page and
     // then yanking it away is worse than a blank moment.
-    if (isLoading) {
+    if (schoolLoading || isLoading) {
         return null
+    }
+
+    // Approval comes before payment. StartCheckoutHandler refuses to sell a
+    // plan to a school that is not Approved, so sending them to the
+    // subscription page would offer something the server rejects. Overview
+    // already explains where they are in the process.
+    if (school && school.status !== "Approved") {
+        return <Navigate to={ROUTES.schoolAdmin} replace />
     }
 
     const live = subscription?.status === "Active" || subscription?.status === "InGrace"

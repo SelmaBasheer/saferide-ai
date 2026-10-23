@@ -39,6 +39,7 @@ import MobileProfilePage from "@/pages/MobileProfilePage"
 import SuperAdminReportsPage from "@/pages/superadmin/SuperAdminReportsPage"
 import SchoolAdminReportsPage from "@/pages/schooladmin/SchoolAdminReportsPage"
 import SubscriptionGate from "@/routes/SubscriptionGate"
+import ApprovedGate from "@/routes/ApprovedGate"
 
 export default function AppRoutes() {
     return (
@@ -76,7 +77,9 @@ export default function AppRoutes() {
             <Route path={ROUTES.schoolAdmin} element={
                 <ProtectedRoute roles={["SchoolAdmin"]}><SchoolAdminDashboardPage /></ProtectedRoute>} />
             <Route path={ROUTES.schoolSubscription} element={
-                <ProtectedRoute roles={["SchoolAdmin"]}><SubscriptionPage /></ProtectedRoute>} />
+                <ProtectedRoute roles={["SchoolAdmin"]}>
+                    <ApprovedGate><SubscriptionPage /></ApprovedGate>
+                </ProtectedRoute>} />
             <Route path={ROUTES.schoolProfile} element={
                 <ProtectedRoute roles={["SchoolAdmin"]}><SchoolAdminProfilePage /></ProtectedRoute>} />
 
