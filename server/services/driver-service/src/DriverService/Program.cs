@@ -43,6 +43,12 @@ builder.Services.AddOpenApi();
 
 var app = builder.Build();
 
+using (var scope = app.Services.CreateScope())
+{
+    var db = scope.ServiceProvider.GetRequiredService<DriverDbContext>();
+    await db.Database.MigrateAsync();
+}
+
 // ---------- Middleware pipeline ----------
 app.UseExceptionHandler();
 app.UseAuthentication();
