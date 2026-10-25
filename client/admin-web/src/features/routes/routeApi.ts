@@ -60,8 +60,26 @@ export const routeApi = baseApi.injectEndpoints({
             providesTags: ["Routes"],
         }),
 
+        /**
+         * Routes assigned to the signed-in driver, via the bus they drive.
+         * The server scopes this by the caller's own user id, so the driver
+         * screens never ask for routes they are not entitled to see.
+         */
+        getMyRoutes: builder.query<PagedResult<RouteListItem>, { page: number; pageSize: number }>({
+            query: ({ page, pageSize }) => ({ url: "/routes/mine", params: { page, pageSize } }),
+            transformResponse: (r: ApiResponse<PagedResult<RouteListItem>>) => r.data,
+            providesTags: ["Routes"],
+        }),
+
         getRoute: builder.query<RouteListItem, string>({
             query: (id) => ({ url: `/routes/${id}` }),
+            transformResponse: (r: ApiResponse<RouteListItem>) => r.data,
+            providesTags: ["Routes"],
+        }),
+
+        /** Same as getRoute, but 404s unless the caller drives this route's bus. */
+        getMyRoute: builder.query<RouteListItem, string>({
+            query: (id) => ({ url: `/routes/mine/${id}` }),
             transformResponse: (r: ApiResponse<RouteListItem>) => r.data,
             providesTags: ["Routes"],
         }),
@@ -111,7 +129,9 @@ export const routeApi = baseApi.injectEndpoints({
 
 export const {
     useGetRoutesQuery,
+    useGetMyRoutesQuery,
     useGetRouteQuery,
+    useGetMyRouteQuery,
     useCreateRouteMutation,
     useAssignBusToRouteMutation,
     useDeactivateRouteMutation,

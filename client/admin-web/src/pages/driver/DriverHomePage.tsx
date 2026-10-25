@@ -1,7 +1,7 @@
 import { useState } from "react"
 import { useNavigate } from "react-router-dom"
 import { ROUTES } from "@/routes/paths"
-import { useGetRoutesQuery } from "@/features/routes/routeApi"
+import { useGetMyRoutesQuery } from "@/features/routes/routeApi"
 import { useGetTripsQuery, useStartTripMutation } from "@/features/tracking/trackingApi"
 
 export default function DriverHomePage() {
@@ -15,16 +15,19 @@ export default function DriverHomePage() {
         refetch: refetchActive,
     } = useGetTripsQuery({ status: "Active", page: 1, pageSize: 1 })
 
+    // /routes/mine, not /routes — the server returns only routes whose bus is
+    // assigned to this driver, so there is nothing to filter out here.
     const {
         data: routes,
         isLoading: loadingRoutes,
         isError: routesFailed,
         refetch: refetchRoutes,
-    } = useGetRoutesQuery({ page: 1, pageSize: 50 })
+    } = useGetMyRoutesQuery({ page: 1, pageSize: 50 })
 
     const [startTrip, { isLoading: starting }] = useStartTripMutation()
 
     const activeTrip = active?.items?.[0]
+    const myRoutes = routes?.items ?? []
 
     const onStart = async (routeId: string) => {
         setMessage(null)
@@ -86,27 +89,38 @@ export default function DriverHomePage() {
                 </button>
             )}
 
-            {!activeTrip && (
-                <>
-                    <p className="text-sm text-slate-500">Choose your route to begin.</p>
+            {!activeTrip && myRoutes.length === 0 && (
+                <div className="rounded-xl border border-slate-200 p-4 text-sm text-slate-600">
+                    <p className="font-medium text-slate-800">No route assigned</p>
+                    <p className="mt-1">
+                        You are not assigned to a bus yet, so there is no route to drive. Ask the
+                        school office to assign you to a bus.
+                    </p>
+                </div>
+            )}
 
-                    {routes?.items
-                        ?.filter((r) => r.status === "ACTIVE")
-                        .map((route) => (
-                            <button
-                                key={route.id}
-                                disabled={starting || !route.assignedBusId}
-                                onClick={() => onStart(route.id)}
-                                className="rounded-xl border border-slate-200 p-4 text-left disabled:opacity-50"
-                            >
-                                <div className="text-lg font-semibold">{route.code}</div>
-                                <div className="text-slate-600">{route.name}</div>
-                                <div className="mt-1 text-sm text-slate-500">
-                                    {route.stops.length} stops
-                                    {!route.assignedBusId && " · no bus assigned"}
-                                </div>
-                            </button>
-                        ))}
+            {!activeTrip && myRoutes.length > 0 && (
+                <>
+                    <p className="text-sm text-slate-500">
+                        {myRoutes.length === 1
+                            ? "Your route — tap to begin."
+                            : "Choose your route to begin."}
+                    </p>
+
+                    {myRoutes.map((route) => (
+                        <button
+                            key={route.id}
+                            disabled={starting}
+                            onClick={() => onStart(route.id)}
+                            className="rounded-xl border border-slate-200 p-4 text-left disabled:opacity-50"
+                        >
+                            <div className="text-lg font-semibold">{route.code}</div>
+                            <div className="text-slate-600">{route.name}</div>
+                            <div className="mt-1 text-sm text-slate-500">
+                                {route.stops.length} stops
+                            </div>
+                        </button>
+                    ))}
                 </>
             )}
         </div>

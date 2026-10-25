@@ -6,6 +6,7 @@ import { schoolAdminNav } from "@/components/layout/schoolAdminNav"
 import { Button } from "@/components/ui/button"
 import { ROUTES } from "@/routes/paths"
 import { useGetBusesQuery } from "@/features/buses/busApi"
+import { useGetDriversQuery } from "@/features/drivers/driverApi"
 import {
     useAssignBusToRouteMutation,
     useDeactivateRouteMutation,
@@ -25,6 +26,7 @@ export default function RouteDetailPage() {
 
     const { data: route, isLoading, isError, refetch } = useGetRouteQuery(id, { skip: !id })
     const { data: buses } = useGetBusesQuery({ page: 1, pageSize: 50 })
+    const { data: drivers } = useGetDriversQuery({ page: 1, pageSize: 50 })
 
     const [assignBus, { isLoading: assigning }] = useAssignBusToRouteMutation()
     const [deactivateRoute, { isLoading: deactivating }] = useDeactivateRouteMutation()
@@ -36,6 +38,13 @@ export default function RouteDetailPage() {
 
     const activeBuses = (buses?.items ?? []).filter((b) => b.status === "ACTIVE")
     const assignedBus = activeBuses.find((b) => b.id === route?.assignedBusId)
+
+    // A route has no driver of its own — the driver follows the bus. Showing it
+    // here saves hopping to the bus page to answer "who drives this route?",
+    // and makes an unstaffed route visible before a parent notices.
+    const assignedDriver = assignedBus
+        ? (drivers?.items ?? []).find((d) => d.id === assignedBus.assignedDriverId)
+        : undefined
 
     const onAssign = async () => {
         if (!selectedBusId) return
@@ -80,9 +89,11 @@ export default function RouteDetailPage() {
 
             {route && (
                 <>
-                    <div className="mt-4 flex items-start justify-between">
-                        <div>
-                            <h1 className="text-2xl font-semibold text-slate-800">{route.code}</h1>
+                    <div className="mt-4 flex flex-wrap items-start justify-between gap-3">
+                        <div className="min-w-0">
+                            <h1 className="text-xl font-semibold text-slate-800 sm:text-2xl">
+                                {route.code}
+                            </h1>
                             <p className="mt-1 text-sm text-slate-500">{route.name}</p>
                         </div>
 
@@ -119,18 +130,21 @@ export default function RouteDetailPage() {
                         </div>
                     )}
 
-                    <section className="mt-6 rounded-lg border bg-white p-6">
+                    <section className="mt-6 rounded-lg border bg-white p-4 sm:p-6">
                         <h2 className="mb-4 text-sm font-semibold uppercase tracking-wide text-slate-400">
-                            Bus
+                            Bus and driver
                         </h2>
 
-                        <p className="mb-4 text-sm">
+                        <p className="mb-2 text-sm">
                             {assignedBus ? (
                                 <>
                                     Served by{" "}
-                                    <span className="font-medium text-slate-800">
+                                    <Link
+                                        to={ROUTES.schoolBusDetail.replace(":id", assignedBus.id)}
+                                        className="font-medium text-sky-700 hover:underline"
+                                    >
                                         {assignedBus.registrationNumber}
-                                    </span>{" "}
+                                    </Link>{" "}
                                     <span className="text-slate-500">({assignedBus.model})</span>
                                 </>
                             ) : route.assignedBusId ? (
@@ -143,6 +157,24 @@ export default function RouteDetailPage() {
                                 </span>
                             )}
                         </p>
+
+                        {assignedBus && (
+                            <p className="mb-4 text-sm">
+                                {assignedDriver ? (
+                                    <>
+                                        Driven by{" "}
+                                        <span className="font-medium text-slate-800">
+                                            {assignedDriver.firstName} {assignedDriver.lastName}
+                                        </span>
+                                    </>
+                                ) : (
+                                    <span className="text-amber-700">
+                                        This bus has no active driver — nobody can start a trip on this
+                                        route. Assign one on the bus page.
+                                    </span>
+                                )}
+                            </p>
+                        )}
 
                         {assignedBus && !assignedBus.documentsValid && (
                             <p className="mb-4 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">
@@ -159,11 +191,11 @@ export default function RouteDetailPage() {
                         )}
 
                         {route.status === "ACTIVE" && (
-                            <div className="flex flex-wrap items-center gap-3">
+                            <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
                                 <select
                                     value={selectedBusId}
                                     onChange={(e) => setSelectedBusId(e.target.value)}
-                                    className="min-w-72 rounded-md border border-slate-300 bg-white px-3 py-2 text-sm"
+                                    className="w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm sm:w-auto sm:min-w-72"
                                 >
                                     <option value="">Choose a bus…</option>
                                     {activeBuses.map((b) => (
@@ -194,7 +226,7 @@ export default function RouteDetailPage() {
                     {route.status === "ACTIVE" ? (
                         <RouteBuilder key={route.stops.map((s) => s.stopId).join("|")} route={route} />
                     ) : (
-                        <section className="mt-6 rounded-lg border bg-white p-6">
+                        <section className="mt-6 rounded-lg border bg-white p-4 sm:p-6">
                             <h2 className="mb-2 text-sm font-semibold uppercase tracking-wide text-slate-400">
                                 Stops and path
                             </h2>
@@ -205,7 +237,7 @@ export default function RouteDetailPage() {
                     )}
 
                     {route.status === "ACTIVE" && (
-                        <section className="mt-6 rounded-lg border border-red-200 bg-white p-6">
+                        <section className="mt-6 rounded-lg border border-red-200 bg-white p-4 sm:p-6">
                             <h2 className="mb-2 text-sm font-semibold uppercase tracking-wide text-slate-400">
                                 Danger zone
                             </h2>

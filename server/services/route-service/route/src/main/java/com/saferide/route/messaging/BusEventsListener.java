@@ -13,12 +13,21 @@ import org.springframework.stereotype.Component;
 @Component
 public class BusEventsListener {
 
-    public record BusStatusPayload(
+    /**
+     * One record for both event shapes on this queue. The converter ignores
+     * unknown properties and leaves absent ones null, so a status event carries
+     * no driverId and a driver event carries no registrationNumber.
+     *
+     * <p>The boxed Boolean is deliberate: a primitive would silently become
+     * false on a driver event, which is a different claim from "not stated".
+     */
+    public record BusEventPayload(
             UUID busId,
             UUID schoolId,
             String registrationNumber,
-            boolean active,
-            boolean documentsValid,
+            Boolean active,
+            Boolean documentsValid,
+            UUID driverId,
             Instant occurredAtUtc) {}
 
     private static final Logger log = LoggerFactory.getLogger(BusEventsListener.class);
@@ -30,23 +39,30 @@ public class BusEventsListener {
     }
 
     @RabbitListener(queues = "${saferide.rabbitmq.bus-events-queue}")
-    public void handle(BusStatusPayload event, @Header(AmqpHeaders.RECEIVED_ROUTING_KEY) String routingKey) {
+    public void handle(BusEventPayload event, @Header(AmqpHeaders.RECEIVED_ROUTING_KEY) String routingKey) {
         if (event == null || event.busId() == null || event.schoolId() == null || event.occurredAtUtc() == null) {
             log.warn("Discarding malformed bus event, routingKey={}", routingKey);
             return;
         }
 
-        if (!"bus-status-changed".equals(routingKey)) {
-            log.warn("Ignoring unmapped bus routing key: {}", routingKey);
-            return;
-        }
+        switch (routingKey) {
+            case "bus-status-changed" -> busStatus.upsert(
+                    event.busId(),
+                    event.schoolId(),
+                    event.registrationNumber(),
+                    Boolean.TRUE.equals(event.active()),
+                    Boolean.TRUE.equals(event.documentsValid()),
+                    event.occurredAtUtc());
 
-        busStatus.upsert(
-                event.busId(),
-                event.schoolId(),
-                event.registrationNumber(),
-                event.active(),
-                event.documentsValid(),
-                event.occurredAtUtc());
+            case "bus-driver-assigned" -> {
+                if (event.driverId() == null) {
+                    log.warn("Driver assignment for bus {} carried no driverId", event.busId());
+                    return;
+                }
+                busStatus.assignDriver(event.busId(), event.schoolId(), event.driverId(), event.occurredAtUtc());
+            }
+
+            default -> log.warn("Ignoring unmapped bus routing key: {}", routingKey);
+        }
     }
 }

@@ -14,6 +14,8 @@ import com.saferide.route.messaging.RouteBusAssigned;
 import com.saferide.route.messaging.RouteCreated;
 import com.saferide.route.projection.BusStatus;
 import com.saferide.route.projection.BusStatusRepository;
+import com.saferide.route.projection.DriverStatus;
+import com.saferide.route.projection.DriverStatusRepository;
 import com.saferide.route.projection.SchoolStatusRepository;
 import com.saferide.route.projection.SchoolStatuses;
 import com.saferide.route.repository.RouteRepository;
@@ -48,6 +50,7 @@ public class RouteService {
     private final RouteRepository routeRepository;
     private final SchoolStatusRepository schoolStatusRepository;
     private final BusStatusRepository busStatusRepository;
+    private final DriverStatusRepository driverStatusRepository;
     private final MongoTemplate mongo;
     private final RouteMapper routeMapper;
     private final RabbitEventPublisher publisher;
@@ -57,6 +60,7 @@ public class RouteService {
             RouteRepository routeRepository,
             SchoolStatusRepository schoolStatusRepository,
             BusStatusRepository busStatusRepository,
+            DriverStatusRepository driverStatusRepository,
             MongoTemplate mongo,
             RouteMapper routeMapper,
             RabbitEventPublisher publisher,
@@ -64,6 +68,7 @@ public class RouteService {
         this.routeRepository = routeRepository;
         this.schoolStatusRepository = schoolStatusRepository;
         this.busStatusRepository = busStatusRepository;
+        this.driverStatusRepository = driverStatusRepository;
         this.mongo = mongo;
         this.routeMapper = routeMapper;
         this.publisher = publisher;
@@ -116,6 +121,90 @@ public class RouteService {
                 .toList();
 
         return new PagedResult<>(items, total, safePage, safeSize);
+    }
+
+    /**
+     * Routes assigned to the calling driver.
+     *
+     * <p>Matched by email, not user id: bus-service stores the driver *record*
+     * id on a bus, while the gateway sends the identity *user* id, and the only
+     * value common to both is the email address.
+     *
+     * <p>A driver with no bus, or a bus with no route, gets an empty page —
+     * the honest answer rather than an error.
+     */
+    public PagedResult<RouteResponse> listForDriver(UUID schoolId, String email, int page, int pageSize) {
+        int safePage = Math.max(page, 1);
+        int safeSize = Math.clamp(pageSize, 1, MAX_PAGE_SIZE);
+
+        PagedResult<RouteResponse> empty = new PagedResult<>(List.of(), 0, safePage, safeSize);
+
+        UUID driverId = resolveDriverId(schoolId, email);
+        if (driverId == null) {
+            return empty;
+        }
+
+        List<UUID> busIds = busStatusRepository.findBySchoolIdAndAssignedDriverId(schoolId, driverId).stream()
+                .map(BusStatus::getBusId)
+                .toList();
+
+        if (busIds.isEmpty()) {
+            return empty;
+        }
+
+        Query query = new Query(Criteria.where("schoolId")
+                .is(schoolId)
+                .and("assignedBusId")
+                .in(busIds)
+                .and("status")
+                .is(RouteStatus.ACTIVE));
+
+        long total = mongo.count(query, Route.class);
+
+        query.with(Sort.by(Sort.Direction.ASC, "code"))
+                .skip((long) (safePage - 1) * safeSize)
+                .limit(safeSize);
+
+        List<RouteResponse> items = mongo.find(query, Route.class).stream()
+                .map(routeMapper::toResponse)
+                .toList();
+
+        return new PagedResult<>(items, total, safePage, safeSize);
+    }
+
+    /**
+     * One route, but only if the caller drives its bus. Answers 404 rather than
+     * 403 on a route that exists but isn't theirs — a 403 would confirm the
+     * route exists, which the driver shouldn't learn.
+     */
+    public RouteResponse getForDriver(UUID schoolId, String email, UUID routeId) {
+        Route route = findOwned(schoolId, routeId);
+
+        UUID driverId = resolveDriverId(schoolId, email);
+
+        boolean drivesThisBus = driverId != null
+                && route.getAssignedBusId() != null
+                && busStatusRepository
+                        .findByBusIdAndSchoolId(route.getAssignedBusId(), schoolId)
+                        .map(bus -> driverId.equals(bus.getAssignedDriverId()))
+                        .orElse(false);
+
+        if (!drivesThisBus) {
+            throw new AppException.NotFoundException(ResponseMessages.ROUTE_NOT_FOUND);
+        }
+
+        return routeMapper.toResponse(route);
+    }
+
+    /** Identity email to driver record id, or null if this login is not a driver here. */
+    private UUID resolveDriverId(UUID schoolId, String email) {
+        if (email == null || email.isBlank()) {
+            return null;
+        }
+        return driverStatusRepository
+                .findBySchoolIdAndEmail(schoolId, email.trim().toLowerCase())
+                .map(DriverStatus::getDriverId)
+                .orElse(null);
     }
 
     public RouteResponse getById(UUID schoolId, UUID id) {
@@ -201,9 +290,9 @@ public class RouteService {
             for (int j = i + 1; j < stops.size(); j++) {
                 double metres = metresBetween(
                         stops.get(i).getLocation().getY(),
-                                stops.get(i).getLocation().getX(),
+                        stops.get(i).getLocation().getX(),
                         stops.get(j).getLocation().getY(),
-                                stops.get(j).getLocation().getX());
+                        stops.get(j).getLocation().getX());
 
                 if (metres < MIN_STOP_SEPARATION_METRES) {
                     throw new AppException.ValidationException(

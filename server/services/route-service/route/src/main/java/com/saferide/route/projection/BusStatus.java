@@ -18,6 +18,13 @@ public class BusStatus {
     private Instant updatedAt;
     private Instant eventAtUtc; // source event time — stale-replay guard; null = pre-guard row
 
+    private UUID assignedDriverId;
+
+    // Status changes and driver assignments are independent event streams, so
+    // they need independent stale-guards. Sharing eventAtUtc would let a status
+    // change discard a newer driver assignment, or the reverse.
+    private Instant driverEventAtUtc;
+
     protected BusStatus() {}
 
     public BusStatus(
@@ -58,5 +65,13 @@ public class BusStatus {
 
     public Instant getEventAtUtc() {
         return eventAtUtc;
+    }
+
+    public UUID getAssignedDriverId() {
+        return assignedDriverId;
+    }
+
+    public Instant getDriverEventAtUtc() {
+        return driverEventAtUtc;
     }
 }

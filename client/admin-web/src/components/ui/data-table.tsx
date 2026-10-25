@@ -6,6 +6,8 @@ export interface Column<T> {
     header: string
     cell: (row: T) => ReactNode
     className?: string
+    /** Drop this column from the stacked mobile view — usually row actions. */
+    hideOnMobile?: boolean
 }
 
 interface DataTableProps<T> {
@@ -38,31 +40,55 @@ export function DataTable<T>({
             ) : rows.length === 0 ? (
                 <p className="p-6 text-sm text-slate-500">{emptyMessage}</p>
             ) : (
-                <table className="w-full text-sm">
-                    <thead className="bg-slate-50 text-left text-slate-500">
-                        <tr>
-                            {columns.map((c) => (
-                                <th key={c.header} className={`px-4 py-3 font-medium ${c.className ?? ""}`}>
-                                    {c.header}
-                                </th>
-                            ))}
-                        </tr>
-                    </thead>
-                    <tbody className="divide-y">
+                <>
+                    {/* Below md a table either overflows the screen or squeezes
+                        every column unreadable, so each row becomes a labelled
+                        card instead. Same data, same order, no horizontal scroll. */}
+                    <div className="divide-y md:hidden">
                         {rows.map((row) => (
-                            <tr key={rowKey(row)} className="hover:bg-slate-50">
-                                {columns.map((c) => (
-                                    <td key={c.header} className={`px-4 py-3 ${c.className ?? ""}`}>
-                                        {c.cell(row)}
-                                    </td>
-                                ))}
-                            </tr>
+                            <div key={rowKey(row)} className="space-y-2 p-4">
+                                {columns
+                                    .filter((c) => !c.hideOnMobile)
+                                    .map((c) => (
+                                        <div key={c.header} className="flex items-start justify-between gap-3">
+                                            <span className="shrink-0 text-xs uppercase tracking-wide text-slate-400">
+                                                {c.header}
+                                            </span>
+                                            <span className="min-w-0 text-right text-sm">{c.cell(row)}</span>
+                                        </div>
+                                    ))}
+                            </div>
                         ))}
-                    </tbody>
-                </table>
+                    </div>
+
+                    <div className="hidden overflow-x-auto md:block">
+                        <table className="w-full text-sm">
+                            <thead className="bg-slate-50 text-left text-slate-500">
+                                <tr>
+                                    {columns.map((c) => (
+                                        <th key={c.header} className={`px-4 py-3 font-medium ${c.className ?? ""}`}>
+                                            {c.header}
+                                        </th>
+                                    ))}
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y">
+                                {rows.map((row) => (
+                                    <tr key={rowKey(row)} className="hover:bg-slate-50">
+                                        {columns.map((c) => (
+                                            <td key={c.header} className={`px-4 py-3 ${c.className ?? ""}`}>
+                                                {c.cell(row)}
+                                            </td>
+                                        ))}
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+                </>
             )}
 
-            <div className="flex items-center justify-between border-t bg-slate-50 px-4 py-2">
+            <div className="flex flex-wrap items-center justify-between gap-2 border-t bg-slate-50 px-4 py-2">
                 <p className="text-xs text-slate-500">
                     {totalCount} result{totalCount === 1 ? "" : "s"} · page {page} of {totalPages}
                 </p>

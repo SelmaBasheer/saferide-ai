@@ -212,22 +212,22 @@ export default function RouteBuilder({ route }: { route: RouteListItem }) {
             : [8.8901, 76.6012]
 
     return (
-        <section className="mt-6 rounded-lg border bg-white p-6">
+        <section className="mt-6 rounded-lg border bg-white p-4 sm:p-6">
             <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
                 <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-400">
                     Stops and path
                 </h2>
-                <div className="flex gap-2">
+                <div className="flex w-full gap-2 sm:w-auto">
                     <button
                         onClick={() => setMode("stops")}
-                        className={`rounded-md px-3 py-1.5 text-sm ${mode === "stops" ? "bg-sky-700 text-white" : "border border-slate-300"
+                        className={`flex-1 rounded-md px-3 py-1.5 text-sm sm:flex-none ${mode === "stops" ? "bg-sky-700 text-white" : "border border-slate-300"
                             }`}
                     >
                         Place stops
                     </button>
                     <button
                         onClick={() => setMode("path")}
-                        className={`rounded-md px-3 py-1.5 text-sm ${mode === "path" ? "bg-sky-700 text-white" : "border border-slate-300"
+                        className={`flex-1 rounded-md px-3 py-1.5 text-sm sm:flex-none ${mode === "path" ? "bg-sky-700 text-white" : "border border-slate-300"
                             }`}
                     >
                         Path
@@ -250,7 +250,9 @@ export default function RouteBuilder({ route }: { route: RouteListItem }) {
                 </div>
             )}
 
-            <div className="h-96 w-full overflow-hidden rounded-lg border">
+            {/* 384px of map swallows a phone screen whole, so it starts shorter
+                and only gets its full height once there is room for the list too. */}
+            <div className="h-72 w-full overflow-hidden rounded-lg border sm:h-96">
                 <MapContainer center={centre} zoom={14} className="h-full w-full">
                     <TileLayer
                         url="https://tile.openstreetmap.org/{z}/{x}/{y}.png"
@@ -348,7 +350,7 @@ export default function RouteBuilder({ route }: { route: RouteListItem }) {
                                     value={s.name}
                                     onChange={(e) => editStop(i, { name: e.target.value })}
                                     placeholder="Stop name"
-                                    className="min-w-48 flex-1 rounded-md border border-slate-300 px-2 py-1.5 text-sm"
+                                    className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm sm:w-auto sm:min-w-48 sm:flex-1"
                                 />
 
                                 <input
@@ -359,7 +361,9 @@ export default function RouteBuilder({ route }: { route: RouteListItem }) {
                                         }`}
                                 />
 
-                                <span className="text-xs text-slate-400">
+                                {/* Useful at a desk, pure noise on a phone — the pin on
+                                    the map already says where the stop is. */}
+                                <span className="hidden text-xs text-slate-400 sm:inline">
                                     {s.latitude.toFixed(4)}, {s.longitude.toFixed(4)}
                                 </span>
 

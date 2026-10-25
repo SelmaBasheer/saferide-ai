@@ -46,6 +46,30 @@ public class RouteController {
         return ApiResponse.ok(routeService.list(caller.requireSchoolId(), search, includeInactive, page, pageSize));
     }
 
+    /**
+     * Routes assigned to the calling driver, via the bus they drive.
+     *
+     * <p>Scoped by the caller's own email from the gateway rather than by a
+     * role claim, so the endpoint is safe for anyone to call: a school admin
+     * hitting it simply has no driver record and sees nothing.
+     *
+     * <p>Declared before /{id} for readability only — Spring prefers the
+     * literal "mine" over the {id} template regardless of order.
+     */
+    @GetMapping("/mine")
+    public ApiResponse<PagedResult<RouteResponse>> listMine(
+            @AuthenticationPrincipal GatewayUser caller,
+            @RequestParam(defaultValue = "1") int page,
+            @RequestParam(defaultValue = "10") int pageSize) {
+        return ApiResponse.ok(routeService.listForDriver(caller.requireSchoolId(), caller.email(), page, pageSize));
+    }
+
+    /** Full detail — stops and path — for one of the caller's own routes. */
+    @GetMapping("/mine/{id}")
+    public ApiResponse<RouteResponse> getMineById(@AuthenticationPrincipal GatewayUser caller, @PathVariable UUID id) {
+        return ApiResponse.ok(routeService.getForDriver(caller.requireSchoolId(), caller.email(), id));
+    }
+
     @GetMapping("/{id}")
     public ApiResponse<RouteResponse> getById(@AuthenticationPrincipal GatewayUser caller, @PathVariable UUID id) {
         return ApiResponse.ok(routeService.getById(caller.requireSchoolId(), id));

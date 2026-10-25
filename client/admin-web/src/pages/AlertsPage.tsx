@@ -1,4 +1,5 @@
 import { useState } from "react"
+import { RefreshCw } from "lucide-react"
 import DashboardLayout from "@/components/layout/DashboardLayout"
 import { schoolAdminNav } from "@/components/layout/schoolAdminNav"
 import { Button } from "@/components/ui/button"
@@ -12,6 +13,10 @@ import {
 } from "@/features/alerts/alertApi"
 
 const PAGE_SIZE = 10
+
+// Deviation detection runs on a two-minute schedule, so polling faster than
+// that only adds load without ever showing anything new sooner.
+const POLL_MS = 60_000
 
 const statusClass = (status: Alert["status"]) =>
     status === "Classified"
@@ -45,7 +50,11 @@ export default function AlertsPage() {
     // the first one to finish must not re-enable the button for the second.
     const [dismissingIds, setDismissingIds] = useState<ReadonlySet<string>>(new Set())
 
-    const { data, isLoading, isError } = useGetAlertsQuery({ status, page, pageSize: PAGE_SIZE })
+    const { data, isLoading, isError, isFetching, refetch } = useGetAlertsQuery(
+        { status, page, pageSize: PAGE_SIZE },
+        { pollingInterval: POLL_MS, refetchOnMountOrArgChange: true }
+    )
+
     const [approveAlert, { isLoading: approving }] = useApproveAlertMutation()
     const [dismissAlert] = useDismissAlertMutation()
 
@@ -87,12 +96,21 @@ export default function AlertsPage() {
 
     return (
         <DashboardLayout roleLabel="School Admin" nav={schoolAdminNav("Alerts")}>
-            <div>
-                <h1 className="text-2xl font-semibold text-slate-800">Alerts</h1>
-                <p className="mt-1 text-sm text-slate-500">
-                    Unusual events detected during trips. Approving an alert marks its message as
-                    ready to go to parents; nothing is delivered without your approval.
-                </p>
+            <div className="flex flex-wrap items-start justify-between gap-3">
+                <div>
+                    <h1 className="text-xl font-semibold text-slate-800 sm:text-2xl">Alerts</h1>
+                    <p className="mt-1 text-sm text-slate-500">
+                        Unusual events detected during trips. Approving an alert marks its message as
+                        ready to go to parents; nothing is delivered without your approval.
+                    </p>
+                </div>
+
+                {/* The list refreshes itself every minute, but an admin watching a
+                    trip in progress wants the answer now, not on the next tick. */}
+                <Button variant="outline" disabled={isFetching} onClick={() => refetch()}>
+                    <RefreshCw className={`mr-1 h-4 w-4 ${isFetching ? "animate-spin" : ""}`} />
+                    {isFetching ? "Refreshing…" : "Refresh"}
+                </Button>
             </div>
 
             <div className="mt-6 flex flex-wrap gap-2">
@@ -147,9 +165,9 @@ export default function AlertsPage() {
                 )}
 
                 {alerts.map((alert) => (
-                    <section key={alert.id} className="rounded-lg border bg-white p-5">
+                    <section key={alert.id} className="rounded-lg border bg-white p-4 sm:p-5">
                         <div className="flex flex-wrap items-start justify-between gap-3">
-                            <div>
+                            <div className="min-w-0">
                                 <div className="flex flex-wrap items-center gap-2">
                                     <span className="font-semibold text-slate-800">
                                         {alert.routeCode} — {alert.routeName}
@@ -166,7 +184,7 @@ export default function AlertsPage() {
                                 </p>
                             </div>
 
-                            <div className="text-right text-xs">
+                            <div className="text-xs sm:text-right">
                                 {alert.classification && (
                                     <div className="font-medium text-slate-700">
                                         {alert.classification}
@@ -192,7 +210,7 @@ export default function AlertsPage() {
                         )}
 
                         {alert.status === "Classified" && (
-                            <div className="mt-4 flex gap-3">
+                            <div className="mt-4 flex flex-wrap gap-3">
                                 <Button
                                     className="bg-sky-700 hover:bg-sky-800"
                                     onClick={() => {

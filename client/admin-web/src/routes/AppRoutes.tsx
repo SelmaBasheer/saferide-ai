@@ -144,6 +144,7 @@ export default function AppRoutes() {
                 <ProtectedRoute roles={["Driver"]}>
                     <MobileLayout
                         tripsPath={ROUTES.driverTrips}
+                        homePath={ROUTES.driver}
                         items={[{ label: "Profile", icon: UserCircle, to: ROUTES.driverProfile }]}
                     />
                 </ProtectedRoute>}>
@@ -160,6 +161,7 @@ export default function AppRoutes() {
                 <ProtectedRoute roles={["Parent"]}>
                     <MobileLayout
                         tripsPath={ROUTES.parentTrips}
+                        homePath={ROUTES.parent}
                         items={[
                             { label: "Your children", icon: Users, to: ROUTES.parentChildren },
                             { label: "Profile", icon: UserCircle, to: ROUTES.parentProfile },
