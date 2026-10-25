@@ -37,6 +37,13 @@ public class RabbitConfig {
     @Value("${saferide.rabbitmq.bus-events-queue}")
     String busEventsQueue;
 
+    // Defaults inline so no application.yml change is needed to add this stream.
+    @Value("${saferide.rabbitmq.driver-exchange:driver.events}")
+    String driverExchange;
+
+    @Value("${saferide.rabbitmq.driver-events-queue:route.driver-events}")
+    String driverEventsQueue;
+
     @Bean
     TopicExchange routeEventsExchange() {
         return new TopicExchange(routeExchange, true, false);
@@ -110,6 +117,45 @@ public class RabbitConfig {
     @Bean
     Binding busStatusChangedBinding() {
         return BindingBuilder.bind(busEventsQueueBean()).to(busEventsExchange()).with("bus-status-changed");
+    }
+
+    // Route-service needs to know which driver is on which bus, so a driver can
+    // be shown only the route they are assigned to.
+    @Bean
+    Binding busDriverAssignedBinding() {
+        return BindingBuilder.bind(busEventsQueueBean()).to(busEventsExchange()).with("bus-driver-assigned");
+    }
+
+    @Bean
+    TopicExchange driverEventsExchange() {
+        return new TopicExchange(driverExchange, true, false);
+    }
+
+    @Bean
+    Queue driverEventsQueueBean() {
+        return QueueBuilder.durable(driverEventsQueue)
+                .withArgument("x-dead-letter-exchange", DLX)
+                .withArgument("x-dead-letter-routing-key", driverEventsQueue)
+                .build();
+    }
+
+    @Bean
+    Queue driverEventsDlq() {
+        return QueueBuilder.durable(driverEventsQueue + ".dlq").build();
+    }
+
+    @Bean
+    Binding driverEventsDlqBinding() {
+        return BindingBuilder.bind(driverEventsDlq()).to(deadLetterExchange()).with(driverEventsQueue);
+    }
+
+    // Carries the driver's email, the only value shared with the identity
+    // token — bus-service knows the driver record id and nothing else.
+    @Bean
+    Binding driverCreatedBinding() {
+        return BindingBuilder.bind(driverEventsQueueBean())
+                .to(driverEventsExchange())
+                .with("driver-created");
     }
 
     @Bean

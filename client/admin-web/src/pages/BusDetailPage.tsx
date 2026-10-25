@@ -6,6 +6,7 @@ import { schoolAdminNav } from "@/components/layout/schoolAdminNav"
 import { Button } from "@/components/ui/button"
 import { ROUTES } from "@/routes/paths"
 import { useGetDriversQuery } from "@/features/drivers/driverApi"
+import { useGetRoutesQuery } from "@/features/routes/routeApi"
 import EditBusForm from "@/features/buses/EditBusForm"
 import BusDocumentsPanel from "@/features/buses/BusDocumentsPanel"
 import {
@@ -25,6 +26,7 @@ export default function BusDetailPage() {
 
     const { data: bus, isLoading, isError, refetch } = useGetBusQuery(id, { skip: !id })
     const { data: drivers } = useGetDriversQuery({ page: 1, pageSize: 50 })
+    const { data: routes } = useGetRoutesQuery({ page: 1, pageSize: 50 })
 
     const [assignDriver, { isLoading: assigning }] = useAssignDriverMutation()
     const [deactivateBus, { isLoading: deactivating }] = useDeactivateBusMutation()
@@ -35,6 +37,11 @@ export default function BusDetailPage() {
 
     const activeDrivers = (drivers?.items ?? []).filter((d) => d.status === "Active")
     const assignedDriver = activeDrivers.find((d) => d.id === bus?.assignedDriverId)
+
+    // The link runs route → bus, so this is a reverse lookup. Cheap at fleet
+    // sizes a single school has, and it saves a trip to the Routes page to
+    // answer "where does this bus actually go?".
+    const servingRoute = (routes?.items ?? []).find((r) => r.assignedBusId === bus?.id)
 
     const today = new Date().toISOString().slice(0, 10)
 
@@ -83,9 +90,9 @@ export default function BusDetailPage() {
 
             {bus && (
                 <>
-                    <div className="mt-4 flex items-start justify-between">
-                        <div>
-                            <h1 className="text-2xl font-semibold text-slate-800">
+                    <div className="mt-4 flex flex-wrap items-start justify-between gap-3">
+                        <div className="min-w-0">
+                            <h1 className="text-xl font-semibold text-slate-800 sm:text-2xl">
                                 {bus.registrationNumber}
                             </h1>
                             <p className="mt-1 text-sm text-slate-500">
@@ -129,7 +136,30 @@ export default function BusDetailPage() {
                         </div>
                     )}
 
-                    <section className="mt-6 rounded-lg border bg-white p-6">
+                    <section className="mt-6 rounded-lg border bg-white p-4 sm:p-6">
+                        <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-slate-400">
+                            Route
+                        </h2>
+
+                        {servingRoute ? (
+                            <p className="text-sm">
+                                Runs{" "}
+                                <Link
+                                    to={ROUTES.schoolRouteDetail.replace(":id", servingRoute.id)}
+                                    className="font-medium text-sky-700 hover:underline"
+                                >
+                                    {servingRoute.code}
+                                </Link>{" "}
+                                <span className="text-slate-500">— {servingRoute.name}</span>
+                            </p>
+                        ) : (
+                            <p className="text-sm text-slate-500">
+                                Not assigned to a route. Assign this bus from the route's page.
+                            </p>
+                        )}
+                    </section>
+
+                    <section className="mt-6 rounded-lg border bg-white p-4 sm:p-6">
                         <h2 className="mb-4 text-sm font-semibold uppercase tracking-wide text-slate-400">
                             Driver
                         </h2>
@@ -152,11 +182,11 @@ export default function BusDetailPage() {
                         </p>
 
                         {bus.status === "ACTIVE" && (
-                            <div className="flex flex-wrap items-center gap-3">
+                            <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
                                 <select
                                     value={selectedDriverId}
                                     onChange={(e) => setSelectedDriverId(e.target.value)}
-                                    className="min-w-80 rounded-md border border-slate-300 bg-white px-3 py-2 text-sm"
+                                    className="w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm sm:w-auto sm:min-w-80"
                                 >
                                     <option value="">Choose a driver…</option>
                                     {activeDrivers.map((d) => {
@@ -190,7 +220,7 @@ export default function BusDetailPage() {
                     <BusDocumentsPanel busId={id} canUpload={bus.status === "ACTIVE"} />
 
                     {bus.status === "ACTIVE" && (
-                        <section className="mt-6 rounded-lg border border-red-200 bg-white p-6">
+                        <section className="mt-6 rounded-lg border border-red-200 bg-white p-4 sm:p-6">
                             <h2 className="mb-2 text-sm font-semibold uppercase tracking-wide text-slate-400">
                                 Danger zone
                             </h2>
