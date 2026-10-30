@@ -196,13 +196,14 @@ public class RouteService {
         return routeMapper.toResponse(route);
     }
 
-    /** Identity email to driver record id, or null if this login is not a driver here. */
+    /** Identity email to driver record id, or null if this login is not an active driver here. */
     private UUID resolveDriverId(UUID schoolId, String email) {
         if (email == null || email.isBlank()) {
             return null;
         }
         return driverStatusRepository
                 .findBySchoolIdAndEmail(schoolId, email.trim().toLowerCase())
+                .filter(DriverStatus::isEmployed)
                 .map(DriverStatus::getDriverId)
                 .orElse(null);
     }
