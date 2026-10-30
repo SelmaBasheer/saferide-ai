@@ -1,6 +1,9 @@
 using DriverService.Common;
 using DriverService.Features.CreateDriver;
+using DriverService.Features.DeactivateDriver;
 using DriverService.Features.GetDrivers;
+using DriverService.Features.ReactivateDriver;
+using DriverService.Features.UpdateDriver;
 using DriverService.Mapping;
 using DriverService.Messaging;
 using DriverService.Middleware;
@@ -63,6 +66,9 @@ if (app.Environment.IsDevelopment())
 // ---------- Endpoints (one line per slice) ----------
 app.MapCreateDriver();
 app.MapGetDrivers();
+app.MapUpdateDriver();
+app.MapDeactivateDriver();
+app.MapReactivateDriver();
 app.MapGet("/health", () => Results.Ok(new { status = "ok" })).AllowAnonymous();
 
 app.Run();

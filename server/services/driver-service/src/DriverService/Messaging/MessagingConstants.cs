@@ -15,4 +15,8 @@ public static class MessagingConstants
     // projection vocabulary
     public const string StatusApproved = "Approved";
     public const string StatusSuspended = "Suspended";
+
+    // driver status
+    public const string DriverDeactivatedKey = "driver-deactivated";
+    public const string DriverReactivatedKey = "driver-reactivated";
 }

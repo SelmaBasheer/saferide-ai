@@ -158,6 +158,22 @@ public class RabbitConfig {
                 .with("driver-created");
     }
 
+    // A deactivated driver must stop seeing their route immediately, so this
+    // service tracks employment status as well as identity.
+    @Bean
+    Binding driverDeactivatedBinding() {
+        return BindingBuilder.bind(driverEventsQueueBean())
+                .to(driverEventsExchange())
+                .with("driver-deactivated");
+    }
+
+    @Bean
+    Binding driverReactivatedBinding() {
+        return BindingBuilder.bind(driverEventsQueueBean())
+                .to(driverEventsExchange())
+                .with("driver-reactivated");
+    }
+
     @Bean
     RabbitTemplate rabbitTemplate(ConnectionFactory cf, Jackson2JsonMessageConverter conv) {
         var template = new RabbitTemplate(cf);

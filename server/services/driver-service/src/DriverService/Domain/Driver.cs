@@ -50,6 +50,14 @@ public class Driver
         };
     }
 
+    /// <summary>
+    /// Deliberately does NOT enforce the 5-day rule that Create does.
+    /// Hiring someone whose licence is about to lapse is a mistake worth
+    /// blocking; recording that an existing driver's licence has already
+    /// expired is the truth, and refusing to store it would leave the record
+    /// wrong. Eligibility is derived from the date, not from whether we
+    /// allowed it to be saved.
+    /// </summary>
     public void UpdateDetails(
         string firstName,
         string lastName,
@@ -66,9 +74,34 @@ public class Driver
         UpdatedAt = DateTime.UtcNow;
     }
 
-    public void Deactivate()
+    /// <returns>true if the status actually changed — the caller publishes an event only then.</returns>
+    public bool Deactivate()
     {
+        if (Status == DriverStatus.Inactive)
+            return false;
+
         Status = DriverStatus.Inactive;
         UpdatedAt = DateTime.UtcNow;
+        return true;
     }
+
+    /// <summary>
+    /// No licence check here on purpose. Employment and licence validity are
+    /// separate facts: a driver can be re-employed on Monday and renew their
+    /// licence on Wednesday. Being assignable to a bus requires both.
+    /// </summary>
+    public bool Reactivate()
+    {
+        if (Status == DriverStatus.Active)
+            return false;
+
+        Status = DriverStatus.Active;
+        UpdatedAt = DateTime.UtcNow;
+        return true;
+    }
+
+    public bool LicenceIsValidOn(DateOnly date) => LicenseExpiryDate >= date;
+
+    public bool CanBeAssigned(DateOnly today) =>
+        Status == DriverStatus.Active && LicenceIsValidOn(today);
 }
